@@ -1,5 +1,6 @@
 package com.example.authapp.config;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -11,6 +12,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import com.example.authapp.filter.LoginFilter;
@@ -23,7 +25,17 @@ public class SecurityConfig {
 	
 	// 인증을 수행
     private final AuthenticationConfiguration authenticationConfiguration;
-	
+	// 로그인 성공 이후 로직(로그인 성공 핸들러)
+    private final AuthenticationSuccessHandler loginSuccessHandler;
+    
+    public SecurityConfig(
+            AuthenticationConfiguration authenticationConfiguration,
+            @Qualifier("LoginSuccessHandler") AuthenticationSuccessHandler loginSuccessHandler
+    ) {
+        this.authenticationConfiguration = authenticationConfiguration;
+        this.loginSuccessHandler = loginSuccessHandler;
+    }
+    
     
     // 비밀번호 단방향(BCrypt) 암호화용 Bean
     @Bean
@@ -35,13 +47,7 @@ public class SecurityConfig {
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
         return configuration.getAuthenticationManager();
-    }
-
-
-    public SecurityConfig(AuthenticationConfiguration authenticationConfiguration) {
-        this.authenticationConfiguration = authenticationConfiguration;
-    }
-    
+    }    
     
     // SecurityFilterChain
     @Bean
@@ -72,7 +78,7 @@ public class SecurityConfig {
         );
         
         // 커스텀 필터 추가
-        http.addFilterBefore(new LoginFilter(authenticationManager(authenticationConfiguration)), UsernamePasswordAuthenticationFilter.class);
+        http.addFilterBefore(new LoginFilter(authenticationManager(authenticationConfiguration), loginSuccessHandler), UsernamePasswordAuthenticationFilter.class);
 
         // 세션 필터 설정 (STATELESS)
         http.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
