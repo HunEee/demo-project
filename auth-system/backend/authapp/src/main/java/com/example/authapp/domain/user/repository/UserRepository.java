@@ -13,6 +13,9 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
 	// 회원 정보 수정시 자체 로그인 여부, 잠김 여부를 확인
 	Optional<UserEntity> findByUsernameAndIsLockAndIsSocial(String username, Boolean isLock, Boolean isSocial);
 	
+	// 소셜 로그인 회원 존재 여부 확인
+	Optional<UserEntity> findByUsernameAndIsSocial(String username, Boolean social);
+	
 
 	
 }
