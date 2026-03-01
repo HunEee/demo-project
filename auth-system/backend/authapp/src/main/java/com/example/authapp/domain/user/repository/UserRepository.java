@@ -3,6 +3,8 @@ package com.example.authapp.domain.user.repository;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.example.authapp.domain.user.entity.UserEntity;
 
 public interface UserRepository extends JpaRepository<UserEntity, Long> {
@@ -16,6 +18,10 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
 	// 소셜 로그인 회원 존재 여부 확인
 	Optional<UserEntity> findByUsernameAndIsSocial(String username, Boolean social);
 	
-
+	@Transactional
+	void deleteByUsername(String username);
+	
+	// 자체/소셜 유저 정보 조회
+	Optional<UserEntity> findByUsernameAndIsLock(String username, Boolean isLock);
 	
 }
