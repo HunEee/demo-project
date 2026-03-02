@@ -154,7 +154,9 @@ public class UserService extends DefaultOAuth2UserService implements UserDetails
             attributes = (Map<String, Object>) oAuth2User.getAttributes().get("response");
             username = registrationId + "_" + attributes.get("id");
             email = attributes.get("email").toString();
-            nickname = attributes.get("nickname").toString();
+            nickname = attributes.get("nickname") != null
+                    ? attributes.get("nickname").toString()
+                    : "naver_user";
         } else if (registrationId.equals(SocialProviderType.GOOGLE.name())) {
             attributes = (Map<String, Object>) oAuth2User.getAttributes();
             username = registrationId + "_" + attributes.get("sub");
