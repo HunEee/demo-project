@@ -1,5 +1,5 @@
 package com.example.authapp.domain.user.entity;
 
 public enum UserRoleType {
-    USER, ADMIN
+	 ROLE_ADMIN, ROLE_USER
 }

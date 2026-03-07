@@ -13,15 +13,15 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
 	Boolean existsByUsername(String username);
 	
 	// 회원 정보 수정시 자체 로그인 여부, 잠김 여부를 확인
-	Optional<UserEntity> findByUsernameAndIsLockAndIsSocial(String username, Boolean isLock, Boolean isSocial);
+	Optional<UserEntity> findByUsernameAndLockedAndIsSocial(String username, Boolean Locked, Boolean isSocial);
 	
 	// 소셜 로그인 회원 존재 여부 확인
-	Optional<UserEntity> findByUsernameAndIsSocial(String username, Boolean social);
+	Optional<UserEntity> findByUsernameAndIsSocial(String username, Boolean isSocial);
 	
 	@Transactional
 	void deleteByUsername(String username);
 	
 	// 자체/소셜 유저 정보 조회
-	Optional<UserEntity> findByUsernameAndIsLock(String username, Boolean isLock);
+	Optional<UserEntity> findByUsernameAndLocked(String username, Boolean locked);
 	
 }

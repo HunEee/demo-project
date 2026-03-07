@@ -3,6 +3,7 @@ package com.example.authapp.domain.user.service;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
@@ -27,23 +28,23 @@ import com.example.authapp.domain.jwt.service.JwtService;
 import com.example.authapp.domain.user.dto.CustomOAuth2User;
 import com.example.authapp.domain.user.dto.UserRequestDTO;
 import com.example.authapp.domain.user.dto.UserResponseDTO;
+import com.example.authapp.domain.user.entity.RoleEntity;
 import com.example.authapp.domain.user.entity.SocialProviderType;
 import com.example.authapp.domain.user.entity.UserEntity;
 import com.example.authapp.domain.user.entity.UserRoleType;
+import com.example.authapp.domain.user.repository.RoleRepository;
 import com.example.authapp.domain.user.repository.UserRepository;
 
+import lombok.RequiredArgsConstructor;
+
 @Service
+@RequiredArgsConstructor
 public class UserService extends DefaultOAuth2UserService implements UserDetailsService {
 
 	private final PasswordEncoder passwordEncoder;
 	private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
 	private final JwtService jwtService;
-
-	public UserService(PasswordEncoder passwordEncoder, UserRepository userRepository, JwtService jwtService) {
-	    this.passwordEncoder = passwordEncoder;
-	    this.userRepository = userRepository;
-	    this.jwtService = jwtService;
-	}
 	
     // 자체 로그인 회원 가입 (존재 여부)
     @Transactional(readOnly = true)
@@ -58,18 +59,23 @@ public class UserService extends DefaultOAuth2UserService implements UserDetails
         if (userRepository.existsByUsername(dto.getUsername())) {
             throw new IllegalArgumentException("이미 유저가 존재합니다.");
         }
-
-        UserEntity entity = UserEntity.builder()
+        
+        RoleEntity userRole = roleRepository.findByName("ROLE_USER")
+                .orElseThrow(() -> new IllegalArgumentException("기본 권한이 존재하지 않습니다."));
+        
+        UserEntity user = UserEntity.builder()
                 .username(dto.getUsername())
                 .password(passwordEncoder.encode(dto.getPassword()))
-                .isLock(false)
-                .isSocial(false)
-                .roleType(UserRoleType.USER) // 우선 일반 유저로 가입
-                .nickname(dto.getNickname())
                 .email(dto.getEmail())
+                .nickname(dto.getNickname())
+                .locked(false)
+                .enabled(false)
+                .isSocial(false)
                 .build();
-
-        return userRepository.save(entity).getId();
+        
+        user.addRole(userRole);
+        
+        return userRepository.save(user).getId();
     }
     
     // 자체 로그인
@@ -77,14 +83,19 @@ public class UserService extends DefaultOAuth2UserService implements UserDetails
     @Transactional(readOnly = true)
 	@Override
 	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-	    UserEntity entity = userRepository.findByUsernameAndIsLockAndIsSocial(username, false, false)
-	            							.orElseThrow(() -> new UsernameNotFoundException(username));
+	    UserEntity entity = userRepository.findByUsernameAndLockedAndIsSocial(username, false, false)
+	            				.orElseThrow(() -> new UsernameNotFoundException(username));
 
 	    return User.builder()
 	            .username(entity.getUsername())
 	            .password(entity.getPassword())
-	            .roles(entity.getRoleType().name())
-	            .accountLocked(entity.getIsLock())
+	            .authorities(
+	            	    entity.getRoles().stream()
+	            	        .map(role -> new SimpleGrantedAuthority(role.getName()))
+	            	        .toList()
+	            )
+	            .accountLocked(entity.getLocked())
+	            .disabled(!entity.getEnabled())
 	            .build();
 	}
     
@@ -100,7 +111,7 @@ public class UserService extends DefaultOAuth2UserService implements UserDetails
         }
 
         // 조회
-        UserEntity entity = userRepository.findByUsernameAndIsLockAndIsSocial(dto.getUsername(), false, false)
+        UserEntity entity = userRepository.findByUsernameAndLockedAndIsSocial(dto.getUsername(), false, false)
                 							.orElseThrow(() -> new UsernameNotFoundException(dto.getUsername()));
 
         // 회원 정보 수정
@@ -119,7 +130,7 @@ public class UserService extends DefaultOAuth2UserService implements UserDetails
         String sessionRole = context.getAuthentication().getAuthorities().iterator().next().getAuthority();
 
         boolean isOwner = sessionUsername.equals(dto.getUsername());
-        boolean isAdmin = sessionRole.equals("ROLE_"+UserRoleType.ADMIN.name());
+        boolean isAdmin = sessionRole.equals("ROLE_"+UserRoleType.ROLE_ADMIN.name());
 
         if (!isOwner && !isAdmin) {
             throw new AccessDeniedException("본인 혹은 관리자만 삭제할 수 있습니다.");
@@ -142,11 +153,11 @@ public class UserService extends DefaultOAuth2UserService implements UserDetails
         
         // 데이터
         Map<String, Object> attributes;
-        List<GrantedAuthority> authorities;
         String username;
-        String role = UserRoleType.USER.name();
+        //String role = UserRoleType.ROLE_USER.name();
         String email;
         String nickname;
+        String providerId;
 
         // provider 제공자별 데이터 획득 -> 네이버,구글 프로바이더에 따라 다름 -> 프로바이더가 추가될 때마다 소스코드를 수정해야하므로 추후에 개선 필요
         String registrationId = userRequest.getClientRegistration().getRegistrationId().toUpperCase();
@@ -157,46 +168,56 @@ public class UserService extends DefaultOAuth2UserService implements UserDetails
             nickname = attributes.get("nickname") != null
                     ? attributes.get("nickname").toString()
                     : "naver_user";
+            providerId = attributes.get("id").toString();
         } else if (registrationId.equals(SocialProviderType.GOOGLE.name())) {
             attributes = (Map<String, Object>) oAuth2User.getAttributes();
             username = registrationId + "_" + attributes.get("sub");
             email = attributes.get("email").toString();
             nickname = attributes.get("name").toString();
+            providerId = attributes.get("sub").toString();
         } else {
             throw new OAuth2AuthenticationException("지원하지 않는 소셜 로그인입니다.");
         }
 
         // 데이터베이스 조회 -> 존재하면 업데이트, 없으면 신규 가입
-        Optional<UserEntity> entity = userRepository.findByUsernameAndIsSocial(username, true);
-        if (entity.isPresent()) {
-            // role 조회
-            role = entity.get().getRoleType().name();
-
+        Optional<UserEntity> optionalUser = userRepository.findByUsernameAndIsSocial(username, true);
+        UserEntity user;
+        if (optionalUser.isPresent()) {
+            // 기존 유저 조회
+        	user = optionalUser.get();
             // 기존 유저 업데이트
             UserRequestDTO dto = new UserRequestDTO();
             dto.setNickname(nickname);
             dto.setEmail(email);
-            entity.get().updateUser(dto);
-
-            userRepository.save(entity.get());
+            user.updateUser(dto);
         } else {
+            // 기본 ROLE_USER 조회
+            RoleEntity userRole = roleRepository.findByName("ROLE_USER")
+                    .orElseThrow(() -> new IllegalArgumentException("기본 권한이 존재하지 않습니다."));
             // 신규 유저 추가
-            UserEntity newUserEntity = UserEntity.builder()
+            user = UserEntity.builder()
                     .username(username)
-                    .password("")
-                    .isLock(false)
-                    .isSocial(true)
-                    .socialProviderType(SocialProviderType.valueOf(registrationId))
-                    .roleType(UserRoleType.USER)
                     .nickname(nickname)
                     .email(email)
+                    .password("")
+                    .locked(false)
+                    .enabled(true)
+                    .isSocial(true)
+                    .socialProviderType(SocialProviderType.valueOf(registrationId))
+                    .providerId(providerId)
                     .build();
             
-            userRepository.save(newUserEntity);
+            user.addRole(userRole);
         }
 
-        authorities = List.of(new SimpleGrantedAuthority(role));
-
+        // 저장
+        //userRepository.save(user);
+        
+        List<GrantedAuthority> authorities =
+                user.getRoles().stream()
+                        .map(r -> new SimpleGrantedAuthority(r.getName()))
+                        .collect(Collectors.toList());
+        
         return new CustomOAuth2User(attributes, authorities, username);
     }
     
@@ -215,7 +236,7 @@ public class UserService extends DefaultOAuth2UserService implements UserDetails
         String username = authentication.getName();
         
         // 유저 존재 여부 확인
-        UserEntity entity = userRepository.findByUsernameAndIsLock(username, false)
+        UserEntity entity = userRepository.findByUsernameAndLocked(username, false)
                 .orElseThrow(() -> new UsernameNotFoundException("해당 유저를 찾을 수 없습니다: " + username));
 
         return new UserResponseDTO(username, entity.getIsSocial(), entity.getNickname(), entity.getEmail());

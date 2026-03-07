@@ -75,7 +75,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(List.of("http://localhost:5173"));
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
         configuration.setExposedHeaders(List.of("Authorization", "Set-Cookie"));
@@ -89,9 +89,9 @@ public class SecurityConfig {
     // 권한 계층
     @Bean
     public RoleHierarchy roleHierarchy() {
-        return RoleHierarchyImpl.withRolePrefix("ROLE_")
-                				.role(UserRoleType.ADMIN.name())
-                				.implies(UserRoleType.USER.name())
+        return RoleHierarchyImpl.withRolePrefix("")
+                				.role(UserRoleType.ROLE_ADMIN.name())
+                				.implies(UserRoleType.ROLE_USER.name())
                 				.build();
     }
     
@@ -119,9 +119,9 @@ public class SecurityConfig {
         http.authorizeHttpRequests(auth -> auth
                 .requestMatchers("/jwt/exchange", "/jwt/refresh").permitAll()
                 .requestMatchers(HttpMethod.POST, "/user/exist", "/user").permitAll()
-                .requestMatchers(HttpMethod.GET, "/user").hasRole(UserRoleType.USER.name())
-                .requestMatchers(HttpMethod.PUT, "/user").hasRole(UserRoleType.USER.name())
-                .requestMatchers(HttpMethod.DELETE, "/user").hasRole(UserRoleType.USER.name())
+                .requestMatchers(HttpMethod.GET, "/user").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/user").hasRole("USER")
+                .requestMatchers(HttpMethod.DELETE, "/user").hasRole("USER")
                 .anyRequest().authenticated()
         );
 
