@@ -1,6 +1,7 @@
 package com.example.authapp.api;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.http.MediaType;
@@ -44,9 +45,16 @@ public class UserController {
         Map<String, Long> responseBody = Collections.singletonMap("userEntityId", id);
         return ResponseEntity.status(201).body(responseBody);
     }
+    
+    // 모든 유저 조회 (관리자용)
+    @GetMapping(value = "/users", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<List<UserResponseDTO>> getAllUsersApi() {
+        List<UserResponseDTO> users = userService.getAllUsers();
+        return ResponseEntity.ok(users);
+    }
 
     // 유저 정보
-    @GetMapping(value = "/user", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/user", produces = MediaType.APPLICATION_JSON_VALUE)
     public UserResponseDTO userMeApi() {
         return userService.readUser();
     }

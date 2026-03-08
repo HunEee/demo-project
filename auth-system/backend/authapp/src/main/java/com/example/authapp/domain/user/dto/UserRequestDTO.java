@@ -1,5 +1,7 @@
 package com.example.authapp.domain.user.dto;
 
+import com.example.authapp.domain.user.entity.SocialProviderType;
+
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -25,5 +27,15 @@ public class UserRequestDTO {
     @NotBlank(groups = {addGroup.class, updateGroup.class})
     private String nickname;
 
+    
+    // 회원가입시 프로필 이미지
+    private String profileImage;
+    // 소셜 로그인 여부
+    private Boolean isSocial;
+    // 소셜 타입
+    private SocialProviderType socialProviderType;
+    // 소셜 provider id
+    private String providerId;
+    
     
 }

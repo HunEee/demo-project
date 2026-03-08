@@ -44,8 +44,11 @@ public class RefreshTokenLogoutHandler implements LogoutHandler {
             }
 
             // Refresh 토큰 삭제
-            jwtService.removeRefresh(refreshToken);
+            //jwtService.removeRefresh(refreshToken);
 
+            // Refresh 토큰 만료
+            jwtService.revokeRefresh(refreshToken);
+            
         } catch (IOException e) {
             throw new RuntimeException("Failed to read refresh token", e);
         }

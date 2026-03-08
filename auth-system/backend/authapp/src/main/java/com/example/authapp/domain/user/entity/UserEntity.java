@@ -62,7 +62,7 @@ public class UserEntity {
 	 * 
 	 * @Column(name = "role_type", nullable = false) private UserRoleType roleType;
 	 */
-
+    @Builder.Default
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "user_role",

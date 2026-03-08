@@ -1,5 +1,8 @@
 package com.example.authapp.domain.jwt.service;
 
+import java.time.LocalDateTime;
+import java.util.UUID;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -58,11 +61,17 @@ public class JwtService {
         // 토큰 생성
         String newAccessToken = JWTUtil.createJWT(username, role, true);
         String newRefreshToken = JWTUtil.createJWT(username, role, false);
+        
+        // JWT에서 jti 추출
+        String newJti = JWTUtil.getJti(newRefreshToken);
 
         // 기존 Refresh 토큰 DB 삭제 후 신규 추가
         RefreshEntity newRefreshEntity = RefreshEntity.builder()
                 .username(username)
                 .refresh(newRefreshToken)
+                .jti(newJti)
+                .expiresAt(LocalDateTime.now().plusDays(7))
+                .revoked(false)
                 .build();
 
         removeRefresh(refreshToken);
@@ -86,17 +95,24 @@ public class JwtService {
 
         String refreshToken = dto.getRefreshToken();
 
-        // Refresh 토큰 검증
-        Boolean isValid = JWTUtil.isValid(refreshToken, false);
-        if (!isValid) {
-            throw new RuntimeException("유효하지 않은 refreshToken입니다.");
-        }
+//        // Refresh 토큰 검증
+//        Boolean isValid = JWTUtil.isValid(refreshToken, false);
+//        if (!isValid) {
+//            throw new RuntimeException("유효하지 않은 refreshToken입니다.");
+//        }
+//
+//        // RefreshEntity 존재 확인 (화이트리스트)
+//        if (!existsRefresh(refreshToken)) {
+//            throw new RuntimeException("유효하지 않은 refreshToken입니다.");
+//        }
 
-        // RefreshEntity 존재 확인 (화이트리스트)
-        if (!existsRefresh(refreshToken)) {
-            throw new RuntimeException("유효하지 않은 refreshToken입니다.");
+        RefreshEntity oldEntity = refreshRepository.findByRefresh(refreshToken)
+                					.orElseThrow(() -> new RuntimeException("유효하지 않은 refreshToken입니다."));
+        
+        if (oldEntity.isRevoked()) {
+            throw new RuntimeException("만료된 refreshToken입니다.");
         }
-
+     
         // 정보 추출
         String username = JWTUtil.getUsername(refreshToken);
         String role = JWTUtil.getRole(refreshToken);
@@ -105,14 +121,26 @@ public class JwtService {
         String newAccessToken = JWTUtil.createJWT(username, role, true);
         String newRefreshToken = JWTUtil.createJWT(username, role, false);
 
+        String newJti = JWTUtil.getJti(newRefreshToken);
+        
+        // 기존 토큰 revoke
+        oldEntity.revoke();
+        // 기존 토큰 로테이션 처리 
+        oldEntity.setReplacedByToken(newRefreshToken);
+        
         // 기존 Refresh 토큰 DB 삭제 후 신규 추가
-        RefreshEntity newRefreshEntity = RefreshEntity.builder()
+        RefreshEntity newEntity = RefreshEntity.builder()
                 .username(username)
                 .refresh(newRefreshToken)
+                .jti(newJti)
+                .expiresAt(LocalDateTime.now().plusDays(7))
+                .ipAddress(oldEntity.getIpAddress())
+                .userAgent(oldEntity.getUserAgent())
+                .device(oldEntity.getDevice())
+                .revoked(false)
                 .build();
 
-        removeRefresh(refreshToken);
-        refreshRepository.save(newRefreshEntity);
+        refreshRepository.save(newEntity);
 
         return new JWTResponseDTO(newAccessToken, newRefreshToken);
     }
@@ -120,12 +148,17 @@ public class JwtService {
     
     // JWT Refresh 토큰 발급 후 저장 메소드
     @Transactional
-    public void addRefresh(String username, String refreshToken) {
+    public void addRefresh(String username,String refreshToken,String ip,String userAgent,String device) {
         RefreshEntity entity = RefreshEntity.builder()
-								                .username(username)
-								                .refresh(refreshToken)
-								                .build();
-
+                .username(username)
+                .refresh(refreshToken)
+                .jti(UUID.randomUUID().toString())
+                .expiresAt(LocalDateTime.now().plusDays(7))
+                .ipAddress(ip)
+                .userAgent(userAgent)
+                .device(device)
+                .revoked(false)
+                .build();
         refreshRepository.save(entity);
     }
     
@@ -145,5 +178,16 @@ public class JwtService {
         refreshRepository.deleteByUsername(username);
     }
     
+    // 리프레시 토큰 만료 : revoked -> true 처리
+    @Transactional
+    public void revokeRefresh(String refreshToken) {
+        RefreshEntity entity = refreshRepository
+                .findByRefresh(refreshToken)
+                .orElseThrow(() -> new RuntimeException("Refresh token not found"));
+
+        entity.revoke();
     
+    }
+    
+
 }

@@ -33,10 +33,16 @@ public class SocialSuccessHandler implements AuthenticationSuccessHandler {
         String role = authentication.getAuthorities().iterator().next().getAuthority();
 
         // JWT(Refresh) 발급
-        String refreshToken = JWTUtil.createJWT(username, "ROLE_" + role, false);
+        String refreshToken = JWTUtil.createJWT(username, role, false);
 
+        // 클라이언트 정보 추출
+        String ip = request.getRemoteAddr();
+        String userAgent = request.getHeader("User-Agent");
+        String device = parseDevice(userAgent);
+
+        
         // 발급한 Refresh DB 테이블 저장 (Refresh whitelist)
-        jwtService.addRefresh(username, refreshToken);
+        jwtService.addRefresh(username, refreshToken, ip, userAgent, device);
 
         // 응답
         Cookie refreshCookie = new Cookie("refreshToken", refreshToken);
@@ -49,4 +55,12 @@ public class SocialSuccessHandler implements AuthenticationSuccessHandler {
         response.sendRedirect("http://localhost:5173/cookie");
     }
 
+    private String parseDevice(String userAgent) {
+        if (userAgent == null) return "Unknown";
+        if (userAgent.contains("Mobile")) return "Mobile";
+        if (userAgent.contains("Windows")) return "Windows";
+        if (userAgent.contains("Mac")) return "Mac";
+        if (userAgent.contains("Linux")) return "Linux";
+        return "Other";
+    }
 }

@@ -118,15 +118,20 @@ public class SecurityConfig {
         // 인가
         http.authorizeHttpRequests(auth -> auth
                 .requestMatchers("/jwt/exchange", "/jwt/refresh").permitAll()
-                .requestMatchers(HttpMethod.POST, "/user/exist", "/user").permitAll()
-                .requestMatchers(HttpMethod.GET, "/user").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/user/exist", "/user", "/login").permitAll()
+                .requestMatchers(HttpMethod.GET, "/user","/users").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PUT, "/user").hasRole("USER")
                 .requestMatchers(HttpMethod.DELETE, "/user").hasRole("USER")
                 .anyRequest().authenticated()
         );
 
         // 기본 로그아웃 필터 + 커스텀 Refresh 토큰 삭제 핸들러 추가
-        http.logout(logout -> logout.addLogoutHandler(new RefreshTokenLogoutHandler(jwtService)));
+        http.logout(logout -> logout
+        				.addLogoutHandler(new RefreshTokenLogoutHandler(jwtService))        
+        				.logoutSuccessHandler((request, response, authentication) -> {
+        					response.setStatus(HttpServletResponse.SC_OK);
+    					})
+        );
         
         // 예외 처리
         http.exceptionHandling(

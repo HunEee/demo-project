@@ -36,8 +36,14 @@ public class LoginSuccessHandler implements AuthenticationSuccessHandler {
         String accessToken = JWTUtil.createJWT(username, role, true);
         String refreshToken = JWTUtil.createJWT(username, role, false);
 
+        // 클라이언트 정보 추출
+        String ip = request.getRemoteAddr();
+        String userAgent = request.getHeader("User-Agent");
+        String device = parseDevice(userAgent);
+        
         // 발급한 Refresh DB 테이블 저장 (Refresh whitelist)
-        jwtService.addRefresh(username, refreshToken);
+        //jwtService.addRefresh(username, refreshToken);
+        jwtService.addRefresh(username, refreshToken, ip, userAgent, device);
 
         // 응답
         response.setContentType("application/json");
@@ -47,5 +53,16 @@ public class LoginSuccessHandler implements AuthenticationSuccessHandler {
         response.getWriter().write(json);
         response.getWriter().flush();
     }
+    
+    // device 파싱 (간단 버전)
+    private String parseDevice(String userAgent) {
+        if (userAgent == null) return "Unknown";
+        if (userAgent.contains("Mobile")) return "Mobile";
+        if (userAgent.contains("Windows")) return "Windows";
+        if (userAgent.contains("Mac")) return "Mac";
+        if (userAgent.contains("Linux")) return "Linux";
+        return "Other";
+    }
+    
 
 }

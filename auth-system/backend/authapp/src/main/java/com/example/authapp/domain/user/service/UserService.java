@@ -60,6 +60,10 @@ public class UserService extends DefaultOAuth2UserService implements UserDetails
             throw new IllegalArgumentException("이미 유저가 존재합니다.");
         }
         
+        if (userRepository.existsByEmail(dto.getEmail())) {
+            throw new IllegalArgumentException("이미 이메일이 존재합니다.");
+        }
+        
         RoleEntity userRole = roleRepository.findByName("ROLE_USER")
                 .orElseThrow(() -> new IllegalArgumentException("기본 권한이 존재하지 않습니다."));
         
@@ -68,15 +72,18 @@ public class UserService extends DefaultOAuth2UserService implements UserDetails
                 .password(passwordEncoder.encode(dto.getPassword()))
                 .email(dto.getEmail())
                 .nickname(dto.getNickname())
+                .profileImage(dto.getProfileImage())
                 .locked(false)
-                .enabled(false)
+                .enabled(true)
                 .isSocial(false)
+                .socialProviderType(null)
+                .providerId(null)
                 .build();
         
         user.addRole(userRole);
         
         return userRepository.save(user).getId();
-    }
+    }    
     
     // 자체 로그인
     // DB에 저장된 username/password를 가져온다.
@@ -99,7 +106,6 @@ public class UserService extends DefaultOAuth2UserService implements UserDetails
 	            .build();
 	}
     
-    
     // 자체 로그인 회원 정보 수정
     @Transactional
     public Long updateUser(UserRequestDTO dto) throws AccessDeniedException {
@@ -109,7 +115,12 @@ public class UserService extends DefaultOAuth2UserService implements UserDetails
         if (!sessionUsername.equals(dto.getUsername())) {
             throw new AccessDeniedException("본인 계정만 수정 가능");
         }
-
+        
+        // 중복 이메일 검증
+        if (userRepository.existsByEmail(dto.getEmail())) {
+            throw new IllegalArgumentException("이미 이메일이 존재합니다.");
+        }
+        
         // 조회
         UserEntity entity = userRepository.findByUsernameAndLockedAndIsSocial(dto.getUsername(), false, false)
                 							.orElseThrow(() -> new UsernameNotFoundException(dto.getUsername()));
@@ -242,5 +253,18 @@ public class UserService extends DefaultOAuth2UserService implements UserDetails
         return new UserResponseDTO(username, entity.getIsSocial(), entity.getNickname(), entity.getEmail());
     }
     
+    // 관리자용 전체 유저 조회 
+    @Transactional(readOnly = true)
+    public List<UserResponseDTO> getAllUsers() {
+    	return userRepository.findAll()
+    	        .stream()
+    	        .map(user -> new UserResponseDTO(
+    	                user.getUsername(),
+    	                user.getIsSocial(),
+    	                user.getNickname(),
+    	                user.getEmail()
+    	        ))
+    	        .toList();
+    }
     
 }

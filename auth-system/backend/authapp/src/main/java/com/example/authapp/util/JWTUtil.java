@@ -8,9 +8,14 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.UUID;
 
 public class JWTUtil {
 
+	// 토큰 타입 상수
+    private static final String ACCESS = "access";
+    private static final String REFRESH = "refresh";
+	
     private static final SecretKey secretKey;
     private static final Long accessTokenExpiresIn;
     private static final Long refreshTokenExpiresIn;
@@ -24,12 +29,17 @@ public class JWTUtil {
 
     // JWT 클레임 username 파싱
     public static String getUsername(String token) {
-        return Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token).getPayload().get("sub", String.class);
+        return Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token).getPayload().getSubject();
     }
 
     // JWT 클레임 role 파싱
     public static String getRole(String token) {
         return Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token).getPayload().get("role", String.class);
+    }
+    
+    // JWT_ID 파싱
+    public static String getJti(String token) {
+        return Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token).getPayload().getId();
     }
 
     // JWT 유효 여부 (위조, 시간, Access/Refresh 여부)
@@ -40,12 +50,10 @@ public class JWTUtil {
                     .build()
                     .parseSignedClaims(token)
                     .getPayload();
-
             String type = claims.get("type", String.class);
             if (type == null) return false;
-            if (isAccess && !type.equals("access")) return false;
-            if (!isAccess && !type.equals("refresh")) return false;
-
+            if (isAccess && !ACCESS.equals(type)) return false;
+            if (!isAccess && !REFRESH.equals(type)) return false;
             return true;
         } catch (JwtException | IllegalArgumentException e) {
             return false;
@@ -60,9 +68,10 @@ public class JWTUtil {
         String type = isAccess ? "access" : "refresh";
 
         return Jwts.builder()
-                .claim("sub", username)
+        		.subject(username)
                 .claim("role", role)
                 .claim("type", type)
+                .id(UUID.randomUUID().toString())
                 .issuedAt(new Date(now))
                 .expiration(new Date(now + expiry))
                 .signWith(secretKey)
