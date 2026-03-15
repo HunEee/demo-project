@@ -29,9 +29,14 @@ public class JwtController {
     }
 
     // Refresh 토큰으로 Access 토큰 재발급 (Rotate 포함)
-    @PostMapping(value = "/jwt/refresh", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public JWTResponseDTO jwtRefreshApi(@Validated @RequestBody RefreshRequestDTO dto){
-        return jwtService.refreshRotate(dto);
+//    @PostMapping(value = "/jwt/refresh", consumes = MediaType.APPLICATION_JSON_VALUE)
+//    public JWTResponseDTO jwtRefreshApi(@Validated @RequestBody RefreshRequestDTO dto){
+//        return jwtService.refreshRotate(dto);
+//    }
+    
+    @PostMapping("/jwt/refresh")
+    public JWTResponseDTO refresh(HttpServletRequest request, HttpServletResponse response) {
+        return jwtService.refreshRotate(request, response);
     }
 
 }

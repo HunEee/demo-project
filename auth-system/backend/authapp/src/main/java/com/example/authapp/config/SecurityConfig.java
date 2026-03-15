@@ -29,6 +29,7 @@ import com.example.authapp.domain.user.entity.UserRoleType;
 import com.example.authapp.filter.JWTFilter;
 import com.example.authapp.filter.LoginFilter;
 import com.example.authapp.handler.RefreshTokenLogoutHandler;
+import com.example.authapp.util.CookieService;
 
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -44,17 +45,21 @@ public class SecurityConfig {
     private final AuthenticationSuccessHandler socialSuccessHandler;
     // 로그아웃 핸들러에 주입용
     private final JwtService jwtService;
+    // 쿠키 주입
+    private final CookieService cookieService;
     
     public SecurityConfig(
             AuthenticationConfiguration authenticationConfiguration,
             @Qualifier("LoginSuccessHandler") AuthenticationSuccessHandler loginSuccessHandler,
             @Qualifier("SocialSuccessHandler") AuthenticationSuccessHandler socialSuccessHandler,
-            JwtService jwtService
+            JwtService jwtService,
+            CookieService cookieService
     ) {
         this.authenticationConfiguration = authenticationConfiguration;
         this.loginSuccessHandler = loginSuccessHandler;
         this.socialSuccessHandler = socialSuccessHandler;
         this.jwtService = jwtService;
+        this.cookieService = cookieService;
     }
     
     
@@ -127,7 +132,7 @@ public class SecurityConfig {
 
         // 기본 로그아웃 필터 + 커스텀 Refresh 토큰 삭제 핸들러 추가
         http.logout(logout -> logout
-        				.addLogoutHandler(new RefreshTokenLogoutHandler(jwtService))        
+        				.addLogoutHandler(new RefreshTokenLogoutHandler(jwtService, cookieService))        
         				.logoutSuccessHandler((request, response, authentication) -> {
         					response.setStatus(HttpServletResponse.SC_OK);
     					})

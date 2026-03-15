@@ -10,20 +10,20 @@ import com.example.authapp.domain.jwt.dto.JWTResponseDTO;
 import com.example.authapp.domain.jwt.dto.RefreshRequestDTO;
 import com.example.authapp.domain.jwt.entity.RefreshEntity;
 import com.example.authapp.domain.jwt.repository.RefreshRepository;
+import com.example.authapp.util.CookieService;
 import com.example.authapp.util.JWTUtil;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 
 @Service
+@RequiredArgsConstructor
 public class JwtService {
 
     private final RefreshRepository refreshRepository;
-
-    public JwtService(RefreshRepository refreshRepository) {
-        this.refreshRepository = refreshRepository;
-    }
+    private final CookieService cookieService;
 
     // 소셜 로그인 성공 후 쿠키(Refresh) -> 헤더 방식으로 응답
     @Transactional
@@ -91,9 +91,9 @@ public class JwtService {
 
     // Refresh 토큰으로 Access 토큰 재발급 로직 (Rotate 포함)
     @Transactional
-    public JWTResponseDTO refreshRotate(RefreshRequestDTO dto) {
+    public JWTResponseDTO refreshRotate(HttpServletRequest request, HttpServletResponse response) {
 
-        String refreshToken = dto.getRefreshToken();
+//        String refreshToken = dto.getRefreshToken();
 
 //        // Refresh 토큰 검증
 //        Boolean isValid = JWTUtil.isValid(refreshToken, false);
@@ -105,6 +105,22 @@ public class JwtService {
 //        if (!existsRefresh(refreshToken)) {
 //            throw new RuntimeException("유효하지 않은 refreshToken입니다.");
 //        }
+        Cookie[] cookies = request.getCookies();
+        if (cookies == null) {
+            throw new RuntimeException("refresh cookie 없음");
+        }
+
+        String refreshToken = null;
+        
+        for (Cookie cookie : cookies) {
+            if ("refreshToken".equals(cookie.getName())) {
+                refreshToken = cookie.getValue();
+            }
+        }
+
+        if (refreshToken == null) {
+            throw new RuntimeException("refresh cookie 없음");
+        }
 
         RefreshEntity oldEntity = refreshRepository.findByRefresh(refreshToken)
                 					.orElseThrow(() -> new RuntimeException("유효하지 않은 refreshToken입니다."));
@@ -142,7 +158,11 @@ public class JwtService {
 
         refreshRepository.save(newEntity);
 
-        return new JWTResponseDTO(newAccessToken, newRefreshToken);
+        // 쿠키 교체
+        cookieService.addRefreshCookie(response, newRefreshToken);
+        
+        // 리프레시 토큰 바디로 안넘겨줌
+        return new JWTResponseDTO(newAccessToken, null);
     }
     
     
