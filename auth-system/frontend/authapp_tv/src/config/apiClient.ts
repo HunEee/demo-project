@@ -5,12 +5,12 @@ import toast from "react-hot-toast";
 
 // axios 전용 API 클라이언트 (공통 설정)
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL,
-  headers: {
-    "Content-Type": "application/json",
-  },
-  withCredentials: true,
-  timeout: 10000,
+    baseURL: import.meta.env.VITE_API_BASE_URL,
+     headers: {
+        "Content-Type": "application/json",
+    },
+    withCredentials: true,
+    timeout: 10000,
 });
 
 // =============================
@@ -18,11 +18,11 @@ const apiClient = axios.create({
 // =============================
 // 모든 요청 전에 실행됨 → 토큰 자동 추가
 apiClient.interceptors.request.use((config) => {
-  const accessToken = useAuth.getState().accessToken;
-  if (accessToken) {
-    config.headers.Authorization = `Bearer ${accessToken}`;
-  }
-  return config;
+    const accessToken = useAuth.getState().accessToken;
+    if (accessToken) {
+        config.headers.Authorization = `Bearer ${accessToken}`;
+    }
+    return config;
 });
 
 // =============================

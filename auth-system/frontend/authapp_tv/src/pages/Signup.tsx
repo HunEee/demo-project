@@ -13,64 +13,77 @@ import { registerUser } from "@/services/AuthService";
 
 
 function Signup() {
-  const [data, setData] = useState<RegisterData>({
-    name: "",
-    email: "",
-    password: "",
-  });
 
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState(null);
-
-  const navigate = useNavigate();
-
-  // input 값 변경 처리
-  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setData((value) => ({
-      ...value,
-      [event.target.name]: event.target.value,
-    }));
-  };
-
-  // 회원가입 제출 처리
-  const handleFormSubmit = async (event: FormEvent) => {
-    event.preventDefault();
-
-    // 유효성 검사
-    if (data.name.trim() === "") {
-      toast.error("이름을 입력해주세요.");
-      return;
-    }
-
-    if (data.email.trim() === "") {
-      toast.error("이메일을 입력해주세요.");
-      return;
-    }
-
-    if (data.password.trim() === "") {
-      toast.error("비밀번호를 입력해주세요.");
-      return;
-    }
-
-    try {
-      const result = await registerUser(data);
-      console.log(result);
-
-      toast.success("회원가입이 완료되었습니다.");
-
-      setData({
-        name: "",
+    const [data, setData] = useState({
+        nickname: "",
         email: "",
+        username: "",
         password: "",
-      });
+    });
 
-      // 로그인 페이지로 이동
-      navigate("/login");
-    } catch (error) {
-      console.log(error);
-      toast.error("회원가입 중 오류가 발생했습니다.");
-    }
-  };
+    const [loading, setLoading] = useState<boolean>(false);
+    const [error, setError] = useState(null);
+
+    const navigate = useNavigate();
+
+    // input 값 변경 처리
+    const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        setData((value) => ({
+            ...value,
+            [event.target.name]: event.target.value,
+        }));
+    };
+
+    // 회원가입 제출 처리
+    const handleFormSubmit = async (event: FormEvent) => {
+        event.preventDefault();
+
+        // 기존 쿠키 삭제
+        document.cookie.split(";").forEach((cookie) => {
+            const eqPos = cookie.indexOf("=");
+            const name = eqPos > -1 ? cookie.slice(0, eqPos) : cookie;
+            document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
+        });
+
+        // 유효성 검사
+        if (data.nickname.trim() === "") {
+            toast.error("닉네임을 입력해주세요.");
+            return;
+        }
+
+        if (data.email.trim() === "") {
+            toast.error("이메일을 입력해주세요.");
+            return;
+        }
+
+        if (data.username.trim() === "") {
+            toast.error("아이디를 입력해주세요.");
+            return;
+        }
+
+        if (data.password.trim() === "") {
+            toast.error("비밀번호를 입력해주세요.");
+            return;
+        }
+
+        try {
+            const result = await registerUser(data);
+            console.log(result);
+            toast.success("회원가입이 완료되었습니다.");
+            // 초기화
+            setData({
+                nickname: "",
+                email: "",
+                username: "",
+                password: "",
+            });
+            // 로그인 페이지 이동
+            navigate("/login");
+        } catch (error) {
+            console.log(error);
+            toast.error("회원가입 중 오류가 발생했습니다.");
+        }
+    };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background text-foreground px-4 py-10">
@@ -103,40 +116,56 @@ function Signup() {
 
             {/* 폼 */}
             <form onSubmit={handleFormSubmit} className="mt-8 space-y-6">
-              {/* 이름 */}
-              <div className="space-y-2">
-                <Label htmlFor="name">이름</Label>
+                {/* 이름 */}
+                <div className="space-y-2">
+                    <Label htmlFor="nickname">닉네임</Label>
+                    <div className="relative">
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                        <Input
+                        id="nickname"
+                        type="text"
+                        placeholder="닉네임 입력"
+                        className="pl-10"
+                        name="nickname"
+                        value={data.nickname}
+                        onChange={handleInputChange}
+                        />
+                    </div>
+                </div>
+
+                {/* 이메일 */}
+                <div className="space-y-2">
+                    <Label htmlFor="email">이메일</Label>
+                    <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                        <Input
+                        id="email"
+                        type="email"
+                        placeholder="you@example.com"
+                        className="pl-10"
+                        name="email"
+                        value={data.email}
+                        onChange={handleInputChange}
+                        />
+                    </div>
+                </div>
+
+            <div className="space-y-2">
+                <Label htmlFor="username">아이디</Label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <Input
-                    id="name"
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <Input
+                    id="username"
                     type="text"
-                    placeholder="홍길동"
+                    placeholder="아이디 입력"
                     className="pl-10"
-                    name="name"
-                    value={data.name}
+                    name="username"
+                    value={data.username}
                     onChange={handleInputChange}
-                  />
+                    />
                 </div>
-              </div>
-
-              {/* 이메일 */}
-              <div className="space-y-2">
-                <Label htmlFor="email">이메일</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="you@example.com"
-                    className="pl-10"
-                    name="email"
-                    value={data.email}
-                    onChange={handleInputChange}
-                  />
-                </div>
-              </div>
-
+            </div>
+            
               {/* 비밀번호 */}
               <div className="space-y-2">
                 <Label htmlFor="password">비밀번호</Label>
@@ -154,7 +183,7 @@ function Signup() {
                 </div>
               </div>
 
-              <Button className="w-full rounded-2xl text-lg">
+              <Button type="submit" className="w-full rounded-2xl text-lg">
                 회원가입
               </Button>
 

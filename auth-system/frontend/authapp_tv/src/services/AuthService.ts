@@ -1,4 +1,5 @@
 import apiClient from "@/config/apiClient";
+import authClient from "@/config/authClient";
 import type RegisterData from "@/models/RegisterData";
 import type LoginData from "@/models/LoginData";
 import type LoginResponseData from "@/models/LoginResponseData";
@@ -9,7 +10,7 @@ import type User from "@/models/User";
 // =============================
 export const registerUser = async (signupData: RegisterData) => {
   // 서버에 회원가입 데이터 전송
-  const response = await apiClient.post(`/user`, signupData);
+  const response = await authClient.post("/user", signupData);
   return response.data;
 };
 
@@ -18,7 +19,7 @@ export const registerUser = async (signupData: RegisterData) => {
 // =============================
 export const loginUser = async (loginData: LoginData) => {
   // 로그인 요청 → accessToken + user 정보 반환
-  const response = await apiClient.post<LoginResponseData>("/login",loginData);
+  const response = await authClient.post<LoginResponseData>("/login",loginData);
   return response.data;
 };
 

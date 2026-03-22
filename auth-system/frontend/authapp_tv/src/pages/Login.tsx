@@ -9,18 +9,24 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertTitle } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
-import type LoginData from "@/models/LoginData";
 import OAuth2Buttons from "@/components/OAuth2Buttons";
+import type LoginData from "@/models/LoginData";
+import { loginUser } from "@/services/AuthService";
+import useAuth from "@/auth/store";
+
 
 function Login() {
+
   const [loginData, setLoginData] = useState<LoginData>({
-    email: "",
+    username: "",
     password: "",
   });
 
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<any>(null);
+
   const navigate = useNavigate();
+  const login = useAuth((state) => state.login);
 
   // 입력값 변경 처리
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -35,8 +41,8 @@ function Login() {
     event.preventDefault();
 
     // 유효성 검사
-    if (loginData.email.trim() === "") {
-      toast.error("이메일을 입력해주세요.");
+    if (loginData.username.trim() === "") {
+      toast.error("아이디를 입력해주세요.");
       return;
     }
     if (loginData.password.trim() === "") {
@@ -46,10 +52,9 @@ function Login() {
 
     try {
       setLoading(true);
-
       // 실제 로그인 (zustand or API 연결)
       // const userInfo = await loginUser(loginData);
-
+      await login(loginData);
       toast.success("로그인 성공 🎉");
 
       // 로그인 성공 시 이동
@@ -57,9 +62,7 @@ function Login() {
 
     } catch (error: any) {
       console.error(error);
-
       toast.error("로그인 중 오류가 발생했습니다.");
-
       setError(error);
     } finally {
       setLoading(false);
@@ -95,7 +98,7 @@ function Login() {
               로그인하여 서비스를 이용하세요
             </motion.p>
 
-            {/* 🔹 에러 메시지 */}
+            {/* 에러 메시지 */}
             {error && (
               <div className="mt-6">
                 <Alert variant={"destructive"}>
@@ -109,20 +112,20 @@ function Login() {
               </div>
             )}
 
-            {/* 🔹 로그인 폼 */}
+            {/* 로그인 폼 */}
             <form onSubmit={handleFormSubmit} className="mt-8 space-y-6">
-              {/* 이메일 */}
+              {/* 아이디 */}
               <div className="space-y-2">
-                <Label htmlFor="email">이메일</Label>
+                <Label htmlFor="email">아이디</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                   <Input
-                    id="email"
-                    type="email"
-                    placeholder="you@example.com"
+                    id="username"
+                    type="username"
+                    placeholder="아이디 입력"
                     className="pl-10"
-                    name="email"
-                    value={loginData.email}
+                    name="username"
+                    value={loginData.username}
                     onChange={handleInputChange}
                   />
                 </div>
@@ -147,6 +150,7 @@ function Login() {
 
               {/* 로그인 버튼 */}
               <Button
+                type="submit"
                 disabled={loading}
                 className="w-full cursor-pointer rounded-2xl text-lg"
               >
@@ -167,7 +171,7 @@ function Login() {
                 <div className="flex-1 h-[1px] bg-border"></div>
               </div>
 
-              {/* OAuth 버튼 영역 (구글/깃허브 등) */}
+              {/* OAuth 버튼 영역 */}
               <OAuth2Buttons />
 
             </form>

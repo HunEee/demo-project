@@ -1,5 +1,6 @@
 export default interface RegisterData {
-  name: string;
+  nickname: string;
   email: string;
+  username: string;
   password: string;
 }
