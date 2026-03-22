@@ -1,10 +1,13 @@
 import { Button } from "./ui/button";
 import { NavLink, useNavigate } from "react-router";
-
+import useAuth from "@/auth/store";
 
 function Navbar() {
 
   const navigate = useNavigate();
+  const checkLogin = useAuth((state) => state.checkLogin);
+  const user = useAuth((state) => state.user);
+  const logout = useAuth((state) => state.logout);
 
   return (
     <nav className="py-5  dark:border-b border-gray-700 md:py-0 flex md:flex-row gap-4 md:gap-0 flex-col md:h-14 justify-around items-center    ">
@@ -17,10 +20,15 @@ function Navbar() {
       </div>
 
       <div className="flex gap-4 items-center">
-        (
+        {checkLogin() ? (
           <>
+            <NavLink to={"/dashboard/profile"}>{user?.username}</NavLink>
+
             <Button
-              onClick={() => {navigate("/");}}
+              onClick={() => {
+                logout();
+                navigate("/");
+              }}
               size={"sm"}
               className="cursor-pointer"
               variant={"outline"}
@@ -50,7 +58,7 @@ function Navbar() {
               </Button>
             </NavLink>
           </>
-        )
+        )}
       </div>
     </nav>
   );

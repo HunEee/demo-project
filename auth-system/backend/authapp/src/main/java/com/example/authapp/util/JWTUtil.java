@@ -23,7 +23,7 @@ public class JWTUtil {
     static  {
         String secretKeyString = "himynameiskimjihunsecuritykeyann";
         secretKey = new SecretKeySpec(secretKeyString.getBytes(StandardCharsets.UTF_8), Jwts.SIG.HS256.key().build().getAlgorithm());
-        accessTokenExpiresIn = 3600L * 1000; // 1시간
+        accessTokenExpiresIn = 3600L * 10; // 1시간
         refreshTokenExpiresIn = 604800L * 1000; // 7일
     }
 
@@ -43,21 +43,25 @@ public class JWTUtil {
     }
 
     // JWT 유효 여부 (위조, 시간, Access/Refresh 여부)
-    public static Boolean isValid(String token, Boolean isAccess) {
-        try {
-            Claims claims = Jwts.parser()
-                    .verifyWith(secretKey)
-                    .build()
-                    .parseSignedClaims(token)
-                    .getPayload();
-            String type = claims.get("type", String.class);
-            if (type == null) return false;
-            if (isAccess && !ACCESS.equals(type)) return false;
-            if (!isAccess && !REFRESH.equals(type)) return false;
-            return true;
-        } catch (JwtException | IllegalArgumentException e) {
-            return false;
+    public static Claims validate(String token, Boolean isAccess) {
+        Claims claims = Jwts.parser()
+                .verifyWith(secretKey)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+
+        String type = claims.get("type", String.class);
+
+        if (type == null) {
+            throw new JwtException("Token type 누락");
         }
+        if (isAccess && !ACCESS.equals(type)) {
+            throw new JwtException("유효하지 않은 access token");
+        }
+        if (!isAccess && !REFRESH.equals(type)) {
+            throw new JwtException("유효하지 않은 refresh token");
+        }
+        return claims;
     }
 
     // JWT(Access/Refresh) 생성

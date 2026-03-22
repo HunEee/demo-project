@@ -13,6 +13,9 @@ import com.example.authapp.domain.jwt.repository.RefreshRepository;
 import com.example.authapp.util.CookieService;
 import com.example.authapp.util.JWTUtil;
 
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -48,10 +51,13 @@ public class JwtService {
             throw new RuntimeException("refreshToken 쿠키가 없습니다.");
         }
 
-        // Refresh 토큰 검증
-        Boolean isValid = JWTUtil.isValid(refreshToken, false);
-        if (!isValid) {
-            throw new RuntimeException("유효하지 않은 refreshToken입니다.");
+        // Refresh 토큰 검증 -> false 면 refresh 토큰 검증
+        try {
+        	JWTUtil.validate(refreshToken, false);
+        } catch (ExpiredJwtException e) {
+            throw new RuntimeException("refreshToken 만료됨");
+        } catch (JwtException e) {
+            throw new RuntimeException("유효하지 않은 refreshToken");
         }
 
         // 정보 추출

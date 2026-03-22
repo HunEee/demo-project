@@ -124,6 +124,7 @@ public class SecurityConfig {
         http.authorizeHttpRequests(auth -> auth
                 .requestMatchers("/jwt/exchange", "/jwt/refresh").permitAll()
                 .requestMatchers(HttpMethod.POST, "/user/exist", "/user", "/login").permitAll()
+                .requestMatchers(HttpMethod.GET, "/user").hasRole("USER")
                 .requestMatchers(HttpMethod.GET, "/user","/users").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PUT, "/user").hasRole("USER")
                 .requestMatchers(HttpMethod.DELETE, "/user").hasRole("USER")

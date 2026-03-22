@@ -17,7 +17,7 @@ public class CookieService {
                 .secure(false) // 배포시 true
                 .path("/")
                 .maxAge(60 * 60 * 24 * 7) // 7일
-                .sameSite("Lax")
+                .sameSite("None") // cross-origin 요청에서 쿠키 전송
                 .build();
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
@@ -28,7 +28,7 @@ public class CookieService {
                 .secure(false)
                 .path("/")
                 .maxAge(0)
-                .sameSite("Lax")
+                .sameSite("None")
                 .build();
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
