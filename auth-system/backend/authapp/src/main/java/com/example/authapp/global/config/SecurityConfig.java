@@ -1,4 +1,4 @@
-package com.example.authapp.config;
+package com.example.authapp.global.config;
 
 import java.util.List;
 

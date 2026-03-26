@@ -79,9 +79,10 @@ function Signup() {
             });
             // 로그인 페이지 이동
             navigate("/login");
-        } catch (error) {
+        } catch (error: any) {
             console.log(error);
-            toast.error("회원가입 중 오류가 발생했습니다.");
+            const message = error.response?.data?.message || "회원가입 중 오류가 발생했습니다.";
+            toast.error(message);
         }
     };
 

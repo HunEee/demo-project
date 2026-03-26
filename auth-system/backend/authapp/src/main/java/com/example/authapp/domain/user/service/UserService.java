@@ -32,6 +32,7 @@ import com.example.authapp.domain.user.entity.RoleEntity;
 import com.example.authapp.domain.user.entity.SocialProviderType;
 import com.example.authapp.domain.user.entity.UserEntity;
 import com.example.authapp.domain.user.entity.UserRoleType;
+import com.example.authapp.domain.user.exception.UserException;
 import com.example.authapp.domain.user.repository.RoleRepository;
 import com.example.authapp.domain.user.repository.UserRepository;
 
@@ -56,16 +57,16 @@ public class UserService extends DefaultOAuth2UserService implements UserDetails
     @Transactional
     public Long addUser(UserRequestDTO dto) {
 
-        if (userRepository.existsByUsername(dto.getUsername())) {
-            throw new IllegalArgumentException("이미 유저가 존재합니다.");
-        }
-        
-        if (userRepository.existsByEmail(dto.getEmail())) {
-            throw new IllegalArgumentException("이미 이메일이 존재합니다.");
-        }
-        
-        RoleEntity userRole = roleRepository.findByName("ROLE_USER")
-                .orElseThrow(() -> new IllegalArgumentException("기본 권한이 존재하지 않습니다."));
+    	if (userRepository.existsByUsername(dto.getUsername())) {
+    	    throw UserException.duplicateUsername();
+    	}
+
+    	if (userRepository.existsByEmail(dto.getEmail())) {
+    	    throw UserException.duplicateEmail();
+    	}
+
+    	RoleEntity userRole = roleRepository.findByName("ROLE_USER")
+    	        .orElseThrow(UserException::roleNotFound);
         
         UserEntity user = UserEntity.builder()
                 .username(dto.getUsername())
@@ -91,7 +92,7 @@ public class UserService extends DefaultOAuth2UserService implements UserDetails
 	@Override
 	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
 	    UserEntity entity = userRepository.findByUsernameAndLockedAndIsSocial(username, false, false)
-	            				.orElseThrow(() -> new UsernameNotFoundException(username));
+	    		.orElseThrow(() -> new UsernameNotFoundException("유저가 존재하지 않습니다."));
 
 	    return User.builder()
 	            .username(entity.getUsername())

@@ -62,9 +62,10 @@ function Login() {
 
     } catch (error: any) {
       console.error(error);
-      toast.error("로그인 중 오류가 발생했습니다.");
+      const message = error.response?.data?.message || "아이디 또는 비밀번호가 틀렸습니다.";
+      toast.error(message);
       setError(error);
-    } finally {
+    }finally {
       setLoading(false);
     }
   };
