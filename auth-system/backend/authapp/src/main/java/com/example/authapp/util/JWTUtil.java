@@ -26,6 +26,16 @@ public class JWTUtil {
         accessTokenExpiresIn = 3600L * 10; // 1시간
         refreshTokenExpiresIn = 604800L * 1000; // 7일
     }
+    
+    // 토큰 만료시간 조회 메서드(초 단위로 변환)
+    public static long getAccessTokenExpiresIn() {
+        return accessTokenExpiresIn / 1000; 
+    }
+
+    public static long getRefreshTokenExpiresIn() {
+        return refreshTokenExpiresIn / 1000;
+    }
+    
 
     // JWT 클레임 username 파싱
     public static String getUsername(String token) {

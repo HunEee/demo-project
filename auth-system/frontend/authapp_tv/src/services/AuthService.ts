@@ -4,7 +4,7 @@ import type RegisterData from "@/models/RegisterData";
 import type LoginData from "@/models/LoginData";
 import type LoginResponseData from "@/models/LoginResponseData";
 import type User from "@/models/User";
-import { refreshClient } from "@/config/refreshClient";
+
 
 // =============================
 // 회원가입
@@ -53,7 +53,7 @@ export const getCurrentUserByEmail = async (emailId: string | undefined) => {
 // =============================
 export const refreshToken = async () => {
   // accessToken 만료 시 새로운 토큰 발급 요청
-  const response = await refreshClient.post<LoginResponseData>(`/jwt/refresh`);
+  const response = await authClient.post<LoginResponseData>(`/jwt/refresh`);
   return response.data;
 };
 

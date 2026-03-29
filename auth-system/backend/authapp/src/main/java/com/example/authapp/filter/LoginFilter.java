@@ -14,6 +14,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.authentication.AbstractAuthenticationProcessingFilter;
+import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
@@ -35,11 +36,14 @@ public class LoginFilter extends AbstractAuthenticationProcessingFilter {
     private String passwordParameter = SPRING_SECURITY_FORM_PASSWORD_KEY;
 
     private final AuthenticationSuccessHandler authenticationSuccessHandler;
+    private final AuthenticationFailureHandler authenticationFailureHandler;
 
-    
-    public LoginFilter(AuthenticationManager authenticationManager, AuthenticationSuccessHandler authenticationSuccessHandler) {
+    public LoginFilter(AuthenticationManager authenticationManager,
+                       AuthenticationSuccessHandler successHandler,
+                       AuthenticationFailureHandler failureHandler) {
         super(DEFAULT_ANT_PATH_REQUEST_MATCHER, authenticationManager);
-        this.authenticationSuccessHandler = authenticationSuccessHandler;
+        this.authenticationSuccessHandler = successHandler;
+        this.authenticationFailureHandler = failureHandler;
     }
     
 
@@ -77,9 +81,16 @@ public class LoginFilter extends AbstractAuthenticationProcessingFilter {
     
     // 로그인 성공 핸들러 등록 -> 등록시 SecurityConfig도 수정을 해줘야함
     @Override
-    protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response, 
-    										FilterChain chain, Authentication authResult) throws IOException, ServletException {
+    protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response, FilterChain chain, Authentication authResult) 
+    		throws IOException, ServletException {
         authenticationSuccessHandler.onAuthenticationSuccess(request, response, authResult);
+    }
+    
+    // 로그인 실패 핸들러
+    @Override
+    protected void unsuccessfulAuthentication(HttpServletRequest request, HttpServletResponse response, AuthenticationException failed)
+            throws IOException, ServletException {
+        authenticationFailureHandler.onAuthenticationFailure(request, response, failed);
     }
 
 }

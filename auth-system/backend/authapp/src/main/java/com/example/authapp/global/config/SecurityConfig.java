@@ -17,6 +17,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.logout.LogoutFilter;
@@ -41,6 +42,7 @@ public class SecurityConfig {
     private final AuthenticationConfiguration authenticationConfiguration;
 	// 로그인 성공 이후 로직(로그인 성공 핸들러)
     private final AuthenticationSuccessHandler loginSuccessHandler;
+    private final AuthenticationFailureHandler loginFailureHandler;
     // 소셜 로그인 핸들러
     private final AuthenticationSuccessHandler socialSuccessHandler;
     // 로그아웃 핸들러에 주입용
@@ -51,12 +53,14 @@ public class SecurityConfig {
     public SecurityConfig(
             AuthenticationConfiguration authenticationConfiguration,
             @Qualifier("LoginSuccessHandler") AuthenticationSuccessHandler loginSuccessHandler,
+            AuthenticationFailureHandler loginFailureHandler,
             @Qualifier("SocialSuccessHandler") AuthenticationSuccessHandler socialSuccessHandler,
             JwtService jwtService,
             CookieService cookieService
     ) {
         this.authenticationConfiguration = authenticationConfiguration;
         this.loginSuccessHandler = loginSuccessHandler;
+        this.loginFailureHandler = loginFailureHandler;
         this.socialSuccessHandler = socialSuccessHandler;
         this.jwtService = jwtService;
         this.cookieService = cookieService;
@@ -150,7 +154,8 @@ public class SecurityConfig {
         );
         
         // 커스텀 필터 추가
-        http.addFilterBefore(new LoginFilter(authenticationManager(authenticationConfiguration), loginSuccessHandler), UsernamePasswordAuthenticationFilter.class);
+        http.addFilterBefore(new LoginFilter(authenticationManager(authenticationConfiguration), loginSuccessHandler, loginFailureHandler), 
+        					UsernamePasswordAuthenticationFilter.class);
         http.addFilterBefore(new JWTFilter(), LogoutFilter.class);
         
         // 세션 필터 설정 (STATELESS)

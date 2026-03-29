@@ -3,6 +3,8 @@ package com.example.authapp.domain.user.repository;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.authapp.domain.user.entity.UserEntity;
@@ -17,6 +19,10 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
 	
 	// 회원 정보 수정시 자체 로그인 여부, 잠김 여부를 확인
 	Optional<UserEntity> findByUsernameAndLockedAndIsSocial(String username, Boolean Locked, Boolean isSocial);
+	
+	// ROLE가 LAZY 로딩이라 한번에 조회
+	@Query("SELECT u FROM UserEntity u JOIN FETCH u.roles WHERE u.username = :username AND u.locked = false AND u.isSocial = false")
+	Optional<UserEntity> findWithRoles(@Param("username") String username);
 	
 	// 소셜 로그인 회원 존재 여부 확인
 	Optional<UserEntity> findByUsernameAndIsSocial(String username, Boolean isSocial);
