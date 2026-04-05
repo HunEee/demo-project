@@ -10,6 +10,11 @@ import About from "./pages/About.tsx";
 import UserLayout from "./pages/users/UserLayout.tsx";
 import UserHome from "./pages/users/UserHome.tsx";
 import UserProfile from "./pages/users/UserProfile.tsx";
+import MyPage from './pages/MyPage.tsx';
+import LoginHistoryPage from './pages/LoginHistoryPage.tsx';
+import SecurityPage from './pages/SecurityPage.tsx';
+import ChangePasswordPage from './pages/ChangePasswordPage.tsx';
+import SessionsPage from './pages/SessionsPage.tsx';
 
 
 createRoot(document.getElementById('root')!).render(
@@ -26,7 +31,14 @@ createRoot(document.getElementById('root')!).render(
           <Route index element={<UserHome />} />
           <Route path="profile" element={<UserProfile />} />
         </Route>
-      
+
+        <Route path="/mypage" element={<MyPage />} />
+        <Route path="/mypage/logins" element={<LoginHistoryPage />} />
+        <Route path="/mypage/security" element={<SecurityPage />} />
+        <Route path="/mypage/password" element={<ChangePasswordPage />} />
+
+        <Route path="/mypage/sessions" element={<SessionsPage />} />
+
       </Route>
     </Routes>
   </BrowserRouter>

@@ -8,4 +8,6 @@ export default interface User {
   updatedAt?: string;
   createdAt?: string;
   provider: string;
+  roles: string[];
+  securityAlert?: boolean; // 보안 상태
 }

@@ -148,11 +148,6 @@ export default function FuturisticAuthHome() {
           </div>
         </div>
       </section>
-
-      {/* Footer */}
-      <footer className="py-10 text-center text-muted-foreground border-t border-border">
-        © {new Date().getFullYear()} 미래형 인증 서비스. All rights reserved.
-      </footer>
     </div>
   );
 }

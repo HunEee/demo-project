@@ -1,10 +1,13 @@
 package com.example.authapp.handler.dto;
 
+import com.example.authapp.domain.user.entity.RoleEntity;
 import com.example.authapp.domain.user.entity.UserEntity;
 import lombok.Builder;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Getter
 @Builder
@@ -17,10 +20,11 @@ public class UserResponseDTO {
     private String image;
     private Boolean enabled;
     private String provider;
+    private Set<String> roles; 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    // 🔥 Entity → DTO 변환
+    // Entity → DTO 변환
     public static UserResponseDTO from(UserEntity user) {
         return UserResponseDTO.builder()
                 .id(user.getId())
@@ -30,6 +34,11 @@ public class UserResponseDTO {
                 .image(user.getProfileImage())
                 .enabled(user.getEnabled())
                 .provider(user.getIsSocial() ? user.getSocialProviderType().name() : "LOCAL")
+                .roles(
+                        user.getRoles().stream()
+                                .map(RoleEntity::getName)
+                                .collect(Collectors.toSet())
+                )
                 .createdAt(user.getCreatedDate())
                 .updatedAt(user.getUpdatedDate())
                 .build();
