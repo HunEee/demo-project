@@ -10,6 +10,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 
+import com.example.authapp.domain.audit.service.LoginHistoryService;
 import com.example.authapp.domain.jwt.service.JwtService;
 import com.example.authapp.domain.user.entity.UserEntity;
 import com.example.authapp.handler.dto.LoginResponseDTO;
@@ -29,6 +30,7 @@ public class LoginSuccessHandler implements AuthenticationSuccessHandler {
     private final JwtService jwtService;
 	private final CookieService cookieService;	
 	private final ObjectMapper objectMapper;
+	private final LoginHistoryService loginHistoryService;
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
@@ -51,9 +53,12 @@ public class LoginSuccessHandler implements AuthenticationSuccessHandler {
         String userAgent = request.getHeader("User-Agent");
         String device = parseDevice(userAgent);
         
+        // 로그인 이력 저장
+        var history = loginHistoryService.saveSuccess(username,ip,userAgent,device);
+        
         // 발급한 Refresh DB 테이블 저장 (Refresh whitelist)
         //jwtService.addRefresh(username, refreshToken);
-        jwtService.addRefresh(username, refreshToken, ip, userAgent, device);
+        jwtService.addRefresh(username, refreshToken, ip, userAgent, device, history.getId());
         
         // 쿠키 저장
         cookieService.addRefreshCookie(response, refreshToken);

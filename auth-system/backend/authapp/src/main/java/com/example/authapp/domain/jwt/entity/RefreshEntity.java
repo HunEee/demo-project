@@ -75,6 +75,13 @@ public class RefreshEntity {
     @Column(name = "user_agent", length = 512)
     private String userAgent;
     
+    // 로그인 이력 연결 
+    @Column(name = "login_history_id")
+    private Long loginHistoryId;
+    
+    // 마지막 사용 시간 (세션 관리용)
+    @Column(name = "last_used_at")
+    private LocalDateTime lastUsedAt;
     
     //********************************************************************************
     // 커스텀 메서드
@@ -88,6 +95,11 @@ public class RefreshEntity {
     // Refresh Token Rotation 시 새 토큰 연결
     public void setReplacedByToken(String replacedByToken) {
         this.replacedByToken = replacedByToken;
+    }
+    
+    // 사용 시간 업데이트
+    public void updateLastUsedAt() {
+        this.lastUsedAt = LocalDateTime.now();
     }
 
 }

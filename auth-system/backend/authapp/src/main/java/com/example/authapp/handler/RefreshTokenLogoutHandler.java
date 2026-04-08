@@ -3,6 +3,7 @@ package com.example.authapp.handler;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.logout.LogoutHandler;
 
+import com.example.authapp.domain.audit.service.LoginHistoryService;
 import com.example.authapp.domain.jwt.service.JwtService;
 import com.example.authapp.util.CookieService;
 
@@ -16,6 +17,7 @@ public class RefreshTokenLogoutHandler implements LogoutHandler {
 
     private final JwtService jwtService;
     private final CookieService cookieService;
+    private final LoginHistoryService loginHistoryService;
 
     @Override
     public void logout(HttpServletRequest request, HttpServletResponse response, Authentication authentication) {
@@ -26,7 +28,13 @@ public class RefreshTokenLogoutHandler implements LogoutHandler {
         for (Cookie cookie : cookies) {
             if ("refreshToken".equals(cookie.getName())) {
                 String refreshToken = cookie.getValue();
-                jwtService.revokeRefresh(refreshToken);
+                //revoke + historyId 가져오기
+                Long historyId = jwtService.revokeRefresh(refreshToken);
+                // 로그인 이력 업데이트
+                if (historyId != null) {
+                    loginHistoryService.logout(historyId);
+                }
+                // 쿠키 삭제
                 cookieService.clearRefreshCookie(response);
             }
         }

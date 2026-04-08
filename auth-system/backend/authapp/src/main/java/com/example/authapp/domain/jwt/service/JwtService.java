@@ -174,7 +174,7 @@ public class JwtService {
     
     // JWT Refresh 토큰 발급 후 저장 메소드
     @Transactional
-    public void addRefresh(String username,String refreshToken,String ip,String userAgent,String device) {
+    public void addRefresh(String username,String refreshToken,String ip,String userAgent,String device, Long loginHistoryId) {
         RefreshEntity entity = RefreshEntity.builder()
                 .username(username)
                 .refresh(refreshToken)
@@ -184,6 +184,7 @@ public class JwtService {
                 .userAgent(userAgent)
                 .device(device)
                 .revoked(false)
+                .loginHistoryId(loginHistoryId) 
                 .build();
         refreshRepository.save(entity);
     }
@@ -206,12 +207,14 @@ public class JwtService {
     
     // 리프레시 토큰 만료 : revoked -> true 처리
     @Transactional
-    public void revokeRefresh(String refreshToken) {
+    public Long revokeRefresh(String refreshToken) {
         RefreshEntity entity = refreshRepository
                 .findByRefresh(refreshToken)
                 .orElseThrow(() -> new RuntimeException("Refresh token not found"));
 
         entity.revoke();
+        
+        return entity.getLoginHistoryId();
     
     }
     

@@ -25,6 +25,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import com.example.authapp.domain.audit.service.LoginHistoryService;
 import com.example.authapp.domain.jwt.service.JwtService;
 import com.example.authapp.domain.user.entity.UserRoleType;
 import com.example.authapp.filter.JWTFilter;
@@ -49,6 +50,8 @@ public class SecurityConfig {
     private final JwtService jwtService;
     // 쿠키 주입
     private final CookieService cookieService;
+    // 로그인 기록 남기기
+    private final LoginHistoryService loginHistoryService;
     
     public SecurityConfig(
             AuthenticationConfiguration authenticationConfiguration,
@@ -56,7 +59,8 @@ public class SecurityConfig {
             AuthenticationFailureHandler loginFailureHandler,
             @Qualifier("SocialSuccessHandler") AuthenticationSuccessHandler socialSuccessHandler,
             JwtService jwtService,
-            CookieService cookieService
+            CookieService cookieService,
+            LoginHistoryService loginHistoryService
     ) {
         this.authenticationConfiguration = authenticationConfiguration;
         this.loginSuccessHandler = loginSuccessHandler;
@@ -64,6 +68,7 @@ public class SecurityConfig {
         this.socialSuccessHandler = socialSuccessHandler;
         this.jwtService = jwtService;
         this.cookieService = cookieService;
+        this.loginHistoryService = loginHistoryService;
     }
     
     
@@ -137,7 +142,7 @@ public class SecurityConfig {
 
         // 기본 로그아웃 필터 + 커스텀 Refresh 토큰 삭제 핸들러 추가
         http.logout(logout -> logout
-        				.addLogoutHandler(new RefreshTokenLogoutHandler(jwtService, cookieService))        
+        				.addLogoutHandler(new RefreshTokenLogoutHandler(jwtService, cookieService, loginHistoryService))        
         				.logoutSuccessHandler((request, response, authentication) -> {
         					response.setStatus(HttpServletResponse.SC_OK);
     					})
