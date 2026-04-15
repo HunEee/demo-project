@@ -1,6 +1,7 @@
 package com.example.authapp.domain.jwt.repository;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -26,5 +27,8 @@ public interface RefreshRepository extends JpaRepository<RefreshEntity, Long> {
 	void deleteByCreatedDateBefore(LocalDateTime createdDate);
 	
     Optional<RefreshEntity> findByRefresh(String refresh);
+    
+    // 유저의 토큰들 조회
+    List<RefreshEntity> findByUsername(String username);
 	
 }

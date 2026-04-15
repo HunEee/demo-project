@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
         name = "refresh_entity",
         indexes = {
                 // refresh token 조회 성능 개선
-                @Index(name = "idx_refresh_token", columnList = "token", unique = true),
+                @Index(name = "idx_refresh_token", columnList = "refresh", unique = true),
 
                 // 사용자별 refresh token 조회
                 @Index(name = "idx_refresh_username", columnList = "username"),
@@ -39,7 +39,7 @@ public class RefreshEntity {
     @Column(name = "username", nullable = false)
     private String username;
 
-    @Column(name = "refresh", nullable = false, length = 512, unique = true)
+    @Column(name = "refresh", nullable = false, length = 512)
     private String refresh;
 
     // jwt_id -> 토큰 중복 방지 및 추적을 위해 사용

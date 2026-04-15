@@ -11,11 +11,13 @@ import org.springframework.security.web.authentication.AuthenticationSuccessHand
 import org.springframework.stereotype.Component;
 
 import com.example.authapp.domain.audit.service.LoginHistoryService;
+import com.example.authapp.domain.audit.service.SecurityEventService;
 import com.example.authapp.domain.jwt.service.JwtService;
 import com.example.authapp.domain.user.entity.UserEntity;
 import com.example.authapp.handler.dto.LoginResponseDTO;
 import com.example.authapp.handler.dto.UserResponseDTO;
 import com.example.authapp.principal.UserPrincipal;
+import com.example.authapp.util.ClientUtil;
 import com.example.authapp.util.CookieService;
 import com.example.authapp.util.JWTUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -31,6 +33,7 @@ public class LoginSuccessHandler implements AuthenticationSuccessHandler {
 	private final CookieService cookieService;	
 	private final ObjectMapper objectMapper;
 	private final LoginHistoryService loginHistoryService;
+	private final SecurityEventService securityEventService;
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
@@ -49,9 +52,9 @@ public class LoginSuccessHandler implements AuthenticationSuccessHandler {
         long expiresIn = JWTUtil.getAccessTokenExpiresIn();
 
         // 클라이언트 정보 추출
-        String ip = request.getRemoteAddr();
-        String userAgent = request.getHeader("User-Agent");
-        String device = parseDevice(userAgent);
+        String ip = ClientUtil.getIp(request);
+        String userAgent = ClientUtil.getUserAgent(request);
+        String device = ClientUtil.getDevice(userAgent);
         
         // 로그인 이력 저장
         var history = loginHistoryService.saveSuccess(username,ip,userAgent,device);
@@ -59,7 +62,7 @@ public class LoginSuccessHandler implements AuthenticationSuccessHandler {
         // 발급한 Refresh DB 테이블 저장 (Refresh whitelist)
         //jwtService.addRefresh(username, refreshToken);
         jwtService.addRefresh(username, refreshToken, ip, userAgent, device, history.getId());
-        
+
         // 쿠키 저장
         cookieService.addRefreshCookie(response, refreshToken);
         
@@ -76,20 +79,11 @@ public class LoginSuccessHandler implements AuthenticationSuccessHandler {
         response.setCharacterEncoding("UTF-8");
         objectMapper.writeValue(response.getWriter(), result);
 
-//        String json = String.format("{\"accessToken\":\"%s\", \"refreshToken\":\"%s\"}", accessToken, refreshToken);
-//        response.getWriter().write(json);
-//        response.getWriter().flush();
+        //로그인 성공/실패 기록
+        securityEventService.loginSuccess(username, ip, device);
+        
     }
     
-    // device 파싱 (간단 버전)
-    private String parseDevice(String userAgent) {
-        if (userAgent == null) return "Unknown";
-        if (userAgent.contains("Mobile")) return "Mobile";
-        if (userAgent.contains("Windows")) return "Windows";
-        if (userAgent.contains("Mac")) return "Mac";
-        if (userAgent.contains("Linux")) return "Linux";
-        return "Other";
-    }
-    
+
 
 }

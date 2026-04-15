@@ -99,7 +99,12 @@ public class UserEntity {
             role.getUsers().add(this);
         }
     }
-
+    
+    // 패스워드 변경
+    public void changePassword(String newPassword) {
+        this.password = newPassword;
+    }
+    
     public void lock() {
         this.locked = true;
     }

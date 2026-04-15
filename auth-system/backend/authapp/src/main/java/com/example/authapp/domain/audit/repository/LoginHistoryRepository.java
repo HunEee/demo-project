@@ -9,6 +9,6 @@ import com.example.authapp.domain.jwt.entity.RefreshEntity;
 
 public interface LoginHistoryRepository extends JpaRepository<LoginHistory, Long> {
 	
-	Optional<RefreshEntity> findByRefresh(String refresh);
+	//Optional<RefreshEntity> findByRefresh(String refresh);
 	
 }

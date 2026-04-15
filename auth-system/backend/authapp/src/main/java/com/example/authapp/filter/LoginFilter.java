@@ -69,6 +69,9 @@ public class LoginFilter extends AbstractAuthenticationProcessingFilter {
         
         username = (username != null) ? username.trim() : "";
         password = (password != null) ? password : "";
+        
+        // 실패 핸들러에 전달하기 위해 추가
+        request.setAttribute("username", username);
 
         UsernamePasswordAuthenticationToken authRequest = UsernamePasswordAuthenticationToken.unauthenticated(username,password);
         setDetails(request, authRequest);

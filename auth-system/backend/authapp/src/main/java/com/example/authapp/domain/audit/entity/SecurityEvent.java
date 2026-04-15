@@ -3,9 +3,11 @@ package com.example.authapp.domain.audit.entity;
 import java.time.LocalDateTime;
 
 import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
@@ -18,6 +20,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
+@EntityListeners(AuditingEntityListener.class)
 @Table(name = "security_event")
 @Getter
 @Builder
@@ -29,7 +32,7 @@ public class SecurityEvent {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(name = "username", nullable = false)
     private String username;
 
     // 이벤트 종류
@@ -50,6 +53,7 @@ public class SecurityEvent {
 
     // 시간
     @CreatedDate
+    @Column(name = "created_at")
     private LocalDateTime createdAt;
     
 }

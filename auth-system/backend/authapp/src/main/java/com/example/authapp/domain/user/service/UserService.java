@@ -24,6 +24,7 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.authapp.domain.audit.service.SecurityEventService;
 import com.example.authapp.domain.jwt.service.JwtService;
 import com.example.authapp.domain.user.dto.CustomOAuth2User;
 import com.example.authapp.domain.user.dto.UserRequestDTO;
@@ -47,6 +48,7 @@ public class UserService extends DefaultOAuth2UserService implements UserDetails
 	private final UserRepository userRepository;
     private final RoleRepository roleRepository;
 	private final JwtService jwtService;
+    private final SecurityEventService securityEventService;
 	
     // 자체 로그인 회원 가입 (존재 여부)
     @Transactional(readOnly = true)
@@ -275,4 +277,36 @@ public class UserService extends DefaultOAuth2UserService implements UserDetails
     	        .toList();
     }
     
+    // 비밀번호 변경
+    public void changePassword(String username, String currentPassword, String newPassword, String ip, String device) {
+        // 1. 유저 조회
+        UserEntity user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("유저 없음"));
+
+        // 2. 현재 비밀번호 검증
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+            throw new IllegalArgumentException("현재 비밀번호 불일치");
+        }
+
+        // 3. 새 비밀번호 검증 (간단 버전)
+        if (currentPassword.equals(newPassword)) {
+            throw new IllegalArgumentException("기존 비밀번호와 동일");
+        }
+
+        // 4. 비밀번호 암호화
+        String encodedPassword = passwordEncoder.encode(newPassword);
+
+        // 5. 변경
+        user.changePassword(encodedPassword);
+
+        // 6. 모든 Refresh Token 무효화 (강제 로그아웃)
+        jwtService.revokeAllByUsername(username);
+
+        // 7. 보안 로그 기록
+        securityEventService.passwordChange(username, ip, device);
+    }
+
+    
 }
+    
+

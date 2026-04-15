@@ -7,6 +7,7 @@ import java.util.Map;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,19 +16,21 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.authapp.domain.user.dto.PasswordChangeRequest;
 import com.example.authapp.domain.user.dto.UserRequestDTO;
 import com.example.authapp.domain.user.dto.UserResponseDTO;
 import com.example.authapp.domain.user.service.UserService;
 
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
+
 @RestController
+@RequiredArgsConstructor
 public class UserController {
 
     private final UserService userService;
 
-    public UserController(UserService userService) {
-        this.userService = userService;
-    }
-
+    
     // 자체 로그인 유저 존재 확인
     @PostMapping(value = "/user/exist", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Boolean> existUserApi(
@@ -73,5 +76,18 @@ public class UserController {
         userService.deleteUser(dto);
         return ResponseEntity.status(200).body(true);
     }
+    
+    //비밀번호 변경
+    @PostMapping("user/password")
+    public void changePassword(
+            @AuthenticationPrincipal(expression = "username") String username,
+            @RequestBody PasswordChangeRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        String ip = httpRequest.getRemoteAddr();
+        String userAgent = httpRequest.getHeader("User-Agent");
+        userService.changePassword(username,request.getCurrentPassword(),request.getNewPassword(),ip, userAgent);
+    }
+    
 
 }

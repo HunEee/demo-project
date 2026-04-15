@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.authapp.domain.user.entity.RoleEntity;
 import com.example.authapp.domain.user.entity.UserEntity;
 
 public interface UserRepository extends JpaRepository<UserEntity, Long> {
@@ -32,5 +33,8 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
 	
 	// 자체/소셜 유저 정보 조회
 	Optional<UserEntity> findByUsernameAndLocked(String username, Boolean locked);
+
+	// 유저 정보 찾기
+	Optional<UserEntity> findByUsername(String username);
 	
 }

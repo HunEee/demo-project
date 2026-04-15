@@ -6,6 +6,7 @@ public enum SecurityEventType {
     LOGOUT,
     PASSWORD_CHANGE,
     TOKEN_REISSUE,
-    TOKEN_THEFT_DETECTED,
+    TOKEN_THEFT_DETECTED, // 토큰 탈취
+    SUSPICIOUS_LOGIN,	// 의심 로그인
     ADMIN_FORCE_LOGOUT
 }
