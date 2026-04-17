@@ -8,4 +8,14 @@ public interface SecurityEventRepository extends JpaRepository<SecurityEvent, Lo
 
     List<SecurityEvent> findByUsernameOrderByCreatedAtDesc(String username);
     
+    //********************************************************************************
+    // admin 도메인
+    //********************************************************************************
+    
+    // 보안 이벤트 조회
+    List<SecurityEvent> findByUsername(String username);
+
+    List<SecurityEvent> findByType(String type);
+    
+
 }

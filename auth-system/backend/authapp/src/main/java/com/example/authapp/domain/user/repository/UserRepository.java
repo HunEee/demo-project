@@ -1,5 +1,6 @@
 package com.example.authapp.domain.user.repository;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -36,5 +37,9 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
 
 	// 유저 정보 찾기
 	Optional<UserEntity> findByUsername(String username);
-	
+
+	// ADMIN들 조회
+    @Query("SELECT u FROM UserEntity u JOIN u.roles r WHERE r.name = 'ROLE_ADMIN'")
+    List<UserEntity> findAllAdmins();
+    
 }

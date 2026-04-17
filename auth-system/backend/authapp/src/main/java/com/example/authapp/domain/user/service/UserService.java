@@ -306,6 +306,7 @@ public class UserService extends DefaultOAuth2UserService implements UserDetails
         securityEventService.passwordChange(username, ip, device);
     }
 
+
     
 }
     
