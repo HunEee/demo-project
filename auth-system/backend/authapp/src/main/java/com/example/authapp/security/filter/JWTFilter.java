@@ -1,9 +1,10 @@
-package com.example.authapp.filter;
+package com.example.authapp.security.filter;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -12,6 +13,9 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import com.example.authapp.security.principal.CustomUserDetails;
+import com.example.authapp.security.principal.CustomUserDetailsService;
+import com.example.authapp.security.principal.UserPrincipal;
 import com.example.authapp.util.JWTUtil;
 
 import io.jsonwebtoken.ExpiredJwtException;
@@ -21,8 +25,11 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
+@RequiredArgsConstructor
 public class JWTFilter extends OncePerRequestFilter {
 
+	private final CustomUserDetailsService userDetailsService;
+	
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
 
@@ -46,10 +53,11 @@ public class JWTFilter extends OncePerRequestFilter {
             JWTUtil.validate(accessToken,true); 
 
             String username = JWTUtil.getUsername(accessToken);
-            String role = JWTUtil.getRole(accessToken);
+            String jti = JWTUtil.getJti(accessToken);
 
-            List<GrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority(role));
-            Authentication auth = new UsernamePasswordAuthenticationToken(username, null, authorities);
+            UserPrincipal userPrincipal = userDetailsService.loadUserByUsername(username);
+            userPrincipal.setJti(jti);
+            Authentication auth = new UsernamePasswordAuthenticationToken(userPrincipal, null, userPrincipal.getAuthorities());
             SecurityContextHolder.getContext().setAuthentication(auth);
 
             filterChain.doFilter(request, response);

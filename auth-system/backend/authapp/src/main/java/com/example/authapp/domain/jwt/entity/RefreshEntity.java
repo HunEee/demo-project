@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
@@ -80,6 +81,7 @@ public class RefreshEntity {
     private Long loginHistoryId;
     
     // 마지막 사용 시간 (세션 관리용)
+    @LastModifiedDate
     @Column(name = "last_used_at")
     private LocalDateTime lastUsedAt;
     

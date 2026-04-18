@@ -46,7 +46,7 @@ public class RiskEntity {
     private RiskLevel riskLevel;
 
     // 위험 이유 
-    @Column(name = "risk_reson", length = 1000)
+    @Column(name = "risk_reason", length = 1000)
     private String riskReason;
 
     @Column(name = "ip_address")

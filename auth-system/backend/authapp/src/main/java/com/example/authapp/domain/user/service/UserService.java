@@ -36,13 +36,13 @@ import com.example.authapp.domain.user.entity.UserRoleType;
 import com.example.authapp.domain.user.exception.UserException;
 import com.example.authapp.domain.user.repository.RoleRepository;
 import com.example.authapp.domain.user.repository.UserRepository;
-import com.example.authapp.principal.UserPrincipal;
+import com.example.authapp.security.principal.UserPrincipal;
 
 import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
-public class UserService extends DefaultOAuth2UserService implements UserDetailsService {
+public class UserService extends DefaultOAuth2UserService {
 
 	private final PasswordEncoder passwordEncoder;
 	private final UserRepository userRepository;
@@ -89,32 +89,17 @@ public class UserService extends DefaultOAuth2UserService implements UserDetails
         return userRepository.save(user).getId();
     }    
     
-    // 자체 로그인
-    // DB에 저장된 username/password를 가져온다.
-    @Transactional(readOnly = true)
-	@Override
-	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-    	
-    	UserEntity entity = userRepository.findWithRoles(username)
-    		    .orElseThrow(() -> new UsernameNotFoundException("유저가 존재하지 않습니다."));
-    	
-	    return new UserPrincipal(entity); 
-    	
-//	    UserEntity entity = userRepository.findByUsernameAndLockedAndIsSocial(username, false, false)
-//	    		.orElseThrow(() -> new UsernameNotFoundException("유저가 존재하지 않습니다."));
-	    
-//	    return User.builder()
-//	            .username(entity.getUsername())
-//	            .password(entity.getPassword())
-//	            .authorities(
-//	            	    entity.getRoles().stream()
-//	            	        .map(role -> new SimpleGrantedAuthority(role.getName()))
-//	            	        .toList()
-//	            )
-//	            .accountLocked(entity.getLocked())
-//	            .disabled(!entity.getEnabled())
-//	            .build();
-	}
+//    // 자체 로그인
+//    // DB에 저장된 username/password를 가져온다.
+//    @Transactional(readOnly = true)
+//	@Override
+//	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+//    	
+//    	UserEntity entity = userRepository.findWithRoles(username)
+//    		    .orElseThrow(() -> new UsernameNotFoundException("유저가 존재하지 않습니다."));
+//    	
+//	    return new UserPrincipal(entity); 
+//	}
     
     // 자체 로그인 회원 정보 수정
     @Transactional

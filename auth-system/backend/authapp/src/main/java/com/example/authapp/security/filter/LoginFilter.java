@@ -1,4 +1,4 @@
-package com.example.authapp.filter;
+package com.example.authapp.security.filter;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;

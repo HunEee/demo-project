@@ -1,4 +1,4 @@
-package com.example.authapp.handler.dto;
+package com.example.authapp.security.handler.dto;
 
 import lombok.Builder;
 import lombok.Getter;

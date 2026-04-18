@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.example.authapp.domain.admin.service.AdminService;
+import com.example.authapp.domain.admin.AdminService;
 import com.example.authapp.domain.audit.entity.LoginHistory;
 import com.example.authapp.domain.audit.entity.SecurityEvent;
 import com.example.authapp.domain.user.entity.UserEntity;

@@ -1,4 +1,4 @@
-package com.example.authapp.principal;
+package com.example.authapp.security.principal;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
@@ -14,10 +14,21 @@ import java.util.stream.Collectors;
 public class UserPrincipal implements UserDetails {
 
     private final UserEntity user;
+    
+    // JWT ID
+    private String jti;
 
     public UserEntity getUser() {   
         return user;
     } 
+    
+    public String getJti() {
+        return jti;
+    }
+    
+    public void setJti(String jti) {
+        this.jti = jti;
+    }
     
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

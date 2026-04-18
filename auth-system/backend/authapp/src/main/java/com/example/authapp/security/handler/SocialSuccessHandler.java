@@ -1,4 +1,4 @@
-package com.example.authapp.handler;
+package com.example.authapp.security.handler;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
@@ -13,14 +13,15 @@ import org.springframework.stereotype.Component;
 
 import com.example.authapp.domain.audit.service.LoginHistoryService;
 import com.example.authapp.domain.jwt.service.JwtService;
+import com.example.authapp.util.ClientUtil;
 import com.example.authapp.util.CookieService;
 import com.example.authapp.util.JWTUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
+import java.util.UUID;
 
-@Component
-@Qualifier("SocialSuccessHandler")
+@Component("socialSuccessHandler")
 @RequiredArgsConstructor
 public class SocialSuccessHandler implements AuthenticationSuccessHandler {
 
@@ -35,12 +36,13 @@ public class SocialSuccessHandler implements AuthenticationSuccessHandler {
         String role = authentication.getAuthorities().iterator().next().getAuthority();
 
         // JWT(Refresh) 발급
-        String refreshToken = JWTUtil.createJWT(username, role, false);
+        String jti = UUID.randomUUID().toString();
+        String refreshToken = JWTUtil.createJWT(username, role, jti, false);
 
-        // 클라이언트 정보 추출
-        String ip = request.getRemoteAddr();
-        String userAgent = request.getHeader("User-Agent");
-        String device = parseDevice(userAgent);
+        // 클라이언트 정보 추출     
+        String ip = ClientUtil.getIp(request);
+        String userAgent = ClientUtil.getUserAgent(request);
+        String device = ClientUtil.getDevice(userAgent);
 
         var history = loginHistoryService.saveSuccess(username,ip,userAgent,device);
         // 발급한 Refresh DB 테이블 저장 (Refresh whitelist)
@@ -57,12 +59,5 @@ public class SocialSuccessHandler implements AuthenticationSuccessHandler {
         response.sendRedirect("http://localhost:5173/cookie");
     }
 
-    private String parseDevice(String userAgent) {
-        if (userAgent == null) return "Unknown";
-        if (userAgent.contains("Mobile")) return "Mobile";
-        if (userAgent.contains("Windows")) return "Windows";
-        if (userAgent.contains("Mac")) return "Mac";
-        if (userAgent.contains("Linux")) return "Linux";
-        return "Other";
-    }
+    
 }

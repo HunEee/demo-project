@@ -1,4 +1,4 @@
-package com.example.authapp.handler;
+package com.example.authapp.security.handler;
 
 import java.io.IOException;
 import java.util.HashMap;

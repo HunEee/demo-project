@@ -1,7 +1,7 @@
 export default interface Session {
   id: string;
   ip: string;
-  userAgent: string;
+  device: string;
   createdAt: string;
   lastAccessAt: string;
   current: boolean;

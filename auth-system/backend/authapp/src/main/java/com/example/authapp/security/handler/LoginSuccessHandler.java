@@ -1,4 +1,4 @@
-package com.example.authapp.handler;
+package com.example.authapp.security.handler;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -14,18 +14,18 @@ import com.example.authapp.domain.audit.service.LoginHistoryService;
 import com.example.authapp.domain.audit.service.SecurityEventService;
 import com.example.authapp.domain.jwt.service.JwtService;
 import com.example.authapp.domain.user.entity.UserEntity;
-import com.example.authapp.handler.dto.LoginResponseDTO;
-import com.example.authapp.handler.dto.UserResponseDTO;
-import com.example.authapp.principal.UserPrincipal;
+import com.example.authapp.security.handler.dto.LoginResponseDTO;
+import com.example.authapp.security.handler.dto.UserResponseDTO;
+import com.example.authapp.security.principal.UserPrincipal;
 import com.example.authapp.util.ClientUtil;
 import com.example.authapp.util.CookieService;
 import com.example.authapp.util.JWTUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
+import java.util.UUID;
 
-@Component
-@Qualifier("LoginSuccessHandler")
+@Component("loginSuccessHandler")
 @RequiredArgsConstructor
 public class LoginSuccessHandler implements AuthenticationSuccessHandler {
 
@@ -47,8 +47,9 @@ public class LoginSuccessHandler implements AuthenticationSuccessHandler {
         String role = authentication.getAuthorities().iterator().next().getAuthority();
 
         // JWT(Access/Refresh) 발급
-        String accessToken = JWTUtil.createJWT(username, role, true);
-        String refreshToken = JWTUtil.createJWT(username, role, false);
+        String jti = UUID.randomUUID().toString();
+        String accessToken = JWTUtil.createJWT(username, role, jti, true);
+        String refreshToken = JWTUtil.createJWT(username, role, jti, false);
         long expiresIn = JWTUtil.getAccessTokenExpiresIn();
 
         // 클라이언트 정보 추출

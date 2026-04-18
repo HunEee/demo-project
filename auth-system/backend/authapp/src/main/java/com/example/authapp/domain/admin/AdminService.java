@@ -1,4 +1,4 @@
-package com.example.authapp.domain.admin.service;
+package com.example.authapp.domain.admin;
 
 import java.util.List;
 

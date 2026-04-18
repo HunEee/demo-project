@@ -25,9 +25,9 @@ public class RiskEvaluator {
     public int increaseScore(LoginHistory loginHistory) {
         int score = 0;
         if (!loginHistory.isSuccess()) score += 15;
-        if (isNewIp(loginHistory)) score += 30;
-        if (isNewDevice(loginHistory)) score += 20;
-        if (isAbnormalTime(loginHistory)) score += 10;
+        if (isNewIp(loginHistory)) score += 3;
+        if (isNewDevice(loginHistory)) score += 5;
+        if (isAbnormalTime(loginHistory)) score += 2;
         return score;
     }
 
@@ -40,23 +40,28 @@ public class RiskEvaluator {
         if (loginHistory.isSuccess() && !isNewIp(loginHistory) && !isNewDevice(loginHistory)) {
             score -= 20;
         }
+        
         // 최근 로그인 패턴이 안정적
         if (isConsistentPattern(loginHistory)) {
             score -= 10;
         }
+        
         return score;
     }
     // =========================
-    // 토큰 탈취 감지 (강한 증가)
+    // 토큰 탈취 감지 
     // =========================
     public int tokenRiskScore(RefreshEntity token, String currentIp, String currentDevice,String userAgent) {
         int score = 0;
+        // 토근과 요청 값 비교
         boolean ipChanged = !safeEquals(token.getIpAddress(), currentIp);
         boolean deviceChanged = !safeEquals(token.getDevice(), currentDevice);
         boolean uaChanged = !safeEquals(token.getUserAgent(), userAgent);
-
+        
+        // 모바일 대응
         boolean suspiciousIpChange = ipChanged && (deviceChanged || uaChanged);
 
+        // 빠른 변경 (세션 하이재킹)
         boolean rapidChange = false;
         if (token.getLastUsedAt() != null) {
             Duration duration = Duration.between(token.getLastUsedAt(), LocalDateTime.now());
@@ -74,35 +79,6 @@ public class RiskEvaluator {
         if (hardExpired) score += 90;
         
         return score;
-    }
-
-    // 이 아래 지울지 결정
-    // =========================
-    // 토큰 탈취 감지 
-    // =========================
-    public boolean isTokenStolen(RefreshEntity token, String currentIp, String currentDevice, String userAgent) {
-        // 토근과 요청 값 비교
-    	boolean ipChanged = !safeEquals(token.getIpAddress(), currentIp);
-        boolean deviceChanged = !safeEquals(token.getDevice(), currentDevice);
-        boolean uaChanged = !safeEquals(token.getUserAgent(), userAgent);
-
-        // 모바일 대응
-        boolean suspiciousIpChange = ipChanged && (deviceChanged || uaChanged);
-
-        // 빠른 변경 (세션 하이재킹)
-        boolean rapidChange = false;
-        if (token.getLastUsedAt() != null) {
-            Duration duration = Duration.between(token.getLastUsedAt(), LocalDateTime.now());
-            rapidChange = duration.toMinutes() < 5;
-        }
-
-        // 만료 토큰 재사용 
-        boolean expired = token.getExpiresAt().isBefore(LocalDateTime.now());
-        // 클라이언트, 네트워크 지연, 동시 요청 -> 1분 이상 지나면 탈취 판단
-        boolean hardExpired = expired && Duration.between(token.getExpiresAt(), LocalDateTime.now()).toMinutes() > 1;
-        
-        // 최종 판단
-        return suspiciousIpChange || (uaChanged && rapidChange) || hardExpired;
     }
 
     // =========================

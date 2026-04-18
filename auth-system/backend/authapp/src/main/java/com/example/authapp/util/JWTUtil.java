@@ -75,22 +75,25 @@ public class JWTUtil {
     }
 
     // JWT(Access/Refresh) 생성
-    public static String createJWT(String username, String role, Boolean isAccess) {
+    // 기존 메서드 유지 (혹시 다른 곳에서 쓸 수 있으니까)
+//    public static String createJWT(String username, String role, Boolean isAccess) {
+//        return createJWT(username, role, UUID.randomUUID().toString(), isAccess);
+//    }
 
+    // jti 주입 버전 추가
+    public static String createJWT(String username, String role, String jti, Boolean isAccess) {
         long now = System.currentTimeMillis();
         long expiry = isAccess ? accessTokenExpiresIn : refreshTokenExpiresIn;
         String type = isAccess ? "access" : "refresh";
-
         return Jwts.builder()
-        		.subject(username)
+                .subject(username)
                 .claim("role", role)
                 .claim("type", type)
-                .id(UUID.randomUUID().toString())
+                .id(jti) // 외부에서 받은 jti 사용
                 .issuedAt(new Date(now))
                 .expiration(new Date(now + expiry))
                 .signWith(secretKey)
                 .compact();
     }
-    
 
 }

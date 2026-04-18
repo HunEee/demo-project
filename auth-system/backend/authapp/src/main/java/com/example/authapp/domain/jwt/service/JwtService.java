@@ -52,8 +52,9 @@ public class JwtService {
         String role = JWTUtil.getRole(refreshToken);
 
         // 토큰 생성
-        String newAccessToken = JWTUtil.createJWT(username, role, true);
-        String newRefreshToken = JWTUtil.createJWT(username, role, false);
+        String jti = UUID.randomUUID().toString();
+        String newAccessToken = JWTUtil.createJWT(username, role, jti, true);
+        String newRefreshToken = JWTUtil.createJWT(username, role, jti, false);
         
         // JWT에서 jti 추출
         String newJti = JWTUtil.getJti(newRefreshToken);
@@ -118,9 +119,9 @@ public class JwtService {
         String role = JWTUtil.getRole(refreshToken);
 
         // 토큰 생성
-        String newAccessToken = JWTUtil.createJWT(username, role, true);
-        String newRefreshToken = JWTUtil.createJWT(username, role, false);
-        String newJti = JWTUtil.getJti(newRefreshToken);
+        String jti = UUID.randomUUID().toString();
+        String newAccessToken = JWTUtil.createJWT(username, role, jti, true);
+        String newRefreshToken = JWTUtil.createJWT(username, role, jti, false);
         
         // 기존 토큰 revoke
         oldEntity.revoke();
@@ -131,7 +132,7 @@ public class JwtService {
         RefreshEntity newEntity = RefreshEntity.builder()
                 .username(username)
                 .refresh(newRefreshToken)
-                .jti(newJti)
+                .jti(jti)
                 .expiresAt(LocalDateTime.now().plusDays(7))
                 .ipAddress(oldEntity.getIpAddress())
                 .userAgent(oldEntity.getUserAgent())
@@ -170,10 +171,11 @@ public class JwtService {
     // JWT Refresh 토큰 발급 후 저장 메소드
     @Transactional
     public void addRefresh(String username,String refreshToken,String ip,String userAgent,String device, Long loginHistoryId) {
-        RefreshEntity entity = RefreshEntity.builder()
+        String jti = JWTUtil.getJti(refreshToken); 
+    	RefreshEntity entity = RefreshEntity.builder()
                 .username(username)
                 .refresh(refreshToken)
-                .jti(UUID.randomUUID().toString())
+                .jti(jti)
                 .expiresAt(LocalDateTime.now().plusDays(7))
                 .ipAddress(ip)
                 .userAgent(userAgent)

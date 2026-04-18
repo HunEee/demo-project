@@ -31,4 +31,8 @@ public interface RefreshRepository extends JpaRepository<RefreshEntity, Long> {
     // 유저의 토큰들 조회
     List<RefreshEntity> findByUsername(String username);
 	
+    
+    // 세션 관리
+    List<RefreshEntity> findByUsernameAndRevokedFalse(String username);
+    Optional<RefreshEntity> findByIdAndUsername(Long id, String username);
 }

@@ -30,25 +30,29 @@ public class ClientUtil {
 
     // 디바이스 판별
     public static String getDevice(String userAgent) {
-        if (userAgent == null) return "Unknown";
-        
-        userAgent = userAgent.toLowerCase();
-        if (userAgent.contains("mobile") || userAgent.contains("android") || userAgent.contains("iphone")) return "Mobile";
-        if (userAgent.contains("windows")) return "Windows";
-        if (userAgent.contains("mac")) return "Mac";
-        if (userAgent.contains("linux")) return "Linux";
-        return "Other";
+        return getOS(userAgent) + " / " + getBrowser(userAgent);
     }
 
+    // OS 판단 
+    private static String getOS(String userAgent) {
+        if (userAgent == null) return "Unknown";
+        String ua = userAgent.toLowerCase();
+        if (ua.contains("iphone") || ua.contains("android")) return "Mobile";
+        if (ua.contains("ipad") || ua.contains("tablet")) return "Tablet";
+        if (ua.contains("windows")) return "Windows";
+        if (ua.contains("mac")) return "Mac";
+        if (ua.contains("linux")) return "Linux";
+        return "Other";
+    }
+    
     // 브라우저 판별 
     public static String getBrowser(String userAgent) {
         if (userAgent == null) return "Unknown";
-        
-        userAgent = userAgent.toLowerCase();
-        if (userAgent.contains("chrome")) return "Chrome";
-        if (userAgent.contains("firefox")) return "Firefox";
-        if (userAgent.contains("safari")) return "Safari";
-        if (userAgent.contains("edge")) return "Edge";
+        String ua = userAgent.toLowerCase();
+        if (ua.contains("edg")) return "Edge";
+        if (ua.contains("chrome") && !ua.contains("edg")) return "Chrome";
+        if (ua.contains("firefox")) return "Firefox";
+        if (ua.contains("safari") && !ua.contains("chrome")) return "Safari";
         return "Other";
     }
     

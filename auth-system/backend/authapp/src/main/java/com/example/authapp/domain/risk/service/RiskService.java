@@ -59,15 +59,12 @@ public class RiskService {
     }
 
     // =========================
-    // 🔥 토큰 기반 Risk 처리
+    // 토큰 기반 Risk 처리
     // =========================
+    public void analyzeTokenRisk(RefreshEntity token, String currentIp, String currentDevice,String userAgent) {
 
-    public void analyzeTokenRisk1(RefreshEntity token, String currentIp, String currentDevice,String userAgent) {
-
-        int score = riskEvaluator.tokenRiskScore(
-                token, currentIp, currentDevice, userAgent
-        );
-
+    	// 토큰 탈취 여부 판단
+        int score = riskEvaluator.tokenRiskScore(token, currentIp, currentDevice, userAgent);
         if (score == 0) return;
 
         RiskLevel level = calculateLevel(score);
@@ -85,7 +82,6 @@ public class RiskService {
                 .riskReason("TOKEN_RISK")
                 .ipAddress(currentIp)
                 .device(currentDevice)
-                .createdAt(LocalDateTime.now())
                 .build();
 
         handleHighRisk(risk);
@@ -99,69 +95,27 @@ public class RiskService {
                         .description("Token risk detected")
                         .ipAddress(currentIp)
                         .device(currentDevice)
-                        .createdAt(LocalDateTime.now())
                         .build()
         );
     }
 
-    // =========================
-    // 토큰 탈취 감지
-    // =========================
-    public void analyzeTokenRisk(RefreshEntity token, String currentIp, String currentDevice, String userAgent) {
-        // 토큰 탈취 여부 평가
-    	boolean stolen = riskEvaluator.isTokenStolen(token, currentIp, currentDevice, userAgent);
-        if (!stolen) return;
-
-        // 토큰 폐기
-        token.revoke();
-
-        // 전체 토큰 폐기 (선택)
-        revokeAllUserTokens(token.getUsername());
-
-        // Risk 저장
-        RiskEntity risk = RiskEntity.builder()
-                .username(token.getUsername())
-                .riskScore(90)
-                .riskLevel(RiskLevel.CRITICAL)
-                .riskReason("TOKEN_THEFT_DETECTED")
-                .ipAddress(currentIp)
-                .device(currentDevice)
-                .createdAt(LocalDateTime.now())
-                .build();
-        riskRepository.save(risk);
-
-        // 보안 이벤트 저장
-        securityEventRepository.save(
-                SecurityEvent.builder()
-                        .username(token.getUsername())
-                        .type(SecurityEventType.TOKEN_THEFT_DETECTED)
-                        .description("Refresh 토큰 탈취 당함")
-                        .ipAddress(currentIp)
-                        .device(currentDevice)
-                        .createdAt(LocalDateTime.now())
-                        .build()
-        );
-    }
-
+ 
     // =========================
     // 내부 로직
     // =========================
-    
     private void handleHighRisk(RiskEntity risk) {
         if (risk.getRiskLevel() == RiskLevel.CRITICAL) {
             securityEventRepository.save(
                     SecurityEvent.builder()
                             .username(risk.getUsername())
                             .type(SecurityEventType.SUSPICIOUS_LOGIN)
-                            .description("High risk detected")
+                            .description("의심 로그인")
                             .ipAddress(risk.getIpAddress())
                             .device(risk.getDevice())
-                            .createdAt(LocalDateTime.now())
                             .build()
             );
         }
     }
-    
     
     private void revokeAllUserTokens(String username) {
         List<RefreshEntity> tokens = refreshRepository.findByUsername(username);
