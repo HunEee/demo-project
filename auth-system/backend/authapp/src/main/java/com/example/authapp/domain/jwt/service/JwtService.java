@@ -15,6 +15,7 @@ import com.example.authapp.domain.jwt.dto.JWTResponseDTO;
 import com.example.authapp.domain.jwt.entity.RefreshEntity;
 import com.example.authapp.domain.jwt.exception.JwtException;
 import com.example.authapp.domain.jwt.repository.RefreshRepository;
+import com.example.authapp.domain.risk.service.RiskService;
 import com.example.authapp.util.ClientUtil;
 import com.example.authapp.util.CookieService;
 import com.example.authapp.util.JWTUtil;
@@ -32,6 +33,7 @@ public class JwtService {
     private final RefreshRepository refreshRepository;
     private final CookieService cookieService;
     private final SecurityEventService securityEventService;
+    private final RiskService riskService;
     
     // 소셜 로그인 성공 후 쿠키(Refresh) -> 헤더 방식으로 응답
     @Transactional
@@ -102,15 +104,18 @@ public class JwtService {
         String userAgent = ClientUtil.getUserAgent(request);
         String device = ClientUtil.getDevice(userAgent);
         
-        // 1. 이미 revoke된 토큰 → 탈취 의심
-        if (oldEntity.isRevoked()) {
-            // 모든 세션 강제 종료
-            revokeAllByUsername(username);
-            // 보안 이벤트 기록
-            securityEventService.save(username, SecurityEventType.TOKEN_THEFT_DETECTED, "Refresh Token 재사용 감지 (탈취 의심)", ip, device);
-            throw JwtException.abnormalAccess();
-        }
+//        // 1. 이미 revoke된 토큰 → 탈취 의심
+//        if (oldEntity.isRevoked()) {
+//            // 모든 세션 강제 종료
+//            revokeAllByUsername(username);
+//            // 보안 이벤트 기록
+//            securityEventService.save(username, SecurityEventType.TOKEN_THEFT_DETECTED, "Refresh Token 재사용 감지 (탈취 의심)", ip, device);
+//            throw JwtException.abnormalAccess();
+//        }
 
+        // 1. 탈취 판단 위임
+        riskService.analyzeTokenRisk(oldEntity, ip, device, userAgent);
+        
         // 2. IP 변경 감지
         if (!ip.equals(oldEntity.getIpAddress())) {
             securityEventService.suspiciousLogin(username,ip,device);

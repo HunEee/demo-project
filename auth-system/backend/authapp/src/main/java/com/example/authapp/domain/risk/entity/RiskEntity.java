@@ -3,31 +3,35 @@ package com.example.authapp.domain.risk.entity;
 import java.time.LocalDateTime;
 
 import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+
+import com.example.authapp.domain.user.entity.UserEntity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 @Entity
 @EntityListeners(AuditingEntityListener.class)
-@Table(name = "risk_event")
+@Table(name = "risk_entity")
 @Getter
-@Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class RiskEntity {
 
     @Id
@@ -36,34 +40,46 @@ public class RiskEntity {
 
     private String username;
 
-    // 위험 점수 (0 ~ 100)
-    @Column(name = "risk_score")
     private int riskScore;
 
-    // LOW / MEDIUM / HIGH / CRITICAL
     @Enumerated(EnumType.STRING)
-    @Column(name = "risk_level")
     private RiskLevel riskLevel;
 
-    // 위험 이유 
-    @Column(name = "risk_reason", length = 1000)
-    private String riskReason;
-
-    @Column(name = "ip_address")
-    private String ipAddress;
-
-    private String device;
-
-    private String location;
-
+    private String lastReason;
+    
     @CreatedDate
     @Column(name = "created_at")
     private LocalDateTime createdAt;
-
-//    // 로그인 기록과 연결
-//    @ManyToOne(fetch = FetchType.LAZY)
-//    @JoinColumn(name = "login_history_id")
-//    private LoginHistory loginHistory;
     
+    @LastModifiedDate
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+    
+    //*********************************************************
+    // 연관관계
+    //********************************************************* 
+    
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", unique = true)
+    private UserEntity user;
+    
+    //*********************************************************
+    // 커스텀 메서드
+    //*********************************************************    
+    
+    // 점수 누적 메서드
+    public void increaseRisk(int score, String reason) {
+        this.riskScore = Math.min(100, this.riskScore + score);
+        this.riskLevel = calculateLevel(this.riskScore);
+        this.lastReason = reason;
+    }
+    
+    // 리스크 레벨 판별
+    private RiskLevel calculateLevel(int score) {
+        if (score >= 80) return RiskLevel.CRITICAL;
+        if (score >= 60) return RiskLevel.HIGH;
+        if (score >= 30) return RiskLevel.MEDIUM;
+        return RiskLevel.LOW;
+    }
     
 }

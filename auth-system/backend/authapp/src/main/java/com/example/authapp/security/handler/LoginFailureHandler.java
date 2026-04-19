@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 
 import com.example.authapp.domain.audit.service.LoginHistoryService;
 import com.example.authapp.domain.audit.service.SecurityEventService;
+import com.example.authapp.domain.risk.service.RiskService;
 import com.example.authapp.domain.user.repository.UserRepository;
 import com.example.authapp.util.ClientUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -27,6 +28,7 @@ public class LoginFailureHandler implements AuthenticationFailureHandler {
 	private final UserRepository userRepository;
 	private final SecurityEventService securityEventService;
 	private final LoginHistoryService loginHistoryService;
+    private final RiskService riskService;
 	
     @Override
     public void onAuthenticationFailure(HttpServletRequest request,
@@ -68,7 +70,8 @@ public class LoginFailureHandler implements AuthenticationFailureHandler {
     	    // 1. 비밀번호 틀림 (유저 존재할 때만)
     	    if (exception instanceof BadCredentialsException && exists) {
     	        reason = "비밀번호 오류";
-    	        loginHistoryService.saveFail(username, ip, userAgent, device, reason);
+    	        var history = loginHistoryService.saveFail(username, ip, userAgent, device, reason);
+    	        riskService.analyzeLoginRisk(history);
     	        securityEventService.loginFail(username, ip, device, reason);
     	    }
     	    // 2. 유저 없음 -> SecurityEvent만 남김 (공격 탐지용)
@@ -78,7 +81,8 @@ public class LoginFailureHandler implements AuthenticationFailureHandler {
     	    // 3. 기타 인증 실패 (계정 잠김 등)
     	    else {
     	        reason = exception.getMessage();
-    	        loginHistoryService.saveFail(username, ip, userAgent, device, reason);
+    	        var history = loginHistoryService.saveFail(username, ip, userAgent, device, reason);
+    	        riskService.analyzeLoginRisk(history);
     	        securityEventService.loginFail(username, ip, device, reason);
     	    }
         

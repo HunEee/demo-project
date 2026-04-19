@@ -35,7 +35,12 @@ public class RiskEvaluator {
     // 정상 행동 점수 감소
     // =========================
     public int decreaseScore(LoginHistory loginHistory) {
+    	
+    	// 로그인 실패 시 0점 리턴
+    	if (!loginHistory.isSuccess()) return 0;
+    	
         int score = 0;
+        
         // 기존 환경에서 성공 로그인
         if (loginHistory.isSuccess() && !isNewIp(loginHistory) && !isNewDevice(loginHistory)) {
             score -= 20;
