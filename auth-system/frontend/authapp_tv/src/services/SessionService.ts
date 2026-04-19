@@ -1,8 +1,8 @@
 import apiClient from "@/config/apiClient";
-import type Session from "@/models/Session";
+import type SessionData from "@/models/SessionData";
 
 // 세션 목록 조회
-export const getSessions = async (): Promise<Session[]> => {
+export const getSessions = async (): Promise<SessionData[]> => {
   const res = await apiClient.get("/sessions");
   return res.data;
 };

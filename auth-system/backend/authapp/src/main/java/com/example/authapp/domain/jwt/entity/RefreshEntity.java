@@ -9,6 +9,8 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import com.example.authapp.domain.audit.entity.LoginHistory;
+
 import java.time.LocalDateTime;
 
 @Entity
@@ -76,14 +78,19 @@ public class RefreshEntity {
     @Column(name = "user_agent", length = 512)
     private String userAgent;
     
-    // 로그인 이력 연결 
-    @Column(name = "login_history_id")
-    private Long loginHistoryId;
-    
     // 마지막 사용 시간 (세션 관리용)
     @LastModifiedDate
     @Column(name = "last_used_at")
     private LocalDateTime lastUsedAt;
+    
+    //********************************************************************************
+    // 연관관계 칼럼
+    //********************************************************************************
+    
+    // 로그인 이력 연결 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "login_history_id")
+    private LoginHistory loginHistory;
     
     //********************************************************************************
     // 커스텀 메서드

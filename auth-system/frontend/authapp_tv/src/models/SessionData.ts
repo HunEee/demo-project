@@ -1,4 +1,4 @@
-export default interface Session {
+export default interface SessionData {
   id: string;
   ip: string;
   device: string;

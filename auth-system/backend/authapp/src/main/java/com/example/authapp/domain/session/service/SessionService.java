@@ -5,9 +5,13 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.authapp.domain.audit.dto.LoginHistoryResponse;
+import com.example.authapp.domain.audit.entity.LoginHistory;
 import com.example.authapp.domain.audit.service.LoginHistoryService;
+import com.example.authapp.domain.audit.service.SecurityEventService;
 import com.example.authapp.domain.jwt.entity.RefreshEntity;
 import com.example.authapp.domain.jwt.repository.RefreshRepository;
+import com.example.authapp.domain.jwt.service.JwtService;
 import com.example.authapp.domain.session.dto.SessionResponse;
 import com.example.authapp.util.JWTUtil;
 
@@ -19,8 +23,10 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class SessionService {
 	
+	private final JwtService jwtService;
     private final RefreshRepository refreshRepository;
     private final LoginHistoryService loginHistoryService;
+    private final SecurityEventService securityEventService;
     
     // 세션 목록 조회
     public List<SessionResponse> getSessions(String username, HttpServletRequest request) {
@@ -35,7 +41,7 @@ public class SessionService {
                         .id(token.getId())
                         .ip(token.getIpAddress())
                         .device(token.getDevice())
-                        .createdAt(loginHistoryService.getSessionStartTime(token.getLoginHistoryId()))
+                        .createdAt(loginHistoryService.getSessionStartTime(token.getLoginHistory().getId()))
                         .lastAccessAt(token.getLastUsedAt() != null
                                 ? token.getLastUsedAt().toString()
                                 : token.getCreatedDate().toString())
@@ -47,11 +53,16 @@ public class SessionService {
     // 특정 세션 로그아웃
     @Transactional
     public void logoutSession(Long id, String username) {
-        RefreshEntity token = refreshRepository
+        RefreshEntity refreshToken = refreshRepository
                 .findByIdAndUsername(id, username)
                 .orElseThrow(() -> new RuntimeException("세션 없음"));
 
-        token.revoke();
+        // 리프레시 토큰 만료
+        refreshToken.revoke();
+        
+        // 로그 기록과 이벤트 기록을 남김
+        processLogout(refreshToken.getRefresh());
+        
     }
 
     // 전체 로그아웃
@@ -61,12 +72,15 @@ public class SessionService {
     	String refreshToken = extractRefreshToken(request);
         String currentJti = JWTUtil.getJti(refreshToken);
     	
-    	List<RefreshEntity> tokens =
-                refreshRepository.findByUsernameAndRevokedFalse(username);
+    	List<RefreshEntity> tokens = refreshRepository.findByUsernameAndRevokedFalse(username);
 
         tokens.stream()
                 .filter(t -> !t.getJti().equals(currentJti)) // 현재 세션 제외
-                .forEach(RefreshEntity::revoke);
+                .forEach(t -> {
+                    t.revoke();
+                    processLogout(t.getRefresh());
+                });
+        
     }
     
     //*******************************************************************************************
@@ -85,4 +99,15 @@ public class SessionService {
         }
         throw new RuntimeException("refreshToken 없음");
     }
+    
+    // 로그아웃 기록 및 이벤트 기록
+    private void processLogout(String refreshTokenValue) {
+        LoginHistoryResponse history = jwtService.revokeRefresh(refreshTokenValue);
+
+        if (history != null) {
+            loginHistoryService.logout(history);
+            securityEventService.logout(history.username(), history.ipAddress(), history.device());
+        }
+    }
+    
 }

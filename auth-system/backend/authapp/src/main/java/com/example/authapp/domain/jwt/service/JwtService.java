@@ -7,6 +7,8 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.authapp.domain.audit.dto.LoginHistoryResponse;
+import com.example.authapp.domain.audit.entity.LoginHistory;
 import com.example.authapp.domain.audit.entity.SecurityEventType;
 import com.example.authapp.domain.audit.service.SecurityEventService;
 import com.example.authapp.domain.jwt.dto.JWTResponseDTO;
@@ -138,6 +140,7 @@ public class JwtService {
                 .userAgent(oldEntity.getUserAgent())
                 .device(oldEntity.getDevice())
                 .revoked(false)
+                .loginHistory(oldEntity.getLoginHistory())
                 .build();
 
         refreshRepository.save(newEntity);
@@ -170,7 +173,7 @@ public class JwtService {
     
     // JWT Refresh 토큰 발급 후 저장 메소드
     @Transactional
-    public void addRefresh(String username,String refreshToken,String ip,String userAgent,String device, Long loginHistoryId) {
+    public void addRefresh(String username,String refreshToken,String ip,String userAgent,String device, LoginHistory loginHistory) {
         String jti = JWTUtil.getJti(refreshToken); 
     	RefreshEntity entity = RefreshEntity.builder()
                 .username(username)
@@ -181,7 +184,7 @@ public class JwtService {
                 .userAgent(userAgent)
                 .device(device)
                 .revoked(false)
-                .loginHistoryId(loginHistoryId) 
+                .loginHistory(loginHistory) 
                 .build();
         refreshRepository.save(entity);
     }
@@ -208,14 +211,18 @@ public class JwtService {
     
     // 리프레시 토큰 만료 : revoked -> true 처리
     @Transactional
-    public Long revokeRefresh(String refreshToken) {
+    public LoginHistoryResponse revokeRefresh(String refreshToken) {
         RefreshEntity entity = refreshRepository
                 .findByRefresh(refreshToken)
                 .orElseThrow(JwtException::tokenNotFound);
 
         entity.revoke();
+        
+        LoginHistory history = entity.getLoginHistory();
 
-        return entity.getLoginHistoryId();    
+        if (history == null) return null;
+
+        return history.toResponse();  
     }
     
     // 전체 세션 로그아웃 -> 모든 리프레시토큰 만료(비밀번호 변경)

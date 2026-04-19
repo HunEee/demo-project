@@ -1,11 +1,19 @@
 package com.example.authapp.domain.audit.service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import com.example.authapp.domain.audit.dto.LoginHistoryResponse;
+import com.example.authapp.domain.audit.dto.LoginHistoryResponseDTO;
 import com.example.authapp.domain.audit.entity.LoginHistory;
 import com.example.authapp.domain.audit.entity.LoginStatus;
+import com.example.authapp.domain.audit.mapper.LoginHistoryMapper;
 import com.example.authapp.domain.audit.repository.LoginHistoryRepository;
 
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +25,36 @@ public class LoginHistoryService {
 
     private final LoginHistoryRepository loginHistoryRepository;
 
+    // 로그인 기록 조회(필터 없는 버전)
+    public Page<LoginHistoryResponseDTO> getAllLoginHistories(String username, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size,Sort.by(Sort.Direction.DESC, "loginAt"));
+        return loginHistoryRepository
+                .findByUsername(username, pageable)
+                .map(LoginHistoryMapper::toDTO);
+    }
+    
+    // 날짜 필터 조회
+    public Page<LoginHistoryResponseDTO> getLoginHistories(String username, int page, int size, String date) {
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "loginAt"));
+        Page<LoginHistory> result;
+
+        // 날짜 필터
+        if (date != null && !date.isEmpty()) {
+            LocalDate targetDate = LocalDate.parse(date);
+            LocalDateTime start = targetDate.atStartOfDay();
+            LocalDateTime end = targetDate.atTime(23, 59, 59);
+
+            result = loginHistoryRepository.findByUsernameAndLoginAtBetween(username, start, end, pageable);
+        } else {
+            result = loginHistoryRepository.findByUsername(username, pageable);
+        }
+
+        return result.map(LoginHistoryMapper::toDTO);
+    }
+
+    
+    
     // 로그인 성공 히스토리 저장
     public LoginHistory saveSuccess(String username, String ip, String userAgent, String device) {
         LoginHistory history = LoginHistory.builder()
@@ -47,8 +85,9 @@ public class LoginHistoryService {
     
     // 로그아웃
     @Transactional
-    public void logout(Long loginHistoryId) {
-        LoginHistory history = loginHistoryRepository.findById(loginHistoryId)
+    public void logout(LoginHistoryResponse loginHistory) {
+        LoginHistory history = loginHistoryRepository
+                .findById(loginHistory.id())
                 .orElseThrow(() -> new IllegalArgumentException("로그인 이력 없음"));
 
         history.logout(); // logoutAt + status 변경
@@ -72,6 +111,9 @@ public class LoginHistoryService {
     public void expireAll(String username) {
         loginHistoryRepository.findByUsername(username).forEach(LoginHistory::expire);
     }
-    
-    
+
+
+
+
+
 }

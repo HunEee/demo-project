@@ -62,7 +62,7 @@ public class LoginSuccessHandler implements AuthenticationSuccessHandler {
         
         // 발급한 Refresh DB 테이블 저장 (Refresh whitelist)
         //jwtService.addRefresh(username, refreshToken);
-        jwtService.addRefresh(username, refreshToken, ip, userAgent, device, history.getId());
+        jwtService.addRefresh(username, refreshToken, ip, userAgent, device, history);
 
         // 쿠키 저장
         cookieService.addRefreshCookie(response, refreshToken);

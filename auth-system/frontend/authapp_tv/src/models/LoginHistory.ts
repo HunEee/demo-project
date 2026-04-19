@@ -1,7 +1,10 @@
 export default interface LoginHistory {
   id: number;
+  username: string;
   ip: string;
   userAgent: string;
-  loginAt: string;
+  device: string;
   location?: string;
+  loginAt: string;
+  status: "ACTIVE" | "LOGOUT" | "EXPIRED" | "FAILED";
 }

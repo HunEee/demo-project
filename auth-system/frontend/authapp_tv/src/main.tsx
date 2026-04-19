@@ -31,7 +31,7 @@ createRoot(document.getElementById('root')!).render(
         </Route>
 
         <Route path="/mypage" element={<MyPage />} />
-        <Route path="/mypage/logins" element={<LoginHistoryPage />} />
+        <Route path="/mypage/login-history" element={<LoginHistoryPage />} />
         <Route path="/mypage/security" element={<SecurityPage />} />
         <Route path="/mypage/password" element={<ChangePasswordPage />} />
 

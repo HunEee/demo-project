@@ -83,7 +83,7 @@ export default function Navbar() {
                     <DropdownMenuItem onClick={() => navigate("/mypage/password")}>
                       비밀번호 변경
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate("/mypage/logins")}>
+                    <DropdownMenuItem onClick={() => navigate("/mypage/login-history")}>
                       로그인 이력
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => navigate("/mypage/sessions")}>

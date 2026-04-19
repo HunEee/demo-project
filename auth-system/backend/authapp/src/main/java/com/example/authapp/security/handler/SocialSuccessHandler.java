@@ -46,7 +46,7 @@ public class SocialSuccessHandler implements AuthenticationSuccessHandler {
 
         var history = loginHistoryService.saveSuccess(username,ip,userAgent,device);
         // 발급한 Refresh DB 테이블 저장 (Refresh whitelist)
-        jwtService.addRefresh(username, refreshToken, ip, userAgent, device,history.getId());
+        jwtService.addRefresh(username, refreshToken, ip, userAgent, device, history);
 
         // 응답
         Cookie refreshCookie = new Cookie("refreshToken", refreshToken);

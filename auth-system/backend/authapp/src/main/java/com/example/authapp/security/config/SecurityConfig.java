@@ -26,6 +26,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import com.example.authapp.domain.audit.service.LoginHistoryService;
+import com.example.authapp.domain.audit.service.SecurityEventService;
 import com.example.authapp.domain.jwt.service.JwtService;
 import com.example.authapp.domain.user.entity.UserRoleType;
 import com.example.authapp.security.filter.JWTFilter;
@@ -35,7 +36,6 @@ import com.example.authapp.security.principal.CustomUserDetailsService;
 import com.example.authapp.util.CookieService;
 
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.RequiredArgsConstructor;
 
 @Configuration
 @EnableWebSecurity
@@ -56,6 +56,8 @@ public class SecurityConfig {
     private final CookieService cookieService;
     // 로그인 기록 남기기
     private final LoginHistoryService loginHistoryService;
+    // 이벤트 기록
+    private final SecurityEventService securityEventService;
     // UserService에서 분리
     private final CustomUserDetailsService userDetailsService;
     
@@ -68,6 +70,7 @@ public class SecurityConfig {
             JwtService jwtService,
             CookieService cookieService,
             LoginHistoryService loginHistoryService,
+            SecurityEventService securityEventService,
             CustomUserDetailsService userDetailsService
     ) {
         this.authenticationConfiguration = authenticationConfiguration;
@@ -77,6 +80,7 @@ public class SecurityConfig {
         this.jwtService = jwtService;
         this.cookieService = cookieService;
         this.loginHistoryService = loginHistoryService;
+        this.securityEventService = securityEventService;
         this.userDetailsService = userDetailsService;
     }
     
@@ -150,7 +154,7 @@ public class SecurityConfig {
 
         // 기본 로그아웃 필터 + 커스텀 Refresh 토큰 삭제 핸들러 추가
         http.logout(logout -> logout
-                .addLogoutHandler(new RefreshTokenLogoutHandler(jwtService, cookieService, loginHistoryService))
+                .addLogoutHandler(new RefreshTokenLogoutHandler(jwtService, cookieService, loginHistoryService,securityEventService))
                 .logoutSuccessHandler((request, response, authentication) -> {
                     response.setStatus(HttpServletResponse.SC_OK);
                 })

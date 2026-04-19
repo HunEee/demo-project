@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { getSessions, logoutSession,logoutAllSessions } from "@/services/SessionService";
-import type Session from "@/models/Session";
+import type SessionData from "@/models/SessionData";
 
 export default function SessionsPage() {
-  const [sessions, setSessions] = useState<Session[]>([]);
+  const [sessions, setSessions] = useState<SessionData[]>([]);
   const [loading, setLoading] = useState(false);
 
   // 세션 목록 조회
