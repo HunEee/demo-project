@@ -82,4 +82,10 @@ public class RiskEntity {
         return RiskLevel.LOW;
     }
     
+    public void forceCritical(String reason) {
+        this.riskScore = 100;
+        this.riskLevel = RiskLevel.CRITICAL;
+        this.lastReason = reason;
+    }
+    
 }
