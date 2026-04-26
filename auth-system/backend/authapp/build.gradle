@@ -42,6 +42,16 @@ dependencies {
 	// Valid 검증
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	
+	// 이메일 발송 (SMTP)
+    implementation 'org.springframework.boot:spring-boot-starter-mail'
+	// OTP / TOTP (Google Authenticator MFA)
+    implementation 'dev.samstevens.totp:totp:1.7.1'
+	// QR 코드 생성 (MFA 등록용)
+    implementation 'com.google.zxing:core:3.5.3'
+    implementation 'com.google.zxing:javase:3.5.3'
+    // 랜덤 토큰 생성용
+    implementation 'commons-codec:commons-codec:1.17.0'
+	
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.security:spring-security-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'

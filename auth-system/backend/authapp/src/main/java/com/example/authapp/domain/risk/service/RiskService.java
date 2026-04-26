@@ -41,8 +41,8 @@ public class RiskService {
         
         // 점수 계산 
         int score = riskEvaluator.increaseScore(loginHistory) + riskEvaluator.decreaseScore(loginHistory);
-
-        score = Math.max(0, score);
+        
+        // 리즌 빌드
         String reason = buildReason(loginHistory);
 
         // 위험 점수 있을 때만 저장
@@ -55,6 +55,9 @@ public class RiskService {
             if (risk.getRiskLevel() == RiskLevel.CRITICAL) {
                 riskActionService.blockHighRisk(username, loginHistory.getIpAddress(),loginHistory.getDevice());
             }
+        }else if (score < 0) {
+        	// 정상행동 리스크 감소
+            risk.decreaseRisk(Math.abs(score), "NORMAL_LOGIN");
         }
             
         return riskRepository.save(risk);

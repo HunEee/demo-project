@@ -67,14 +67,28 @@ public class RiskEntity {
     // 커스텀 메서드
     //*********************************************************    
     
-    // 점수 누적 메서드
+    // 점수 누적 메서드(위험 증가)
     public void increaseRisk(int score, String reason) {
         this.riskScore = Math.min(100, this.riskScore + score);
         this.riskLevel = calculateLevel(this.riskScore);
         this.lastReason = reason;
     }
     
-    // 리스크 레벨 판별
+    // 점수 감소 메서드(위험 회복)
+    public void decreaseRisk(int score, String reason) {
+        this.riskScore = Math.max(0, this.riskScore - score);
+        this.riskLevel = calculateLevel(this.riskScore);
+        this.lastReason = reason;
+    }
+    
+    // 강제 위험 할당(토큰 탈취 확정)
+    public void forceCritical(String reason) {
+        this.riskScore = 100;
+        this.riskLevel = RiskLevel.CRITICAL;
+        this.lastReason = reason;
+    }
+    
+	// 리스크 레벨 판별
     private RiskLevel calculateLevel(int score) {
         if (score >= 80) return RiskLevel.CRITICAL;
         if (score >= 60) return RiskLevel.HIGH;
@@ -82,10 +96,6 @@ public class RiskEntity {
         return RiskLevel.LOW;
     }
     
-    public void forceCritical(String reason) {
-        this.riskScore = 100;
-        this.riskLevel = RiskLevel.CRITICAL;
-        this.lastReason = reason;
-    }
+    
     
 }

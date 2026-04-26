@@ -36,6 +36,7 @@ import com.example.authapp.domain.user.entity.UserRoleType;
 import com.example.authapp.domain.user.exception.UserException;
 import com.example.authapp.domain.user.repository.RoleRepository;
 import com.example.authapp.domain.user.repository.UserRepository;
+import com.example.authapp.domain.verificatoin.service.EmailCodeService;
 import com.example.authapp.security.principal.UserPrincipal;
 
 import lombok.RequiredArgsConstructor;
@@ -49,7 +50,8 @@ public class UserService extends DefaultOAuth2UserService {
     private final RoleRepository roleRepository;
 	private final JwtService jwtService;
     private final SecurityEventService securityEventService;
-	
+    private final EmailCodeService emailCodeService;
+    
     // 자체 로그인 회원 가입 (존재 여부)
     @Transactional(readOnly = true)
     public Boolean existUser(UserRequestDTO dto) {
@@ -60,6 +62,11 @@ public class UserService extends DefaultOAuth2UserService {
     @Transactional
     public Long addUser(UserRequestDTO dto) {
 
+        // 1. 이메일 인증코드 검증
+        emailCodeService.verifySignupCode(dto.getEmail(),dto.getVerificationCode());
+    	
+        // =========================
+        // 2. 중복 체크
     	if (userRepository.existsByUsername(dto.getUsername())) {
     	    throw UserException.duplicateUsername();
     	}
@@ -68,9 +75,13 @@ public class UserService extends DefaultOAuth2UserService {
     	    throw UserException.duplicateEmail();
     	}
 
+        // =========================
+        // 3. 권한 조회
     	RoleEntity userRole = roleRepository.findByName("ROLE_USER")
     	        .orElseThrow(UserException::roleNotFound);
         
+        // =========================
+        // 4. 회원 생성
         UserEntity user = UserEntity.builder()
                 .username(dto.getUsername())
                 .password(passwordEncoder.encode(dto.getPassword()))
@@ -88,18 +99,6 @@ public class UserService extends DefaultOAuth2UserService {
         
         return userRepository.save(user).getId();
     }    
-    
-//    // 자체 로그인
-//    // DB에 저장된 username/password를 가져온다.
-//    @Transactional(readOnly = true)
-//	@Override
-//	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-//    	
-//    	UserEntity entity = userRepository.findWithRoles(username)
-//    		    .orElseThrow(() -> new UsernameNotFoundException("유저가 존재하지 않습니다."));
-//    	
-//	    return new UserPrincipal(entity); 
-//	}
     
     // 자체 로그인 회원 정보 수정
     @Transactional
@@ -125,6 +124,70 @@ public class UserService extends DefaultOAuth2UserService {
 
         return userRepository.save(entity).getId();
     }
+    
+    // 비밀번호 변경
+    public void changePassword(String username, String currentPassword, String newPassword, String ip, String device) {
+        // 1. 유저 조회
+        UserEntity user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("유저 없음"));
+
+        // 2. 현재 비밀번호 검증
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+            throw new IllegalArgumentException("현재 비밀번호 불일치");
+        }
+
+        // 3. 새 비밀번호 검증 (간단 버전)
+        if (currentPassword.equals(newPassword)) {
+            throw new IllegalArgumentException("기존 비밀번호와 동일");
+        }
+
+        // 4. 비밀번호 암호화
+        String encodedPassword = passwordEncoder.encode(newPassword);
+
+        // 5. 변경
+        user.changePassword(encodedPassword);
+
+        // 6. 모든 Refresh Token 무효화 (강제 로그아웃)
+        jwtService.revokeAllByUsername(username);
+
+        // 7. 보안 로그 기록
+        securityEventService.passwordChange(username, ip, device);
+    }
+    
+    // 비밀번호 초기화(비밀번호 찾기)
+    @Transactional
+    public void resetPassword(UserRequestDTO dto) {
+        // 1. 이메일 인증코드 검증
+        emailCodeService.verifyResetPasswordCode(dto.getEmail(), dto.getVerificationCode());
+        
+        // 2. 유저 조회
+        UserEntity user = userRepository.findByUsernameAndEmail(dto.getUsername(), dto.getEmail())
+        		.orElseThrow(UserException::userNotFound);
+        
+        // 3. 비밀번호 암호화
+        String encodedPassword = passwordEncoder.encode(dto.getPassword());
+
+        // 4. 변경
+        user.changePassword(encodedPassword);
+
+        // 5. 기존 Refresh Token 전체 만료
+        jwtService.revokeAllByUsername(user.getUsername());
+    }
+    
+    // username 찾기
+    @Transactional(readOnly = true)
+    public String findUsername(UserRequestDTO dto) {
+    	
+        emailCodeService.verifyFindUsernameCode(dto.getEmail(), dto.getVerificationCode());
+
+        UserEntity user = userRepository.findByEmail(dto.getEmail()).orElseThrow(UserException::userNotFound);
+
+        String username = user.getUsername();
+        
+        return username;
+    }
+    
+    
     
     // 자체/소셜 로그인 회원 탈퇴
     @Transactional
@@ -262,34 +325,7 @@ public class UserService extends DefaultOAuth2UserService {
     	        .toList();
     }
     
-    // 비밀번호 변경
-    public void changePassword(String username, String currentPassword, String newPassword, String ip, String device) {
-        // 1. 유저 조회
-        UserEntity user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("유저 없음"));
 
-        // 2. 현재 비밀번호 검증
-        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
-            throw new IllegalArgumentException("현재 비밀번호 불일치");
-        }
-
-        // 3. 새 비밀번호 검증 (간단 버전)
-        if (currentPassword.equals(newPassword)) {
-            throw new IllegalArgumentException("기존 비밀번호와 동일");
-        }
-
-        // 4. 비밀번호 암호화
-        String encodedPassword = passwordEncoder.encode(newPassword);
-
-        // 5. 변경
-        user.changePassword(encodedPassword);
-
-        // 6. 모든 Refresh Token 무효화 (강제 로그아웃)
-        jwtService.revokeAllByUsername(username);
-
-        // 7. 보안 로그 기록
-        securityEventService.passwordChange(username, ip, device);
-    }
 
 
     

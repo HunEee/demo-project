@@ -33,17 +33,13 @@ public class UserController {
     
     // 자체 로그인 유저 존재 확인
     @PostMapping(value = "/user/exist", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Boolean> existUserApi(
-            @Validated(UserRequestDTO.existGroup.class) @RequestBody UserRequestDTO dto
-    ) {
+    public ResponseEntity<Boolean> existUserApi(@Validated(UserRequestDTO.existGroup.class) @RequestBody UserRequestDTO dto){
         return ResponseEntity.ok(userService.existUser(dto));
     }
 
-    // 회원가입
+    // 회원가입(email + verificationCode 포함)
     @PostMapping(value = "/user", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Map<String, Long>> joinApi(
-            @Validated(UserRequestDTO.addGroup.class) @RequestBody UserRequestDTO dto
-    ) {
+    public ResponseEntity<Map<String, Long>> joinApi(@Validated(UserRequestDTO.addGroup.class) @RequestBody UserRequestDTO dto){
         Long id = userService.addUser(dto);
         Map<String, Long> responseBody = Collections.singletonMap("userEntityId", id);
         return ResponseEntity.status(201).body(responseBody);
@@ -77,8 +73,8 @@ public class UserController {
         return ResponseEntity.status(200).body(true);
     }
     
-    //비밀번호 변경
-    @PostMapping("user/password")
+    // 비밀번호 변경(로그인 상태)
+    @PostMapping("user/password/change")
     public void changePassword(
             @AuthenticationPrincipal(expression = "username") String username,
             @RequestBody PasswordChangeRequest request,
@@ -88,6 +84,20 @@ public class UserController {
         String userAgent = httpRequest.getHeader("User-Agent");
         userService.changePassword(username,request.getCurrentPassword(),request.getNewPassword(),ip, userAgent);
     }
-    
 
+    // 비밀번호 찾기(로그아웃 상태) -> username + email + verificationCode
+    @PostMapping("/user/password/reset")
+    public ResponseEntity<String> resetPassword(@RequestBody UserRequestDTO dto) {
+        userService.resetPassword(dto);
+        return ResponseEntity.ok("비밀번호 재설정 완료");
+    }
+
+    // 아이디 찾기(로그아웃 상태) -> email + verificationCode
+    @PostMapping("/user/username/find")
+    public ResponseEntity<Map<String, String>> findUsername(@RequestBody UserRequestDTO dto ) {
+        String username = userService.findUsername(dto);
+        return ResponseEntity.ok(Collections.singletonMap("username", username));
+    }
+    
+    
 }
