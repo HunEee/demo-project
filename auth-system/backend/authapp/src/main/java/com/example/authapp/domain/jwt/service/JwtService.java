@@ -15,6 +15,7 @@ import com.example.authapp.domain.jwt.dto.JWTResponseDTO;
 import com.example.authapp.domain.jwt.entity.RefreshEntity;
 import com.example.authapp.domain.jwt.exception.JwtException;
 import com.example.authapp.domain.jwt.repository.RefreshRepository;
+import com.example.authapp.domain.risk.exception.RiskException;
 import com.example.authapp.domain.risk.service.RiskService;
 import com.example.authapp.util.ClientUtil;
 import com.example.authapp.util.CookieService;
@@ -105,7 +106,13 @@ public class JwtService {
         String device = ClientUtil.getDevice(userAgent);
 
         // 탈취 판단 및 차단 위임**********************************************
-        riskService.analyzeTokenRisk(oldEntity, ip, device, userAgent);  
+        boolean available = riskService.analyzeTokenRisk(oldEntity, ip, device, userAgent);  
+        if (!available) {
+            //throw RiskException.tokenReuseDetected();
+        	response.setStatus(401);
+            return new JWTResponseDTO(null, null);
+        }
+        
         // 이 아래는 정상 흐름************************************************
         
         // 토큰 생성
