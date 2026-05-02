@@ -8,9 +8,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.authapp.domain.audit.dto.LoginHistoryResponse;
-import com.example.authapp.domain.audit.entity.LoginHistory;
-import com.example.authapp.domain.audit.entity.SecurityEventType;
-import com.example.authapp.domain.audit.service.SecurityEventService;
+import com.example.authapp.domain.audit.entity.LoginHistoryEntity;
+import com.example.authapp.domain.audit.entity.AuthEventType;
+import com.example.authapp.domain.audit.service.AuthEventLogService;
 import com.example.authapp.domain.jwt.dto.JWTResponseDTO;
 import com.example.authapp.domain.jwt.entity.RefreshEntity;
 import com.example.authapp.domain.jwt.exception.JwtException;
@@ -33,7 +33,7 @@ public class JwtService {
 
     private final RefreshRepository refreshRepository;
     private final CookieService cookieService;
-    private final SecurityEventService securityEventService;
+    private final AuthEventLogService securityEventService;
     private final RiskService riskService;
     
     // 소셜 로그인 성공 후 쿠키(Refresh) -> 헤더 방식으로 응답
@@ -169,7 +169,7 @@ public class JwtService {
     
     // JWT Refresh 토큰 발급 후 저장 메소드
     @Transactional
-    public void addRefresh(String username,String refreshToken,String ip,String userAgent,String device, LoginHistory loginHistory) {
+    public void addRefresh(String username,String refreshToken,String ip,String userAgent,String device, LoginHistoryEntity loginHistory) {
         String jti = JWTUtil.getJti(refreshToken); 
     	RefreshEntity entity = RefreshEntity.builder()
                 .username(username)
@@ -214,14 +214,14 @@ public class JwtService {
 
         entity.revoke();
         
-        LoginHistory history = entity.getLoginHistory();
+        LoginHistoryEntity history = entity.getLoginHistory();
 
         if (history == null) return null;
 
         return history.toResponse();  
     }
     
-    // 전체 세션 로그아웃 -> 모든 리프레시토큰 만료(비밀번호 변경)
+    // 전체 세션 로그아웃 -> 모든 리프레시토큰 만료(비밀번호 변경, 토큰 탈취 및 위험 감지)
     @Transactional
     public void revokeAllByUsername(String username) {
         List<RefreshEntity> tokens = refreshRepository.findByUsername(username);

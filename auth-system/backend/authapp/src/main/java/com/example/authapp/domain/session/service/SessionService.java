@@ -6,9 +6,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.authapp.domain.audit.dto.LoginHistoryResponse;
-import com.example.authapp.domain.audit.entity.LoginHistory;
+import com.example.authapp.domain.audit.entity.LoginHistoryEntity;
 import com.example.authapp.domain.audit.service.LoginHistoryService;
-import com.example.authapp.domain.audit.service.SecurityEventService;
+import com.example.authapp.domain.audit.service.AuthEventLogService;
 import com.example.authapp.domain.jwt.entity.RefreshEntity;
 import com.example.authapp.domain.jwt.repository.RefreshRepository;
 import com.example.authapp.domain.jwt.service.JwtService;
@@ -26,7 +26,7 @@ public class SessionService {
 	private final JwtService jwtService;
     private final RefreshRepository refreshRepository;
     private final LoginHistoryService loginHistoryService;
-    private final SecurityEventService securityEventService;
+    private final AuthEventLogService securityEventService;
     
     // 세션 목록 조회
     public List<SessionResponse> getSessions(String username, HttpServletRequest request) {

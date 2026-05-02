@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.authapp.domain.audit.dto.SecurityStatusResponseDTO;
+import com.example.authapp.domain.audit.repository.SecurityIncidentRepository;
 import com.example.authapp.domain.jwt.entity.RefreshEntity;
 import com.example.authapp.domain.jwt.repository.RefreshRepository;
 import com.example.authapp.domain.jwt.service.JwtService;
@@ -17,9 +18,10 @@ import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
-public class SecurityService {
+public class SecurityDashboardService {
 
     private final RefreshRepository refreshRepository;
+    private final SecurityIncidentRepository securityIncidentRepository;
     
     @Transactional(readOnly = true)
     public SecurityStatusResponseDTO getSecurityStatus(String username) {

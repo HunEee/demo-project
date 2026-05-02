@@ -8,7 +8,7 @@ import org.springframework.security.web.authentication.AuthenticationSuccessHand
 import org.springframework.stereotype.Component;
 
 import com.example.authapp.domain.audit.service.LoginHistoryService;
-import com.example.authapp.domain.audit.service.SecurityEventService;
+import com.example.authapp.domain.audit.service.AuthEventLogService;
 import com.example.authapp.domain.jwt.service.JwtService;
 import com.example.authapp.domain.risk.service.RiskService;
 import com.example.authapp.domain.user.entity.UserEntity;
@@ -33,7 +33,7 @@ public class LoginSuccessHandler implements AuthenticationSuccessHandler {
 	private final CookieService cookieService;	
 	private final ObjectMapper objectMapper;
 	private final LoginHistoryService loginHistoryService;
-	private final SecurityEventService securityEventService;
+	private final AuthEventLogService securityEventService;
 	private final RiskService riskService;
     
 	@Override

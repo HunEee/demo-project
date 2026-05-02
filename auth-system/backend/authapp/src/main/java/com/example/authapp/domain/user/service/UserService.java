@@ -24,7 +24,7 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.example.authapp.domain.audit.service.SecurityEventService;
+import com.example.authapp.domain.audit.service.AuthEventLogService;
 import com.example.authapp.domain.jwt.service.JwtService;
 import com.example.authapp.domain.user.dto.CustomOAuth2User;
 import com.example.authapp.domain.user.dto.UserRequestDTO;
@@ -49,7 +49,7 @@ public class UserService extends DefaultOAuth2UserService {
 	private final UserRepository userRepository;
     private final RoleRepository roleRepository;
 	private final JwtService jwtService;
-    private final SecurityEventService securityEventService;
+    private final AuthEventLogService securityEventService;
     private final EmailCodeService emailCodeService;
     
     // 자체 로그인 회원 가입 (존재 여부)

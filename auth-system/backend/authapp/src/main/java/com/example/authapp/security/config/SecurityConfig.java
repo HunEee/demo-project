@@ -26,7 +26,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import com.example.authapp.domain.audit.service.LoginHistoryService;
-import com.example.authapp.domain.audit.service.SecurityEventService;
+import com.example.authapp.domain.audit.service.AuthEventLogService;
 import com.example.authapp.domain.jwt.service.JwtService;
 import com.example.authapp.domain.user.entity.UserRoleType;
 import com.example.authapp.security.filter.JWTFilter;
@@ -57,7 +57,7 @@ public class SecurityConfig {
     // 로그인 기록 남기기
     private final LoginHistoryService loginHistoryService;
     // 이벤트 기록
-    private final SecurityEventService securityEventService;
+    private final AuthEventLogService securityEventService;
     // UserService에서 분리
     private final CustomUserDetailsService userDetailsService;
     
@@ -70,7 +70,7 @@ public class SecurityConfig {
             JwtService jwtService,
             CookieService cookieService,
             LoginHistoryService loginHistoryService,
-            SecurityEventService securityEventService,
+            AuthEventLogService securityEventService,
             CustomUserDetailsService userDetailsService
     ) {
         this.authenticationConfiguration = authenticationConfiguration;

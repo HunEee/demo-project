@@ -5,7 +5,7 @@ import java.time.LocalDateTime;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import com.example.authapp.domain.audit.entity.LoginHistory;
+import com.example.authapp.domain.audit.entity.LoginHistoryEntity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -63,7 +63,7 @@ public class RiskEventEntity {
     // 로그인 기록과 연결
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "login_history_id")
-    private LoginHistory loginHistory;
+    private LoginHistoryEntity loginHistory;
     
     
 }

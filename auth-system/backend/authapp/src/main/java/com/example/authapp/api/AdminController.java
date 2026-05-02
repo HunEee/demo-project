@@ -10,8 +10,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.authapp.domain.admin.AdminService;
-import com.example.authapp.domain.audit.entity.LoginHistory;
-import com.example.authapp.domain.audit.entity.SecurityEvent;
+import com.example.authapp.domain.audit.entity.LoginHistoryEntity;
+import com.example.authapp.domain.audit.entity.AuthEventLogEntity;
 import com.example.authapp.domain.user.entity.UserEntity;
 
 import lombok.RequiredArgsConstructor;
@@ -40,12 +40,12 @@ public class AdminController {
     }
 
     @GetMapping("/login-history/{username}")
-    public List<LoginHistory> getLoginHistory(@PathVariable String username) {
+    public List<LoginHistoryEntity> getLoginHistory(@PathVariable String username) {
         return adminService.getLoginHistory(username);
     }
 
     @GetMapping("/security-event/{username}")
-    public List<SecurityEvent> getSecurityEvents(@PathVariable String username) {
+    public List<AuthEventLogEntity> getSecurityEvents(@PathVariable String username) {
         return adminService.getSecurityEvents(username);
     }
 

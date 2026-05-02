@@ -1,12 +1,12 @@
 package com.example.authapp.domain.audit.mapper;
 
 import com.example.authapp.domain.audit.dto.LoginHistoryResponseDTO;
-import com.example.authapp.domain.audit.entity.LoginHistory;
+import com.example.authapp.domain.audit.entity.LoginHistoryEntity;
 
 public class LoginHistoryMapper {
     
     // 로그인 기록 페이지 응답용
-    public static LoginHistoryResponseDTO toDTO(LoginHistory entity) {
+    public static LoginHistoryResponseDTO toDTO(LoginHistoryEntity entity) {
         return new LoginHistoryResponseDTO(
             entity.getId(),
             entity.getUsername(),

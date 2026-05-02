@@ -6,7 +6,7 @@ import java.util.List;
 
 import org.springframework.stereotype.Component;
 
-import com.example.authapp.domain.audit.entity.LoginHistory;
+import com.example.authapp.domain.audit.entity.LoginHistoryEntity;
 import com.example.authapp.domain.audit.repository.LoginHistoryRepository;
 import com.example.authapp.domain.jwt.entity.RefreshEntity;
 
@@ -22,7 +22,7 @@ public class RiskEvaluator {
     // =========================
     // 위험 점수 증가
     // =========================
-    public int increaseScore(LoginHistory loginHistory) {
+    public int increaseScore(LoginHistoryEntity loginHistory) {
         int score = 0;
         if (!loginHistory.isSuccess()) score += 15;
         if (isNewIp(loginHistory)) score += 3;
@@ -34,7 +34,7 @@ public class RiskEvaluator {
     // =========================
     // 정상 행동 점수 감소
     // =========================
-    public int decreaseScore(LoginHistory loginHistory) {
+    public int decreaseScore(LoginHistoryEntity loginHistory) {
     	
     	// 로그인 실패 시 0점 리턴
     	if (!loginHistory.isSuccess()) return 0;
@@ -98,24 +98,24 @@ public class RiskEvaluator {
     // =========================
     // 내부 메서드
     // =========================
-    public boolean isNewIp(LoginHistory loginHistory) {
-        List<LoginHistory> histories = loginHistoryRepository.findByUsername(loginHistory.getUsername());
+    public boolean isNewIp(LoginHistoryEntity loginHistory) {
+        List<LoginHistoryEntity> histories = loginHistoryRepository.findByUsername(loginHistory.getUsername());
         return histories.stream().noneMatch(h -> h.getIpAddress().equals(loginHistory.getIpAddress()));
     }
 
-    public boolean isNewDevice(LoginHistory loginHistory) {
-        List<LoginHistory> histories = loginHistoryRepository.findByUsername(loginHistory.getUsername());
+    public boolean isNewDevice(LoginHistoryEntity loginHistory) {
+        List<LoginHistoryEntity> histories = loginHistoryRepository.findByUsername(loginHistory.getUsername());
         return histories.stream().noneMatch(h -> h.getDevice().equals(loginHistory.getDevice()));
     }
 
-    public boolean isAbnormalTime(LoginHistory loginHistory) {
+    public boolean isAbnormalTime(LoginHistoryEntity loginHistory) {
         int hour = loginHistory.getLoginAt().getHour();
         return (hour < 6 || hour > 23);
     }
 
-    private boolean isConsistentPattern(LoginHistory loginHistory) {
-        List<LoginHistory> histories = loginHistoryRepository.findByUsername(loginHistory.getUsername());
-        return histories.stream().limit(5).allMatch(LoginHistory::isSuccess);
+    private boolean isConsistentPattern(LoginHistoryEntity loginHistory) {
+        List<LoginHistoryEntity> histories = loginHistoryRepository.findByUsername(loginHistory.getUsername());
+        return histories.stream().limit(5).allMatch(LoginHistoryEntity::isSuccess);
     }
 
     private boolean safeEquals(String a, String b) {

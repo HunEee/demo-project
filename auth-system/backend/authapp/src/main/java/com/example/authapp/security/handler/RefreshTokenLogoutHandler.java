@@ -5,7 +5,7 @@ import org.springframework.security.web.authentication.logout.LogoutHandler;
 
 import com.example.authapp.domain.audit.dto.LoginHistoryResponse;
 import com.example.authapp.domain.audit.service.LoginHistoryService;
-import com.example.authapp.domain.audit.service.SecurityEventService;
+import com.example.authapp.domain.audit.service.AuthEventLogService;
 import com.example.authapp.domain.jwt.service.JwtService;
 import com.example.authapp.util.CookieService;
 
@@ -20,7 +20,7 @@ public class RefreshTokenLogoutHandler implements LogoutHandler {
     private final JwtService jwtService;
     private final CookieService cookieService;
     private final LoginHistoryService loginHistoryService;
-    private final SecurityEventService securityEventService;
+    private final AuthEventLogService securityEventService;
 
     @Override
     public void logout(HttpServletRequest request, HttpServletResponse response, Authentication authentication) {

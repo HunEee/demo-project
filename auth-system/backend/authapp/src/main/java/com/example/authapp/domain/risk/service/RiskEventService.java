@@ -2,7 +2,7 @@ package com.example.authapp.domain.risk.service;
 
 import org.springframework.stereotype.Service;
 
-import com.example.authapp.domain.audit.entity.LoginHistory;
+import com.example.authapp.domain.audit.entity.LoginHistoryEntity;
 import com.example.authapp.domain.risk.entity.RiskEventEntity;
 import com.example.authapp.domain.risk.repository.RiskEventRepository;
 
@@ -14,7 +14,7 @@ public class RiskEventService {
 
     private final RiskEventRepository riskEventRepository;
 
-    public void saveLoginRisk(LoginHistory history, int score, String reason) {
+    public void saveLoginRisk(LoginHistoryEntity history, int score, String reason) {
 
         RiskEventEntity event = RiskEventEntity.builder()
                 .username(history.getUsername())

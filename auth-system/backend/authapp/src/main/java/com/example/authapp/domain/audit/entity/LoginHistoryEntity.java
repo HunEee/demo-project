@@ -26,7 +26,7 @@ import lombok.NoArgsConstructor;
 @Table(
     name = "login_history",
     indexes = {
-        @Index(name = "idx_login_user_id", columnList = "username"),
+        @Index(name = "idx_login_username", columnList = "username"),
         @Index(name = "idx_login_created_at", columnList = "login_at"),
         @Index(name = "idx_login_status", columnList = "status")
     }
@@ -35,7 +35,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class LoginHistory {
+public class LoginHistoryEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -59,7 +59,7 @@ public class LoginHistory {
     private boolean success;
 
     // 실패 사유 (비번 틀림 등)
-    @Column(name = "fail_reason")
+    @Column(name = "fail_reason", length = 255)
     private String failReason;
 
     // IP
@@ -71,16 +71,16 @@ public class LoginHistory {
     private String userAgent;
 
     // 디바이스 (Mobile / Windows 등)
-    @Column(name = "device")
+    @Column(name = "device",length = 100)
     private String device;
 
     // 국가 (확장용)
-    @Column(name = "location")
+    @Column(name = "location", length = 100)
     private String location;
 
     //로그인 상태 (ACTIVE / LOGOUT / EXPIRED)
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false)
+    @Column(name = "status", nullable = false, length = 20)
     private LoginStatus status;
 
     //********************************************************************************

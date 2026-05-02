@@ -3,7 +3,7 @@ package com.example.authapp.domain.risk.service;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.example.authapp.domain.audit.entity.LoginHistory;
+import com.example.authapp.domain.audit.entity.LoginHistoryEntity;
 import com.example.authapp.domain.jwt.entity.RefreshEntity;
 import com.example.authapp.domain.risk.entity.RiskEntity;
 import com.example.authapp.domain.risk.entity.RiskLevel;
@@ -31,7 +31,7 @@ public class RiskService {
     // =========================
     // 로그인 위험 분석
     // =========================
-    public RiskEntity analyzeLoginRisk(LoginHistory loginHistory) {
+    public RiskEntity analyzeLoginRisk(LoginHistoryEntity loginHistory) {
 
         String username = loginHistory.getUsername();
         UserEntity user = userRepository.findByUsername(username).orElseThrow(RiskException::userNotFound);
@@ -113,7 +113,7 @@ public class RiskService {
     // =========================
     // 내부 메서드
     // =========================
-    private String buildReason(LoginHistory loginHistory) {
+    private String buildReason(LoginHistoryEntity loginHistory) {
         StringBuilder reason = new StringBuilder();
         if (!loginHistory.isSuccess()) reason.append("LOGIN_FAIL;");
         if (riskEvaluator.isNewIp(loginHistory)) reason.append("NEW_IP;");

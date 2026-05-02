@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.authapp.domain.audit.dto.SecurityStatusResponseDTO;
-import com.example.authapp.domain.audit.service.SecurityService;
+import com.example.authapp.domain.audit.service.SecurityDashboardService;
 import com.example.authapp.security.principal.UserPrincipal;
 
 import lombok.RequiredArgsConstructor;
@@ -16,7 +16,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class SecurityController {
 
-    private final SecurityService securityService;
+    private final SecurityDashboardService securityService;
 
     @GetMapping
     public SecurityStatusResponseDTO getSecurityStatus(@AuthenticationPrincipal UserPrincipal user) {

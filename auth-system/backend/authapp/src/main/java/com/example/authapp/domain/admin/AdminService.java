@@ -4,10 +4,10 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 
-import com.example.authapp.domain.audit.entity.LoginHistory;
-import com.example.authapp.domain.audit.entity.SecurityEvent;
+import com.example.authapp.domain.audit.entity.LoginHistoryEntity;
+import com.example.authapp.domain.audit.entity.AuthEventLogEntity;
 import com.example.authapp.domain.audit.repository.LoginHistoryRepository;
-import com.example.authapp.domain.audit.repository.SecurityEventRepository;
+import com.example.authapp.domain.audit.repository.AuthEventLogRepository;
 import com.example.authapp.domain.jwt.entity.RefreshEntity;
 import com.example.authapp.domain.jwt.repository.RefreshRepository;
 import com.example.authapp.domain.user.entity.UserEntity;
@@ -23,7 +23,7 @@ public class AdminService {
 	
     private final UserRepository userRepository;
     private final LoginHistoryRepository loginHistoryRepository;
-    private final SecurityEventRepository securityEventRepository;
+    private final AuthEventLogRepository securityEventRepository;
     private final RefreshRepository refreshTokenRepository;
 
     // 전체 유저 조회
@@ -49,12 +49,12 @@ public class AdminService {
     }
 
     // 로그인 기록 조회
-    public List<LoginHistory> getLoginHistory(String username) {
+    public List<LoginHistoryEntity> getLoginHistory(String username) {
         return loginHistoryRepository.findByUsername(username);
     }
 
     // 보안 이벤트 조회
-    public List<SecurityEvent> getSecurityEvents(String username) {
+    public List<AuthEventLogEntity> getSecurityEvents(String username) {
         return securityEventRepository.findByUsername(username);
     }
 

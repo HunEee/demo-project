@@ -10,7 +10,7 @@ import org.springframework.security.web.authentication.AuthenticationFailureHand
 import org.springframework.stereotype.Component;
 
 import com.example.authapp.domain.audit.service.LoginHistoryService;
-import com.example.authapp.domain.audit.service.SecurityEventService;
+import com.example.authapp.domain.audit.service.AuthEventLogService;
 import com.example.authapp.domain.risk.service.RiskService;
 import com.example.authapp.domain.user.repository.UserRepository;
 import com.example.authapp.util.ClientUtil;
@@ -26,7 +26,7 @@ import lombok.RequiredArgsConstructor;
 public class LoginFailureHandler implements AuthenticationFailureHandler {
 
 	private final UserRepository userRepository;
-	private final SecurityEventService securityEventService;
+	private final AuthEventLogService securityEventService;
 	private final LoginHistoryService loginHistoryService;
     private final RiskService riskService;
 	

@@ -9,7 +9,7 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import com.example.authapp.domain.audit.entity.LoginHistory;
+import com.example.authapp.domain.audit.entity.LoginHistoryEntity;
 
 import java.time.LocalDateTime;
 
@@ -90,7 +90,7 @@ public class RefreshEntity {
     // 로그인 이력 연결 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "login_history_id")
-    private LoginHistory loginHistory;
+    private LoginHistoryEntity loginHistory;
     
     //********************************************************************************
     // 커스텀 메서드

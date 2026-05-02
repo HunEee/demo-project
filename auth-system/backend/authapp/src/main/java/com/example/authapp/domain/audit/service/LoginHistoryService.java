@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
 
 import com.example.authapp.domain.audit.dto.LoginHistoryResponse;
 import com.example.authapp.domain.audit.dto.LoginHistoryResponseDTO;
-import com.example.authapp.domain.audit.entity.LoginHistory;
+import com.example.authapp.domain.audit.entity.LoginHistoryEntity;
 import com.example.authapp.domain.audit.entity.LoginStatus;
 import com.example.authapp.domain.audit.mapper.LoginHistoryMapper;
 import com.example.authapp.domain.audit.repository.LoginHistoryRepository;
@@ -37,7 +37,7 @@ public class LoginHistoryService {
     public Page<LoginHistoryResponseDTO> getLoginHistories(String username, int page, int size, String date) {
 
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "loginAt"));
-        Page<LoginHistory> result;
+        Page<LoginHistoryEntity> result;
 
         // 날짜 필터
         if (date != null && !date.isEmpty()) {
@@ -56,8 +56,8 @@ public class LoginHistoryService {
     
     
     // 로그인 성공 히스토리 저장
-    public LoginHistory saveSuccess(String username, String ip, String userAgent, String device) {
-        LoginHistory history = LoginHistory.builder()
+    public LoginHistoryEntity saveSuccess(String username, String ip, String userAgent, String device) {
+        LoginHistoryEntity history = LoginHistoryEntity.builder()
                 .username(username)
                 .success(true)
                 .ipAddress(ip)
@@ -69,8 +69,8 @@ public class LoginHistoryService {
     }
     
     // 로그인 실패 히스토리 저장
-    public LoginHistory saveFail(String username, String ip, String userAgent, String device, String reason) {
-        LoginHistory history = LoginHistory.builder()
+    public LoginHistoryEntity saveFail(String username, String ip, String userAgent, String device, String reason) {
+        LoginHistoryEntity history = LoginHistoryEntity.builder()
                 .username(username)
                 .success(false)
                 .failReason(reason)
@@ -86,7 +86,7 @@ public class LoginHistoryService {
     // 로그아웃
     @Transactional
     public void logout(LoginHistoryResponse loginHistory) {
-        LoginHistory history = loginHistoryRepository
+        LoginHistoryEntity history = loginHistoryRepository
                 .findById(loginHistory.id())
                 .orElseThrow(() -> new IllegalArgumentException("로그인 이력 없음"));
 
@@ -102,14 +102,14 @@ public class LoginHistoryService {
     @Transactional(readOnly = true)
     public LocalDateTime getSessionStartTime(Long loginHistoryId) {
         return loginHistoryRepository.findById(loginHistoryId)
-                .map(LoginHistory::getLoginAt)
+                .map(LoginHistoryEntity::getLoginAt)
                 .orElse(null);
     }
     
     // 세션종료 전체
     @Transactional
     public void expireAll(String username) {
-        loginHistoryRepository.findByUsername(username).forEach(LoginHistory::expire);
+        loginHistoryRepository.findByUsername(username).forEach(LoginHistoryEntity::expire);
     }
 
 
