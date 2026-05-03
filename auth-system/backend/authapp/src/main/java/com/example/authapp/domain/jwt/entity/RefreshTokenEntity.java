@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
 @Entity
 @EntityListeners(AuditingEntityListener.class)
 @Table(
-        name = "refresh_entity",
+        name = "refresh_token",
         indexes = {
                 // refresh token 조회 성능 개선
                 @Index(name = "idx_refresh_token", columnList = "refresh", unique = true),
@@ -32,7 +32,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class RefreshEntity {
+public class RefreshTokenEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

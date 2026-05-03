@@ -27,7 +27,7 @@ import lombok.Setter;
 
 @Entity
 @EntityListeners(AuditingEntityListener.class)
-@Table(name = "risk_event_entity")
+@Table(name = "risk_event")
 @Getter
 @Setter
 @NoArgsConstructor

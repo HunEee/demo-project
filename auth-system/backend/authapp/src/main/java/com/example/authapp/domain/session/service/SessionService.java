@@ -9,7 +9,7 @@ import com.example.authapp.domain.audit.dto.LoginHistoryResponse;
 import com.example.authapp.domain.audit.entity.LoginHistoryEntity;
 import com.example.authapp.domain.audit.service.LoginHistoryService;
 import com.example.authapp.domain.audit.service.AuthEventLogService;
-import com.example.authapp.domain.jwt.entity.RefreshEntity;
+import com.example.authapp.domain.jwt.entity.RefreshTokenEntity;
 import com.example.authapp.domain.jwt.repository.RefreshRepository;
 import com.example.authapp.domain.jwt.service.JwtService;
 import com.example.authapp.domain.session.dto.SessionResponse;
@@ -34,7 +34,7 @@ public class SessionService {
         String refreshToken = extractRefreshToken(request);
         String currentJti = JWTUtil.getJti(refreshToken);
     	
-        List<RefreshEntity> tokens = refreshRepository.findByUsernameAndRevokedFalse(username);
+        List<RefreshTokenEntity> tokens = refreshRepository.findByUsernameAndRevokedFalse(username);
 
         return tokens.stream()
                 .map(token -> SessionResponse.builder()
@@ -53,7 +53,7 @@ public class SessionService {
     // 특정 세션 로그아웃
     @Transactional
     public void logoutSession(Long id, String username) {
-        RefreshEntity refreshToken = refreshRepository
+        RefreshTokenEntity refreshToken = refreshRepository
                 .findByIdAndUsername(id, username)
                 .orElseThrow(() -> new RuntimeException("세션 없음"));
 
@@ -72,7 +72,7 @@ public class SessionService {
     	String refreshToken = extractRefreshToken(request);
         String currentJti = JWTUtil.getJti(refreshToken);
     	
-    	List<RefreshEntity> tokens = refreshRepository.findByUsernameAndRevokedFalse(username);
+    	List<RefreshTokenEntity> tokens = refreshRepository.findByUsernameAndRevokedFalse(username);
 
         tokens.stream()
                 .filter(t -> !t.getJti().equals(currentJti)) // 현재 세션 제외

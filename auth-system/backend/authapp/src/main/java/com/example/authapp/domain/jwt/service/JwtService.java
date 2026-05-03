@@ -12,7 +12,7 @@ import com.example.authapp.domain.audit.entity.LoginHistoryEntity;
 import com.example.authapp.domain.audit.entity.AuthEventType;
 import com.example.authapp.domain.audit.service.AuthEventLogService;
 import com.example.authapp.domain.jwt.dto.JWTResponseDTO;
-import com.example.authapp.domain.jwt.entity.RefreshEntity;
+import com.example.authapp.domain.jwt.entity.RefreshTokenEntity;
 import com.example.authapp.domain.jwt.exception.JwtException;
 import com.example.authapp.domain.jwt.repository.RefreshRepository;
 import com.example.authapp.domain.risk.exception.RiskException;
@@ -65,7 +65,7 @@ public class JwtService {
         String newJti = JWTUtil.getJti(newRefreshToken);
 
         // 기존 Refresh 토큰 DB 삭제 후 신규 추가
-        RefreshEntity newRefreshEntity = RefreshEntity.builder()
+        RefreshTokenEntity newRefreshEntity = RefreshTokenEntity.builder()
                 .username(username)
                 .refresh(newRefreshToken)
                 .jti(newJti)
@@ -96,7 +96,7 @@ public class JwtService {
     	String refreshToken = extractRefreshToken(request);
 
     	// 요청으로 보낸 토큰이 DB에 있는지 조회
-        RefreshEntity oldEntity = refreshRepository.findByRefresh(refreshToken).orElseThrow(JwtException::tokenNotFound);
+        RefreshTokenEntity oldEntity = refreshRepository.findByRefresh(refreshToken).orElseThrow(JwtException::tokenNotFound);
         
         String username = oldEntity.getUsername();
         
@@ -127,7 +127,7 @@ public class JwtService {
         oldEntity.setReplacedByToken(newRefreshToken);
         
         // 기존 Refresh 토큰 DB 삭제 후 신규 추가
-        RefreshEntity newEntity = RefreshEntity.builder()
+        RefreshTokenEntity newEntity = RefreshTokenEntity.builder()
                 .username(username)
                 .refresh(newRefreshToken)
                 .jti(jti)
@@ -171,7 +171,7 @@ public class JwtService {
     @Transactional
     public void addRefresh(String username,String refreshToken,String ip,String userAgent,String device, LoginHistoryEntity loginHistory) {
         String jti = JWTUtil.getJti(refreshToken); 
-    	RefreshEntity entity = RefreshEntity.builder()
+    	RefreshTokenEntity entity = RefreshTokenEntity.builder()
                 .username(username)
                 .refresh(refreshToken)
                 .jti(jti)
@@ -208,7 +208,7 @@ public class JwtService {
     // 리프레시 토큰 만료 : revoked -> true 처리
     @Transactional
     public LoginHistoryResponse revokeRefresh(String refreshToken) {
-        RefreshEntity entity = refreshRepository
+        RefreshTokenEntity entity = refreshRepository
                 .findByRefresh(refreshToken)
                 .orElseThrow(JwtException::tokenNotFound);
 
@@ -224,9 +224,9 @@ public class JwtService {
     // 전체 세션 로그아웃 -> 모든 리프레시토큰 만료(비밀번호 변경, 토큰 탈취 및 위험 감지)
     @Transactional
     public void revokeAllByUsername(String username) {
-        List<RefreshEntity> tokens = refreshRepository.findByUsername(username);
+        List<RefreshTokenEntity> tokens = refreshRepository.findByUsername(username);
 
-        for (RefreshEntity token : tokens) {
+        for (RefreshTokenEntity token : tokens) {
             token.revoke();
         }
     }

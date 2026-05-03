@@ -7,9 +7,9 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.example.authapp.domain.jwt.entity.RefreshEntity;
+import com.example.authapp.domain.jwt.entity.RefreshTokenEntity;
 
-public interface RefreshRepository extends JpaRepository<RefreshEntity, Long> {
+public interface RefreshRepository extends JpaRepository<RefreshTokenEntity, Long> {
 
 	// 리프레시 토큰이 존재하는지 여부
 	Boolean existsByRefresh(String refreshToken);
@@ -26,13 +26,13 @@ public interface RefreshRepository extends JpaRepository<RefreshEntity, Long> {
 	@Transactional
 	void deleteByCreatedDateBefore(LocalDateTime createdDate);
 	
-    Optional<RefreshEntity> findByRefresh(String refresh);
+    Optional<RefreshTokenEntity> findByRefresh(String refresh);
     
     // 유저의 토큰들 조회
-    List<RefreshEntity> findByUsername(String username);
+    List<RefreshTokenEntity> findByUsername(String username);
 	
     
     // 세션 관리
-    List<RefreshEntity> findByUsernameAndRevokedFalse(String username);
-    Optional<RefreshEntity> findByIdAndUsername(Long id, String username);
+    List<RefreshTokenEntity> findByUsernameAndRevokedFalse(String username);
+    Optional<RefreshTokenEntity> findByIdAndUsername(Long id, String username);
 }

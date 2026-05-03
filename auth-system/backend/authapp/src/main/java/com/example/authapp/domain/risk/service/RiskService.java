@@ -4,7 +4,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.authapp.domain.audit.entity.LoginHistoryEntity;
-import com.example.authapp.domain.jwt.entity.RefreshEntity;
+import com.example.authapp.domain.jwt.entity.RefreshTokenEntity;
 import com.example.authapp.domain.risk.entity.RiskEntity;
 import com.example.authapp.domain.risk.entity.RiskLevel;
 import com.example.authapp.domain.risk.exception.RiskException;
@@ -66,7 +66,7 @@ public class RiskService {
     // =========================
     // 토큰 기반 Risk 처리
     // =========================
-    public boolean analyzeTokenRisk(RefreshEntity token, String ip, String device,String userAgent) {
+    public boolean analyzeTokenRisk(RefreshTokenEntity token, String ip, String device,String userAgent) {
 
         String username = token.getUsername();
         UserEntity user = userRepository.findByUsername(username).orElseThrow(RiskException::userNotFound);

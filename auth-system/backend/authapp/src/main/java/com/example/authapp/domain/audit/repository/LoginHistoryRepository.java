@@ -11,7 +11,7 @@ import org.springframework.data.jpa.repository.Query;
 
 import com.example.authapp.domain.audit.entity.LoginHistoryEntity;
 import com.example.authapp.domain.audit.entity.LoginStatus;
-import com.example.authapp.domain.jwt.entity.RefreshEntity;
+import com.example.authapp.domain.jwt.entity.RefreshTokenEntity;
 
 public interface LoginHistoryRepository extends JpaRepository<LoginHistoryEntity, Long> {
 	

@@ -27,7 +27,7 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @EntityListeners(AuditingEntityListener.class)
-@Table(name = "risk_entity")
+@Table(name = "risk")
 @Getter
 @Builder
 @NoArgsConstructor

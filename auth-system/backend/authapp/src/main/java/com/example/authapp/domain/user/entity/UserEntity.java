@@ -18,7 +18,7 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @EntityListeners(AuditingEntityListener.class)
-@Table(name = "user_entity")
+@Table(name = "users")
 @Getter
 @Builder
 @NoArgsConstructor
@@ -65,7 +65,7 @@ public class UserEntity {
     @Builder.Default
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
-            name = "user_role",
+            name = "user_roles",
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "role_id")
     )
@@ -120,5 +120,15 @@ public class UserEntity {
     public void enable() {
         this.enabled = true;
     }
+
+    public void updateOAuthProfile(String email,String nickname) {
+        if (email != null && !email.isBlank()) {
+            this.email = email;
+        }
+        if (nickname != null && !nickname.isBlank()) {
+            this.nickname = nickname;
+        }
+    }
+    
     
 }

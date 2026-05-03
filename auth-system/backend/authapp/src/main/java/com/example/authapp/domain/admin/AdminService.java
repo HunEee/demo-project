@@ -8,7 +8,7 @@ import com.example.authapp.domain.audit.entity.LoginHistoryEntity;
 import com.example.authapp.domain.audit.entity.AuthEventLogEntity;
 import com.example.authapp.domain.audit.repository.LoginHistoryRepository;
 import com.example.authapp.domain.audit.repository.AuthEventLogRepository;
-import com.example.authapp.domain.jwt.entity.RefreshEntity;
+import com.example.authapp.domain.jwt.entity.RefreshTokenEntity;
 import com.example.authapp.domain.jwt.repository.RefreshRepository;
 import com.example.authapp.domain.user.entity.UserEntity;
 import com.example.authapp.domain.user.repository.UserRepository;
@@ -60,8 +60,8 @@ public class AdminService {
 
     // 토큰 강제 만료
     public void revokeAllTokens(String username) {
-        List<RefreshEntity> tokens = refreshTokenRepository.findByUsername(username);
-        for (RefreshEntity token : tokens) {
+        List<RefreshTokenEntity> tokens = refreshTokenRepository.findByUsername(username);
+        for (RefreshTokenEntity token : tokens) {
             token.revoke();
         }
     }

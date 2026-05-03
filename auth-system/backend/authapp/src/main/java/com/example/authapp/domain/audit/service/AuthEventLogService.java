@@ -31,6 +31,16 @@ public class AuthEventLogService {
     // 편의 메서드
     //********************************************************************************
 
+    // 일반 회원가입
+	public void signupSuccess(String username, String ip, String device) {      
+		save(username, AuthEventType.SIGNUP_SUCCESS, "일반 회원가입 성공", ip,device);
+	}
+	
+	// OAuth2 회원가입
+	public void signupOauth2Success(String username, String ip, String provider) {
+        save(username, AuthEventType.SIGNUP_OAUTH2_SUCCESS, "OAuth2 회원가입 성공 (" + provider + ")", ip, provider);	
+	}
+	
     public void loginSuccess(String username, String ip, String device) {
         save(username, AuthEventType.LOGIN_SUCCESS, "로그인 성공", ip, device);
     }
@@ -47,6 +57,11 @@ public class AuthEventLogService {
         save(username, AuthEventType.PASSWORD_CHANGE, "비밀번호 변경", ip, device);
     }
 
+	public void passwordReset(String username, String ip, String device) {
+		save(username, AuthEventType.PASSWORD_RESET, "비밀번호 초기화/변경", ip, device);
+		
+	}
+    
     public void tokenReissue(String username, String ip, String device) {
         save(username, AuthEventType.TOKEN_REISSUE, "토큰 재발급", ip, device);
     }
@@ -59,6 +74,8 @@ public class AuthEventLogService {
     public void securityForceLogout(String username, String ip, String device) {
         save(username, AuthEventType.SECURITY_FORCE_LOGOUT, "보안 정책에 의한 강제 로그아웃", ip, device);
     }
+
+
     
 
 }

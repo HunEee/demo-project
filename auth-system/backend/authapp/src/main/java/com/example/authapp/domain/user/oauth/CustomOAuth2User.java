@@ -1,4 +1,4 @@
-package com.example.authapp.domain.user.dto;
+package com.example.authapp.domain.user.oauth;
 
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.core.user.OAuth2User;
@@ -16,9 +16,7 @@ public class CustomOAuth2User implements OAuth2User {
     // 애플리케이션에서 사용할 고유 사용자 식별자
     private final String username;
 
-    public CustomOAuth2User(Map<String, Object> attributes,
-                            Collection<? extends GrantedAuthority> authorities,
-                            String username) {
+    public CustomOAuth2User(Map<String, Object> attributes, Collection<? extends GrantedAuthority> authorities, String username) {
         this.attributes = attributes;
         this.authorities = authorities;
         this.username = username;

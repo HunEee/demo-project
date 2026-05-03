@@ -9,7 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.example.authapp.domain.audit.dto.SecurityStatusResponseDTO;
 import com.example.authapp.domain.audit.repository.SecurityIncidentRepository;
-import com.example.authapp.domain.jwt.entity.RefreshEntity;
+import com.example.authapp.domain.jwt.entity.RefreshTokenEntity;
 import com.example.authapp.domain.jwt.repository.RefreshRepository;
 import com.example.authapp.domain.jwt.service.JwtService;
 import com.example.authapp.util.JWTUtil;
@@ -26,14 +26,14 @@ public class SecurityDashboardService {
     @Transactional(readOnly = true)
     public SecurityStatusResponseDTO getSecurityStatus(String username) {
 
-        List<RefreshEntity> tokens = refreshRepository.findByUsername(username);
+        List<RefreshTokenEntity> tokens = refreshRepository.findByUsername(username);
 
         if (tokens.isEmpty()) {
             return new SecurityStatusResponseDTO(null, null, null, "SAFE");
         }
 
         // 최신 토큰 기준
-        RefreshEntity latest = tokens.stream()
+        RefreshTokenEntity latest = tokens.stream()
                 .max((a, b) -> a.getExpiresAt().compareTo(b.getExpiresAt()))
                 .orElseThrow();
         
@@ -45,7 +45,7 @@ public class SecurityDashboardService {
         // 상태 판단 로직
         String status = "SAFE";
         
-        if (tokens.stream().anyMatch(RefreshEntity::isRevoked)) { // 1. 탈취 감지 
+        if (tokens.stream().anyMatch(RefreshTokenEntity::isRevoked)) { // 1. 탈취 감지 
             status = "DANGER";
         } else if (refreshExpire.isBefore(now.plusDays(1))) {// 2. 만료 임박
             status = "WARNING";

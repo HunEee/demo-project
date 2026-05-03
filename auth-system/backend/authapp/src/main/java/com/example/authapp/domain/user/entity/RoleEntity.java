@@ -1,6 +1,7 @@
 package com.example.authapp.domain.user.entity;
 
 import java.util.Set;
+import java.util.HashSet;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -9,7 +10,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "role_entity")
+@Table(name = "roles")
 @Getter
 @Builder
 @NoArgsConstructor
@@ -24,7 +25,9 @@ public class RoleEntity {
     @Column(unique = true, nullable = false)
     private String name; // ROLE_USER, ROLE_ADMIN
     
+    @Builder.Default
     @ManyToMany(mappedBy = "roles")
-    private Set<UserEntity> users;
+    private Set<UserEntity> users = new HashSet<>();
+    
     
 }

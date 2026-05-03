@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 
 import com.example.authapp.domain.audit.entity.LoginHistoryEntity;
 import com.example.authapp.domain.audit.repository.LoginHistoryRepository;
-import com.example.authapp.domain.jwt.entity.RefreshEntity;
+import com.example.authapp.domain.jwt.entity.RefreshTokenEntity;
 
 import lombok.RequiredArgsConstructor;
 
@@ -57,7 +57,7 @@ public class RiskEvaluator {
     // =========================
     // 토큰 탈취 감지 
     // =========================
-    public int tokenRiskScore(RefreshEntity token, String currentIp, String currentDevice,String userAgent) {
+    public int tokenRiskScore(RefreshTokenEntity token, String currentIp, String currentDevice,String userAgent) {
         int score = 0;
         // 토근과 요청 값 비교
         boolean ipChanged = !safeEquals(token.getIpAddress(), currentIp);

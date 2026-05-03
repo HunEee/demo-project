@@ -11,6 +11,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 
+import com.example.authapp.domain.audit.service.AuthEventLogService;
 import com.example.authapp.domain.audit.service.LoginHistoryService;
 import com.example.authapp.domain.jwt.service.JwtService;
 import com.example.authapp.util.ClientUtil;
@@ -27,6 +28,7 @@ public class SocialSuccessHandler implements AuthenticationSuccessHandler {
 
     private final JwtService jwtService;
 	private final LoginHistoryService loginHistoryService;
+    private final AuthEventLogService authEventLogService;
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
@@ -47,6 +49,9 @@ public class SocialSuccessHandler implements AuthenticationSuccessHandler {
         var history = loginHistoryService.saveSuccess(username,ip,userAgent,device);
         // 발급한 Refresh DB 테이블 저장 (Refresh whitelist)
         jwtService.addRefresh(username, refreshToken, ip, userAgent, device, history);
+        
+        // 로그인 이벤트 기록
+        authEventLogService.loginSuccess(username, ip, device);
 
         // 응답
         Cookie refreshCookie = new Cookie("refreshToken", refreshToken);
