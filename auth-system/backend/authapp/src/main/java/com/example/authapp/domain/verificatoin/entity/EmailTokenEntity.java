@@ -16,7 +16,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "email_token_entity")
+@Table(name = "email_token")
 @Getter
 @Builder
 @NoArgsConstructor
@@ -37,8 +37,14 @@ public class EmailTokenEntity {
 
     private boolean used;
 
+    @Column(name = "created_at", nullable = false)
+    private LocalDateTime createdAt;
+
+    @Column(name = "expired_at", nullable = false)
     private LocalDateTime expiredAt;
 
+    //*************************************************************************
+    
     public void use() {
         this.used = true;
     }

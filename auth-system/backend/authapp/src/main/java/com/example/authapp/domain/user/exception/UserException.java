@@ -8,11 +8,11 @@ public class UserException extends CustomException {
         super(status, message);
     }
 
-    public static UserException duplicateUsername() {
+    public static UserException usernameAlreadyExists() {
         return new UserException(400, "이미 유저가 존재합니다.");
     }
 
-    public static UserException duplicateEmail() {
+    public static UserException emailAlreadyExists() {
         return new UserException(400, "이미 이메일이 존재합니다.");
     }
 
@@ -23,6 +23,10 @@ public class UserException extends CustomException {
     public static UserException roleNotFound() {
         return new UserException(500, "기본 권한이 존재하지 않습니다.");
     }
-    
+
+    public static UserException alreadyDeleted() {
+        return new UserException(400, "이미 탈퇴한 계정입니다.");
+    }
+
     
 }

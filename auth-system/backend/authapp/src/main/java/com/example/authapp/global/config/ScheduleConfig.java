@@ -6,7 +6,7 @@ import java.util.List;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import com.example.authapp.domain.jwt.repository.RefreshRepository;
+import com.example.authapp.domain.jwt.repository.RefreshTokenRepository;
 import com.example.authapp.domain.risk.entity.RiskEntity;
 import com.example.authapp.domain.risk.repository.RiskRepository;
 
@@ -16,7 +16,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class ScheduleConfig {
 
-    private final RefreshRepository refreshRepository;
+    private final RefreshTokenRepository refreshRepository;
     private final RiskRepository riskRepository;
     
     

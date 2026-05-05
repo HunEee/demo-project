@@ -9,14 +9,15 @@ import org.springframework.stereotype.Component;
 
 import com.example.authapp.domain.audit.service.LoginHistoryService;
 import com.example.authapp.domain.audit.service.AuthEventLogService;
+import com.example.authapp.domain.jwt.service.CookieService;
 import com.example.authapp.domain.jwt.service.JwtService;
+import com.example.authapp.domain.jwt.service.RefreshTokenService;
 import com.example.authapp.domain.risk.service.RiskService;
 import com.example.authapp.domain.user.entity.UserEntity;
 import com.example.authapp.security.handler.dto.LoginResponseDTO;
 import com.example.authapp.security.handler.dto.UserResponseDTO;
 import com.example.authapp.security.principal.UserPrincipal;
 import com.example.authapp.util.ClientUtil;
-import com.example.authapp.util.CookieService;
 import com.example.authapp.util.JWTUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -29,7 +30,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class LoginSuccessHandler implements AuthenticationSuccessHandler {
 
-    private final JwtService jwtService;
+    private final RefreshTokenService refreshTokenService;
 	private final CookieService cookieService;	
 	private final ObjectMapper objectMapper;
 	private final LoginHistoryService loginHistoryService;
@@ -66,7 +67,7 @@ public class LoginSuccessHandler implements AuthenticationSuccessHandler {
         
         // 발급한 Refresh DB 테이블 저장 (Refresh whitelist)
         //jwtService.addRefresh(username, refreshToken);
-        jwtService.addRefresh(username, refreshToken, ip, userAgent, device, history);
+        refreshTokenService.addRefresh(username, refreshToken, ip, userAgent, device, history);
 
         // 쿠키 저장
         cookieService.addRefreshCookie(response, refreshToken);
@@ -85,7 +86,7 @@ public class LoginSuccessHandler implements AuthenticationSuccessHandler {
         objectMapper.writeValue(response.getWriter(), result);
 
         //로그인 성공/실패 기록
-        securityEventService.loginSuccess(username, ip, device);
+        securityEventService.loginSuccess(username);
         
     }
     

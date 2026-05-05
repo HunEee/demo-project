@@ -23,5 +23,9 @@ public class EmailCodeException extends CustomException {
     public static EmailCodeException alreadyUsed() {
         return new EmailCodeException(400, "이미 사용된 인증코드입니다.");
     }
+
+    public static EmailCodeException tooManyRequests() {
+        return new EmailCodeException(429, "요청이 너무 많습니다. 잠시 후 다시 시도해주세요.");
+    }
     
 }

@@ -23,7 +23,6 @@ public class EmailTokenService {
 
     private final EmailTokenRepository emailTokenRepository;
     private final MailService mailService;
-    private final UserRepository userRepository;
     
     
     /*
@@ -56,9 +55,6 @@ public class EmailTokenService {
     ==============================================
     */
     public void sendResetPasswordToken(String email) {
-
-        UserEntity user = userRepository.findByEmail(email)
-                .orElseThrow(UserException::userNotFound);
 
         String token = UUID.randomUUID().toString();
 

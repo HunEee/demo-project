@@ -9,7 +9,7 @@ import com.example.authapp.domain.audit.entity.AuthEventLogEntity;
 import com.example.authapp.domain.audit.repository.LoginHistoryRepository;
 import com.example.authapp.domain.audit.repository.AuthEventLogRepository;
 import com.example.authapp.domain.jwt.entity.RefreshTokenEntity;
-import com.example.authapp.domain.jwt.repository.RefreshRepository;
+import com.example.authapp.domain.jwt.repository.RefreshTokenRepository;
 import com.example.authapp.domain.user.entity.UserEntity;
 import com.example.authapp.domain.user.repository.UserRepository;
 
@@ -24,7 +24,7 @@ public class AdminService {
     private final UserRepository userRepository;
     private final LoginHistoryRepository loginHistoryRepository;
     private final AuthEventLogRepository securityEventRepository;
-    private final RefreshRepository refreshTokenRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
 
     // 전체 유저 조회
     public List<UserEntity> getAllUsers() {

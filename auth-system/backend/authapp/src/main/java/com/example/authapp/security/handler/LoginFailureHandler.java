@@ -26,7 +26,7 @@ import lombok.RequiredArgsConstructor;
 public class LoginFailureHandler implements AuthenticationFailureHandler {
 
 	private final UserRepository userRepository;
-	private final AuthEventLogService securityEventService;
+	private final AuthEventLogService authEventLogService;
 	private final LoginHistoryService loginHistoryService;
     private final RiskService riskService;
 	
@@ -72,18 +72,18 @@ public class LoginFailureHandler implements AuthenticationFailureHandler {
     	        reason = "비밀번호 오류";
     	        var history = loginHistoryService.saveFail(username, ip, userAgent, device, reason);
     	        riskService.analyzeLoginRisk(history);
-    	        securityEventService.loginFail(username, ip, device, reason);
+    	        authEventLogService.loginFail(username, reason);
     	    }
     	    // 2. 유저 없음 -> SecurityEvent만 남김 (공격 탐지용)
     	    else if (!exists) {
-    	        securityEventService.loginFail(username, ip, device, "존재하지 않는 사용자");
+    	    	authEventLogService.loginFail(username, "존재하지 않는 사용자");
     	    }
     	    // 3. 기타 인증 실패 (계정 잠김 등)
     	    else {
     	        reason = exception.getMessage();
     	        var history = loginHistoryService.saveFail(username, ip, userAgent, device, reason);
     	        riskService.analyzeLoginRisk(history);
-    	        securityEventService.loginFail(username, ip, device, reason);
+    	        authEventLogService.loginFail(username, reason);
     	    }
         
     }

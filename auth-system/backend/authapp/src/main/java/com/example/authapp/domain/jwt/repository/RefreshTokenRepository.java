@@ -9,7 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.example.authapp.domain.jwt.entity.RefreshTokenEntity;
 
-public interface RefreshRepository extends JpaRepository<RefreshTokenEntity, Long> {
+public interface RefreshTokenRepository extends JpaRepository<RefreshTokenEntity, Long> {
 
 	// 리프레시 토큰이 존재하는지 여부
 	Boolean existsByRefresh(String refreshToken);
@@ -24,7 +24,7 @@ public interface RefreshRepository extends JpaRepository<RefreshTokenEntity, Lon
 	
 	// 특정일 지난 refresh 토큰 삭제
 	@Transactional
-	void deleteByCreatedDateBefore(LocalDateTime createdDate);
+	void deleteByCreatedAtBefore(LocalDateTime createdAt);
 	
     Optional<RefreshTokenEntity> findByRefresh(String refresh);
     

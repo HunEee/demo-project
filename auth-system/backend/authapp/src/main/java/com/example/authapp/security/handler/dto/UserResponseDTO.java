@@ -39,8 +39,8 @@ public class UserResponseDTO {
                                 .map(RoleEntity::getName)
                                 .collect(Collectors.toSet())
                 )
-                .createdAt(user.getCreatedDate())
-                .updatedAt(user.getUpdatedDate())
+                .createdAt(user.getCreatedAt())
+                .updatedAt(user.getUpdatedAt())
                 .build();
     }
     

@@ -51,8 +51,8 @@ public class RefreshTokenEntity {
     
     //토큰 생성 시간
     @CreatedDate
-    @Column(name = "created_date", nullable = false, updatable = false)
-    private LocalDateTime createdDate;
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
     
     // 토큰 만료 시간 
     @Column(name = "expires_at", nullable = false)

@@ -14,11 +14,10 @@ import com.example.authapp.domain.audit.service.AuthEventLogService;
 import com.example.authapp.domain.jwt.dto.JWTResponseDTO;
 import com.example.authapp.domain.jwt.entity.RefreshTokenEntity;
 import com.example.authapp.domain.jwt.exception.JwtException;
-import com.example.authapp.domain.jwt.repository.RefreshRepository;
+import com.example.authapp.domain.jwt.repository.RefreshTokenRepository;
 import com.example.authapp.domain.risk.exception.RiskException;
 import com.example.authapp.domain.risk.service.RiskService;
 import com.example.authapp.util.ClientUtil;
-import com.example.authapp.util.CookieService;
 import com.example.authapp.util.JWTUtil;
 
 import io.jsonwebtoken.ExpiredJwtException;
@@ -31,10 +30,12 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class JwtService {
 
-    private final RefreshRepository refreshRepository;
+	private final RefreshTokenService refreshTokenService;
     private final CookieService cookieService;
+    
     private final AuthEventLogService securityEventService;
     private final RiskService riskService;
+    
     
     // 소셜 로그인 성공 후 쿠키(Refresh) -> 헤더 방식으로 응답
     @Transactional
@@ -73,9 +74,9 @@ public class JwtService {
                 .revoked(false)
                 .build();
 
-        removeRefresh(refreshToken);
-        refreshRepository.flush(); // 같은 트랜잭션 내부라 : 삭제 -> 생성 문제 해결
-        refreshRepository.save(newRefreshEntity);
+        refreshTokenService.removeRefresh(refreshToken);
+        refreshTokenService.flush(); // 같은 트랜잭션 내부라 : 삭제 -> 생성 문제 해결
+        refreshTokenService.save(newRefreshEntity);
 
         // 기존 쿠키 제거
         Cookie refreshCookie = new Cookie("refreshToken", null);
@@ -96,7 +97,7 @@ public class JwtService {
     	String refreshToken = extractRefreshToken(request);
 
     	// 요청으로 보낸 토큰이 DB에 있는지 조회
-        RefreshTokenEntity oldEntity = refreshRepository.findByRefresh(refreshToken).orElseThrow(JwtException::tokenNotFound);
+        RefreshTokenEntity oldEntity = refreshTokenService.findByRefresh(refreshToken);
         
         String username = oldEntity.getUsername();
         
@@ -139,13 +140,13 @@ public class JwtService {
                 .loginHistory(oldEntity.getLoginHistory())
                 .build();
 
-        refreshRepository.save(newEntity);
+        refreshTokenService.save(newEntity);
 
         // 쿠키 교체
         cookieService.addRefreshCookie(response, newRefreshToken);
 
         // 이벤트 기록
-        securityEventService.tokenReissue(username, ip, device);
+        securityEventService.tokenReissue(username);
         
         // 리프레시 토큰 바디로 안넘겨줌
         return new JWTResponseDTO(newAccessToken, null);
@@ -165,71 +166,7 @@ public class JwtService {
         }
         throw JwtException.refreshTokenNotFound();
     }
-    
-    
-    // JWT Refresh 토큰 발급 후 저장 메소드
-    @Transactional
-    public void addRefresh(String username,String refreshToken,String ip,String userAgent,String device, LoginHistoryEntity loginHistory) {
-        String jti = JWTUtil.getJti(refreshToken); 
-    	RefreshTokenEntity entity = RefreshTokenEntity.builder()
-                .username(username)
-                .refresh(refreshToken)
-                .jti(jti)
-                .expiresAt(LocalDateTime.now().plusDays(7))
-                .ipAddress(ip)
-                .userAgent(userAgent)
-                .device(device)
-                .revoked(false)
-                .loginHistory(loginHistory) 
-                .build();
-        refreshRepository.save(entity);
-    }
-    
-    //******************************************************************************************************************
-    // JWT Refresh 토큰 관련 메서드
-    //******************************************************************************************************************
-    
-    // JWT Refresh 존재 확인 메소드
-    @Transactional(readOnly = true)
-    public Boolean existsRefresh(String refreshToken) {
-        return refreshRepository.existsByRefresh(refreshToken);
-    }
 
-    // JWT Refresh 토큰 삭제 메소드
-    public void removeRefresh(String refreshToken) {
-        refreshRepository.deleteByRefresh(refreshToken);
-    }
-    
-    // 특정 유저 Refresh 토큰 모두 삭제 (탈퇴)
-    public void removeRefreshUser(String username) {
-        refreshRepository.deleteByUsername(username);
-    }
-    
-    // 리프레시 토큰 만료 : revoked -> true 처리
-    @Transactional
-    public LoginHistoryResponse revokeRefresh(String refreshToken) {
-        RefreshTokenEntity entity = refreshRepository
-                .findByRefresh(refreshToken)
-                .orElseThrow(JwtException::tokenNotFound);
-
-        entity.revoke();
-        
-        LoginHistoryEntity history = entity.getLoginHistory();
-
-        if (history == null) return null;
-
-        return history.toResponse();  
-    }
-    
-    // 전체 세션 로그아웃 -> 모든 리프레시토큰 만료(비밀번호 변경, 토큰 탈취 및 위험 감지)
-    @Transactional
-    public void revokeAllByUsername(String username) {
-        List<RefreshTokenEntity> tokens = refreshRepository.findByUsername(username);
-
-        for (RefreshTokenEntity token : tokens) {
-            token.revoke();
-        }
-    }
     
     
 

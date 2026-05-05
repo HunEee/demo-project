@@ -18,16 +18,15 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
 	// 회원 가입시 이미 email이 존재하는지 중복 검증을 진행
 	Boolean existsByEmail(String email);
 	
-	// 회원 정보 수정시 자체 로그인 여부, 잠김 여부를 확인
-	Optional<UserEntity> findByUsernameAndLockedAndIsSocial(String username, Boolean Locked, Boolean isSocial);
+	// 회원 정보 수정시 탈퇴 여부를 확인
+	Optional<UserEntity> findByUsernameAndDeletedAtIsNull(String username);
 	
-	@Transactional
+	// 비밀번호 재설정 or 비밀번호 찾기 or username 찾기(탈퇴 상태가 아닌 경우)
+	Optional<UserEntity> findByEmailAndDeletedAtIsNull(String email);
+	Optional<UserEntity> findByUsernameAndEmailAndDeletedAtIsNull(String username, String email);
+
+	
 	void deleteByUsername(String username);
-	
-	// 비밀번호 재설정 or 비밀번호 찾기 or username 찾기
-	Optional<UserEntity> findByEmail(String email);
-	Optional<UserEntity> findByUsernameAndEmail(String username, String email);
-	
 	
 	
 	// ROLE가 LAZY 로딩이라 한번에 조회
@@ -47,6 +46,7 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
 	// ADMIN들 조회
     @Query("SELECT u FROM UserEntity u JOIN u.roles r WHERE r.name = 'ROLE_ADMIN'")
     List<UserEntity> findAllAdmins();
+
 
 
 

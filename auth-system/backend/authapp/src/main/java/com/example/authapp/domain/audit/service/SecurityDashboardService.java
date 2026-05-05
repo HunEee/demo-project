@@ -10,7 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.example.authapp.domain.audit.dto.SecurityStatusResponseDTO;
 import com.example.authapp.domain.audit.repository.SecurityIncidentRepository;
 import com.example.authapp.domain.jwt.entity.RefreshTokenEntity;
-import com.example.authapp.domain.jwt.repository.RefreshRepository;
+import com.example.authapp.domain.jwt.repository.RefreshTokenRepository;
 import com.example.authapp.domain.jwt.service.JwtService;
 import com.example.authapp.util.JWTUtil;
 
@@ -20,7 +20,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class SecurityDashboardService {
 
-    private final RefreshRepository refreshRepository;
+    private final RefreshTokenRepository refreshRepository;
     private final SecurityIncidentRepository securityIncidentRepository;
     
     @Transactional(readOnly = true)
@@ -54,7 +54,7 @@ public class SecurityDashboardService {
         return new SecurityStatusResponseDTO(
                 accessExpire.toString(),
                 refreshExpire.toString(),
-                latest.getCreatedDate() != null ? latest.getCreatedDate().toString() : null,
+                latest.getCreatedAt() != null ? latest.getCreatedAt().toString() : null,
                 status
         );
         

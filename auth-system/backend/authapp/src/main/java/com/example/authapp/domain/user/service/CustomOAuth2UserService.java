@@ -74,7 +74,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
             userRepository.save(user);
 
-            authEventLogService.signupOauth2Success(username, "SYSTEM", info.provider());
+            authEventLogService.signupOauth2Success(username,info.provider());
         }
 
         List<GrantedAuthority> authorities =

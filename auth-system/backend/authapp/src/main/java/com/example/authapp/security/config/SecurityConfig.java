@@ -3,6 +3,7 @@ package com.example.authapp.security.config;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -27,13 +28,14 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import com.example.authapp.domain.audit.service.LoginHistoryService;
 import com.example.authapp.domain.audit.service.AuthEventLogService;
+import com.example.authapp.domain.jwt.service.CookieService;
 import com.example.authapp.domain.jwt.service.JwtService;
+import com.example.authapp.domain.jwt.service.RefreshTokenService;
 import com.example.authapp.domain.user.entity.UserRoleType;
 import com.example.authapp.security.filter.JWTFilter;
 import com.example.authapp.security.filter.LoginFilter;
 import com.example.authapp.security.handler.RefreshTokenLogoutHandler;
 import com.example.authapp.security.principal.CustomUserDetailsService;
-import com.example.authapp.util.CookieService;
 
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -52,6 +54,7 @@ public class SecurityConfig {
     
     // 로그아웃 핸들러에 주입용
     private final JwtService jwtService;
+    private final RefreshTokenService refreshTokenService;
     // 쿠키 주입
     private final CookieService cookieService;
     // 로그인 기록 남기기
@@ -61,6 +64,8 @@ public class SecurityConfig {
     // UserService에서 분리
     private final CustomUserDetailsService userDetailsService;
     
+    @Value("${api.prefix}")
+    private String API_PREFIX;
     
     public SecurityConfig(
             AuthenticationConfiguration authenticationConfiguration,
@@ -68,6 +73,7 @@ public class SecurityConfig {
             @Qualifier("socialSuccessHandler") AuthenticationSuccessHandler socialSuccessHandler,
             AuthenticationFailureHandler loginFailureHandler,
             JwtService jwtService,
+            RefreshTokenService refreshTokenService,
             CookieService cookieService,
             LoginHistoryService loginHistoryService,
             AuthEventLogService securityEventService,
@@ -78,6 +84,7 @@ public class SecurityConfig {
         this.socialSuccessHandler = socialSuccessHandler;
         this.loginFailureHandler = loginFailureHandler;
         this.jwtService = jwtService;
+        this.refreshTokenService = refreshTokenService;
         this.cookieService = cookieService;
         this.loginHistoryService = loginHistoryService;
         this.securityEventService = securityEventService;
@@ -143,18 +150,30 @@ public class SecurityConfig {
 
         // 인가
         http.authorizeHttpRequests(auth -> auth
-                .requestMatchers("/jwt/exchange", "/jwt/refresh").permitAll()
-                .requestMatchers(HttpMethod.POST, "/user/exist", "/user", "/login").permitAll()
-                .requestMatchers(HttpMethod.GET, "/user").hasRole("USER")
-                .requestMatchers(HttpMethod.GET, "/users").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.PUT, "/user").hasRole("USER")
-                .requestMatchers(HttpMethod.DELETE, "/user").hasRole("USER")
+        		// 인증관련
+                .requestMatchers(API_PREFIX + "/jwt/exchange", API_PREFIX + "/jwt/refresh").permitAll()
+                // 비인증 API
+                .requestMatchers(HttpMethod.POST,
+                    API_PREFIX + "/users",
+                    API_PREFIX + "/users/exists",
+                    API_PREFIX + "/users/find-username",
+                    API_PREFIX + "/users/password/reset",
+                    API_PREFIX + "/verification/**",
+                    "/login"
+                ).permitAll()
+                // 인증 필요
+                .requestMatchers(HttpMethod.GET, API_PREFIX + "/users/me").hasRole("USER")
+                .requestMatchers(HttpMethod.PATCH, API_PREFIX + "/users/me").hasRole("USER")
+                .requestMatchers(HttpMethod.DELETE, API_PREFIX + "/users/me").hasRole("USER")
+                .requestMatchers(HttpMethod.PUT, API_PREFIX + "/users/me/password").hasRole("USER")
+                // 관리자
+                .requestMatchers(HttpMethod.GET, API_PREFIX + "/users").hasRole("ADMIN")
                 .anyRequest().authenticated()
         );
 
         // 기본 로그아웃 필터 + 커스텀 Refresh 토큰 삭제 핸들러 추가
         http.logout(logout -> logout
-                .addLogoutHandler(new RefreshTokenLogoutHandler(jwtService, cookieService, loginHistoryService,securityEventService))
+                .addLogoutHandler(new RefreshTokenLogoutHandler(refreshTokenService, cookieService, loginHistoryService,securityEventService))
                 .logoutSuccessHandler((request, response, authentication) -> {
                     response.setStatus(HttpServletResponse.SC_OK);
                 })

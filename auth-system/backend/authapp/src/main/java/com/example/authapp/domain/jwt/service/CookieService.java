@@ -1,4 +1,4 @@
-package com.example.authapp.util;
+package com.example.authapp.domain.jwt.service;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;

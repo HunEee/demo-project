@@ -1,6 +1,6 @@
 package com.example.authapp.domain.user.dto;
 
-public record UserResponseDTO(
+public record UserResponse(
 		String username, 
 		Boolean social, 
 		String nickname, 

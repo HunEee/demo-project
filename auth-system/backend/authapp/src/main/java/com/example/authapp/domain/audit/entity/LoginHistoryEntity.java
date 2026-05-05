@@ -21,7 +21,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-@Entity
+@Entity(name="LoginHistory")
 @EntityListeners(AuditingEntityListener.class)
 @Table(
     name = "login_history",
