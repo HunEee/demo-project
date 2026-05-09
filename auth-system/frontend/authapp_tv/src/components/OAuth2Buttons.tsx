@@ -7,6 +7,19 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 function OAuth2Buttons() {
   return (
     <div className="space-y-3">
+      {/* Naver */}
+      <NavLink
+        to={`${BASE_URL}/oauth2/authorization/naver`}
+        className="block"
+      >
+        <Button
+          type="button"
+          className="w-full flex cursor-pointer items-center justify-center gap-3 rounded-2xl bg-green-500 hover:bg-green-600 text-white"
+        >
+          Naver로 계속하기
+        </Button>
+      </NavLink>
+
       {/* Google */}
       <NavLink
         to={`${BASE_URL}/oauth2/authorization/google`}
@@ -35,18 +48,7 @@ function OAuth2Buttons() {
         </Button>
       </NavLink>
 
-      {/* Naver */}
-      <NavLink
-        to={`${BASE_URL}/oauth2/authorization/naver`}
-        className="block"
-      >
-        <Button
-          type="button"
-          className="w-full flex cursor-pointer items-center justify-center gap-3 rounded-2xl bg-green-500 hover:bg-green-600 text-white"
-        >
-          Naver로 계속하기
-        </Button>
-      </NavLink>
+
     </div>
   );
 }

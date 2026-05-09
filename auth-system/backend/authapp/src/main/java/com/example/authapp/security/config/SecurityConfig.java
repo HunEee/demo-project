@@ -43,6 +43,9 @@ import jakarta.servlet.http.HttpServletResponse;
 @EnableWebSecurity
 public class SecurityConfig {
 	
+    @Value("${api.prefix}")
+    private String API_PREFIX;
+	
 	// 인증을 수행
     private final AuthenticationConfiguration authenticationConfiguration;
     // 로그인 성공 이후 로직(로그인 성공 핸들러)
@@ -53,7 +56,7 @@ public class SecurityConfig {
     private final AuthenticationSuccessHandler socialSuccessHandler;
     
     // 로그아웃 핸들러에 주입용
-    private final JwtService jwtService;
+    //private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
     // 쿠키 주입
     private final CookieService cookieService;
@@ -64,15 +67,12 @@ public class SecurityConfig {
     // UserService에서 분리
     private final CustomUserDetailsService userDetailsService;
     
-    @Value("${api.prefix}")
-    private String API_PREFIX;
-    
     public SecurityConfig(
             AuthenticationConfiguration authenticationConfiguration,
             @Qualifier("loginSuccessHandler") AuthenticationSuccessHandler loginSuccessHandler,
             @Qualifier("socialSuccessHandler") AuthenticationSuccessHandler socialSuccessHandler,
             AuthenticationFailureHandler loginFailureHandler,
-            JwtService jwtService,
+            //JwtService jwtService,
             RefreshTokenService refreshTokenService,
             CookieService cookieService,
             LoginHistoryService loginHistoryService,
@@ -83,7 +83,7 @@ public class SecurityConfig {
         this.loginSuccessHandler = loginSuccessHandler;
         this.socialSuccessHandler = socialSuccessHandler;
         this.loginFailureHandler = loginFailureHandler;
-        this.jwtService = jwtService;
+        //this.jwtService = jwtService;
         this.refreshTokenService = refreshTokenService;
         this.cookieService = cookieService;
         this.loginHistoryService = loginHistoryService;
@@ -159,7 +159,7 @@ public class SecurityConfig {
                     API_PREFIX + "/users/find-username",
                     API_PREFIX + "/users/password/reset",
                     API_PREFIX + "/verification/**",
-                    "/login"
+                    API_PREFIX + "/login"
                 ).permitAll()
                 // 인증 필요
                 .requestMatchers(HttpMethod.GET, API_PREFIX + "/users/me").hasRole("USER")
@@ -173,6 +173,7 @@ public class SecurityConfig {
 
         // 기본 로그아웃 필터 + 커스텀 Refresh 토큰 삭제 핸들러 추가
         http.logout(logout -> logout
+        		.logoutUrl(API_PREFIX + "/logout")
                 .addLogoutHandler(new RefreshTokenLogoutHandler(refreshTokenService, cookieService, loginHistoryService,securityEventService))
                 .logoutSuccessHandler((request, response, authentication) -> {
                     response.setStatus(HttpServletResponse.SC_OK);
@@ -191,7 +192,8 @@ public class SecurityConfig {
         http.addFilterBefore(
                 new LoginFilter(authenticationManager(authenticationConfiguration),
                         loginSuccessHandler,
-                        loginFailureHandler),
+                        loginFailureHandler,
+                        API_PREFIX ),
                 UsernamePasswordAuthenticationFilter.class
         );
 

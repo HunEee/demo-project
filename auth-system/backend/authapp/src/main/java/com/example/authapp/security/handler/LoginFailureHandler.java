@@ -35,7 +35,7 @@ public class LoginFailureHandler implements AuthenticationFailureHandler {
                                         HttpServletResponse response,
                                         AuthenticationException exception)
             throws IOException, ServletException {
-    	 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+    	 	response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
     	    response.setContentType("application/json;charset=UTF-8");
 
     	    Map<String, Object> result = new HashMap<>();
@@ -58,7 +58,7 @@ public class LoginFailureHandler implements AuthenticationFailureHandler {
     	    }
 
     	    // 유저 존재 여부 체크
-    	    boolean exists = userRepository.existsByUsername(username);
+    	    var userOpt = userRepository.findByUsername(username);
 
     	    // 클라이언트 정보
     	    String ip = ClientUtil.getIp(request);
@@ -67,23 +67,26 @@ public class LoginFailureHandler implements AuthenticationFailureHandler {
 
     	    String reason = "로그인 실패";
 
-    	    // 1. 비밀번호 틀림 (유저 존재할 때만)
-    	    if (exception instanceof BadCredentialsException && exists) {
-    	        reason = "비밀번호 오류";
+    	    // 1. 유저 존재
+    	    if (userOpt.isPresent()) {
+
+    	        var user = userOpt.get();
+
+    	        // 비밀번호 오류
+    	        if (exception instanceof BadCredentialsException) {
+    	            reason = "비밀번호 오류";
+    	        } else {
+    	            reason = exception.getMessage();
+    	        }
     	        var history = loginHistoryService.saveFail(username, ip, userAgent, device, reason);
-    	        riskService.analyzeLoginRisk(history);
+    	        // user 전달 
+    	        riskService.analyzeLoginRisk(user, history);
     	        authEventLogService.loginFail(username, reason);
     	    }
-    	    // 2. 유저 없음 -> SecurityEvent만 남김 (공격 탐지용)
-    	    else if (!exists) {
-    	    	authEventLogService.loginFail(username, "존재하지 않는 사용자");
-    	    }
-    	    // 3. 기타 인증 실패 (계정 잠김 등)
+
+    	    // 2. 유저 없음
     	    else {
-    	        reason = exception.getMessage();
-    	        var history = loginHistoryService.saveFail(username, ip, userAgent, device, reason);
-    	        riskService.analyzeLoginRisk(history);
-    	        authEventLogService.loginFail(username, reason);
+    	        authEventLogService.loginFail(username, "존재하지 않는 사용자");
     	    }
         
     }

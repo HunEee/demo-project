@@ -4,26 +4,27 @@ import org.springframework.http.MediaType;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.authapp.domain.jwt.dto.JWTResponseDTO;
 import com.example.authapp.domain.jwt.dto.RefreshRequestDTO;
 import com.example.authapp.domain.jwt.service.JwtService;
+import com.example.authapp.domain.verificatoin.service.EmailCodeService;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 
 @RestController
+@RequiredArgsConstructor
+@RequestMapping("/api/v1/jwt")
 public class JwtController {
 
     private final JwtService jwtService;
 
-    public JwtController(JwtService jwtService) {
-        this.jwtService = jwtService;
-    }
-
     // 소셜 로그인 쿠키 방식의 Refresh 토큰 헤더 방식으로 교환
-    @PostMapping(value = "/jwt/exchange", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/exchange", consumes = MediaType.APPLICATION_JSON_VALUE)
     public JWTResponseDTO jwtExchangeApi(HttpServletRequest request,HttpServletResponse response){
         return jwtService.cookie2Header(request, response);
     }
@@ -34,7 +35,7 @@ public class JwtController {
 //        return jwtService.refreshRotate(dto);
 //    }
     
-    @PostMapping("/jwt/refresh")
+    @PostMapping("/refresh")
     public JWTResponseDTO refresh(HttpServletRequest request, HttpServletResponse response) {
         return jwtService.refreshRotate(request, response);
     }

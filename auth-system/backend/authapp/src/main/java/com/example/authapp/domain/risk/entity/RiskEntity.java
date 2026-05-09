@@ -40,11 +40,14 @@ public class RiskEntity {
 
     private String username;
 
+    @Column(name = "risk_score")
     private int riskScore;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "risk_level")
     private RiskLevel riskLevel;
 
+    @Column(name = "last_reason")
     private String lastReason;
     
     @CreatedDate

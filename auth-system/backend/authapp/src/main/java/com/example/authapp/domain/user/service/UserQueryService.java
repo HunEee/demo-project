@@ -10,6 +10,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.authapp.application.user.dto.FindUsernameRequest;
 import com.example.authapp.domain.user.dto.UserResponse;
 import com.example.authapp.domain.user.entity.UserEntity;
 import com.example.authapp.domain.user.exception.UserException;
@@ -56,6 +57,24 @@ public class UserQueryService {
     public UserEntity getByUsernameAndEmail(String username, String email) {
         return userRepository.findByUsernameAndEmailAndDeletedAtIsNull(username, email).orElseThrow(UserException::userNotFound);
     }
+
+    // ==================================================================================================================
+    // 내 정보 조회 (Controller에서 username 전달)
+    // ==================================================================================================================
+
+    public UserResponse getMyInfo(String username) {
+        var user = userRepository.findByUsernameAndLocked(username, false).orElseThrow(UserException::userNotFound);
+        return new UserResponse(user.getUsername(),user.getIsSocial(),user.getNickname(),user.getEmail());
+    }
+    
+    // ==================================================================================================================
+    // username 찾기
+    // ==================================================================================================================
+    public String findUsername(FindUsernameRequest dto) {
+        UserEntity user = userRepository.findByEmailAndDeletedAtIsNull(dto.email()).orElseThrow(UserException::userNotFound);
+        return user.getUsername();
+    }
+    
     
     // ==================================================================================================================
     // 목록 조회
@@ -74,34 +93,6 @@ public class UserQueryService {
                 .toList();
     }
     
-    // ==================================================================================================================
-    // 내 정보 조회 (Controller에서 username 전달)
-    // ==================================================================================================================
-
-    public UserResponse getMyInfo(String username) {
-        var user = userRepository.findByUsername(username).orElseThrow();
-        return new UserResponse(user.getUsername(),user.getIsSocial(),user.getNickname(),user.getEmail());
-    }
-    
-    
-    // 자체/소셜 유저 정보 조회
-    public UserResponse readUser() {
-        
-    	Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        
-        // 인증 여부 먼저 확인
-        if (authentication == null || !authentication.isAuthenticated()|| authentication instanceof AnonymousAuthenticationToken) {
-            throw new AccessDeniedException("로그인이 필요합니다.");
-        }
-
-        String username = authentication.getName();
-        
-        // 유저 존재 여부 확인
-        UserEntity entity = userRepository.findByUsernameAndLocked(username, false)
-                .orElseThrow(() -> new UsernameNotFoundException("해당 유저를 찾을 수 없습니다: " + username));
-
-        return new UserResponse(username, entity.getIsSocial(), entity.getNickname(), entity.getEmail());
-    }
 
     
 }

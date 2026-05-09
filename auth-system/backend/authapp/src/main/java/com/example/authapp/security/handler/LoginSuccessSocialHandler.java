@@ -25,7 +25,7 @@ import java.util.UUID;
 
 @Component("socialSuccessHandler")
 @RequiredArgsConstructor
-public class SocialSuccessHandler implements AuthenticationSuccessHandler {
+public class LoginSuccessSocialHandler implements AuthenticationSuccessHandler {
 
     private final RefreshTokenService refreshTokenService;
 	private final LoginHistoryService loginHistoryService;

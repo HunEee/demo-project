@@ -63,7 +63,7 @@ public class LoginSuccessHandler implements AuthenticationSuccessHandler {
         var history = loginHistoryService.saveSuccess(username,ip,userAgent,device);
         
         // 위험 로그인 여부 판단
-        riskService.analyzeLoginRisk(history);
+        riskService.analyzeLoginRisk(user,history);
         
         // 발급한 Refresh DB 테이블 저장 (Refresh whitelist)
         //jwtService.addRefresh(username, refreshToken);

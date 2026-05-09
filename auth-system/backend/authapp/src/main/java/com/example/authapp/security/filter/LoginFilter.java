@@ -7,6 +7,8 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.ServletInputStream;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationServiceException;
@@ -28,9 +30,11 @@ public class LoginFilter extends AbstractAuthenticationProcessingFilter {
 
     public static final String SPRING_SECURITY_FORM_USERNAME_KEY = "username";
     public static final String SPRING_SECURITY_FORM_PASSWORD_KEY = "password";
+    
 
-    private static final RequestMatcher DEFAULT_ANT_PATH_REQUEST_MATCHER 
-    											= PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, "/login");
+
+//    private static final RequestMatcher DEFAULT_ANT_PATH_REQUEST_MATCHER 
+//    											= PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, "/login");
 
     private String usernameParameter = SPRING_SECURITY_FORM_USERNAME_KEY;
     private String passwordParameter = SPRING_SECURITY_FORM_PASSWORD_KEY;
@@ -40,8 +44,9 @@ public class LoginFilter extends AbstractAuthenticationProcessingFilter {
 
     public LoginFilter(AuthenticationManager authenticationManager,
                        AuthenticationSuccessHandler successHandler,
-                       AuthenticationFailureHandler failureHandler) {
-        super(DEFAULT_ANT_PATH_REQUEST_MATCHER, authenticationManager);
+                       AuthenticationFailureHandler failureHandler,
+                       String apiPrefix) {
+        super(PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, apiPrefix + "/login"),authenticationManager);
         this.authenticationSuccessHandler = successHandler;
         this.authenticationFailureHandler = failureHandler;
     }

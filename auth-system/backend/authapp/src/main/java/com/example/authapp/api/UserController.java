@@ -16,13 +16,14 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.authapp.application.user.dto.FindUsernameRequest;
+import com.example.authapp.application.user.dto.SignupRequest;
+import com.example.authapp.application.user.dto.UpdateUserProfileRequest;
+import com.example.authapp.application.user.usecase.UserFacade;
 import com.example.authapp.domain.user.dto.UserResponse;
 import com.example.authapp.domain.user.dto.password.ChangePasswordRequest;
 import com.example.authapp.domain.user.dto.password.ResetPasswordRequest;
 import com.example.authapp.domain.user.dto.user.CheckUsernameRequest;
-import com.example.authapp.domain.user.dto.user.FindUsernameRequest;
-import com.example.authapp.domain.user.dto.user.SignupRequest;
-import com.example.authapp.domain.user.dto.user.UpdateUserRequest;
 import com.example.authapp.domain.user.service.PasswordService;
 import com.example.authapp.domain.user.service.UserCommandService;
 import com.example.authapp.domain.user.service.UserQueryService;
@@ -39,17 +40,19 @@ public class UserController {
     private final UserQueryService userQueryService;
     private final PasswordService passwordService;
     
+    private final UserFacade userFacade; 
+    
     // 회원가입(email + verificationCode 포함)
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Long> signup(@Valid @RequestBody SignupRequest request){
-        return ResponseEntity.status(201).body(userCommandService.addUser(request));
+        return ResponseEntity.status(201).body(userFacade.signup(request));
     }
     
     // 유저 수정 (자체 로그인 유저만)
     @PatchMapping(value = "/me", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Long> updateUser(        
     		@AuthenticationPrincipal(expression = "username") String username,
-            @RequestBody UpdateUserRequest request
+            @RequestBody UpdateUserProfileRequest request
     ) {
         return ResponseEntity.status(200).body(userCommandService.updateUser(username, request));
     }
@@ -79,14 +82,14 @@ public class UserController {
     
     // 유저 정보
     @GetMapping(value = "/me", produces = MediaType.APPLICATION_JSON_VALUE)
-    public UserResponse userMe() {
-        return userQueryService.readUser();
+    public UserResponse me(@AuthenticationPrincipal(expression = "username") String username) {
+        return userQueryService.getMyInfo(username);
     }
-
+    
     // 아이디 찾기(로그아웃 상태) -> email + verificationCode
     @PostMapping("/find-username")
     public ResponseEntity<Map<String, String>> findUsername(@Valid @RequestBody FindUsernameRequest request) {
-        String username = userCommandService.findUsername(request);
+        String username = userFacade.findUsername(request);
         return ResponseEntity.ok(Collections.singletonMap("username", username));
     }
     

@@ -17,16 +17,14 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class RiskEvaluator {
 
-    private final LoginHistoryRepository loginHistoryRepository;
-
     // =========================
     // 위험 점수 증가
     // =========================
-    public int increaseScore(LoginHistoryEntity loginHistory) {
+    public int increaseScore(LoginHistoryEntity loginHistory, List<LoginHistoryEntity> histories) {
         int score = 0;
         if (!loginHistory.isSuccess()) score += 15;
-        if (isNewIp(loginHistory)) score += 3;
-        if (isNewDevice(loginHistory)) score += 5;
+        if (isNewIp(loginHistory, histories)) score += 3;
+        if (isNewDevice(loginHistory, histories)) score += 5;
         if (isAbnormalTime(loginHistory)) score += 2;
         return score;
     }
@@ -34,7 +32,7 @@ public class RiskEvaluator {
     // =========================
     // 정상 행동 점수 감소
     // =========================
-    public int decreaseScore(LoginHistoryEntity loginHistory) {
+    public int decreaseScore(LoginHistoryEntity loginHistory, List<LoginHistoryEntity> histories) {
     	
     	// 로그인 실패 시 0점 리턴
     	if (!loginHistory.isSuccess()) return 0;
@@ -42,12 +40,12 @@ public class RiskEvaluator {
         int score = 0;
         
         // 기존 환경에서 성공 로그인
-        if (loginHistory.isSuccess() && !isNewIp(loginHistory) && !isNewDevice(loginHistory)) {
+        if (loginHistory.isSuccess() && !isNewIp(loginHistory, histories) && !isNewDevice(loginHistory, histories)) {
             score -= 20;
         }
         
         // 최근 로그인 패턴이 안정적
-        if (isConsistentPattern(loginHistory)) {
+        if (isConsistentPattern(histories)) {
             score -= 10;
         }
         
@@ -98,25 +96,22 @@ public class RiskEvaluator {
     // =========================
     // 내부 메서드
     // =========================
-    public boolean isNewIp(LoginHistoryEntity loginHistory) {
-        List<LoginHistoryEntity> histories = loginHistoryRepository.findByUsername(loginHistory.getUsername());
-        return histories.stream().noneMatch(h -> h.getIpAddress().equals(loginHistory.getIpAddress()));
-    }
-
-    public boolean isNewDevice(LoginHistoryEntity loginHistory) {
-        List<LoginHistoryEntity> histories = loginHistoryRepository.findByUsername(loginHistory.getUsername());
-        return histories.stream().noneMatch(h -> h.getDevice().equals(loginHistory.getDevice()));
-    }
-
-    public boolean isAbnormalTime(LoginHistoryEntity loginHistory) {
-        int hour = loginHistory.getLoginAt().getHour();
-        return (hour < 6 || hour > 23);
-    }
-
-    private boolean isConsistentPattern(LoginHistoryEntity loginHistory) {
-        List<LoginHistoryEntity> histories = loginHistoryRepository.findByUsername(loginHistory.getUsername());
-        return histories.stream().limit(5).allMatch(LoginHistoryEntity::isSuccess);
-    }
+    public boolean isNewIp(LoginHistoryEntity loginHistory, List<LoginHistoryEntity> histories) {
+    	return histories.stream().noneMatch(h -> h.getIpAddress().equals(loginHistory.getIpAddress()));
+	}
+	
+	public boolean isNewDevice(LoginHistoryEntity loginHistory, List<LoginHistoryEntity> histories) {
+		return histories.stream().noneMatch(h -> h.getDevice().equals(loginHistory.getDevice()));
+	}
+	
+	public boolean isAbnormalTime(LoginHistoryEntity loginHistory) {
+		int hour = loginHistory.getLoginAt().getHour();
+		return hour < 6 || hour > 23;
+	}
+	
+	private boolean isConsistentPattern(List<LoginHistoryEntity> histories) {
+		return histories.stream().limit(5).allMatch(LoginHistoryEntity::isSuccess);
+	}
 
     private boolean safeEquals(String a, String b) {
         return (a == null && b == null) || (a != null && a.equals(b));

@@ -1,9 +1,12 @@
 package com.example.authapp.domain.risk.service;
 
+import java.util.List;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.authapp.domain.audit.entity.LoginHistoryEntity;
+import com.example.authapp.domain.audit.repository.LoginHistoryRepository;
 import com.example.authapp.domain.jwt.entity.RefreshTokenEntity;
 import com.example.authapp.domain.risk.entity.RiskEntity;
 import com.example.authapp.domain.risk.entity.RiskLevel;
@@ -21,7 +24,9 @@ import lombok.RequiredArgsConstructor;
 public class RiskService {
 
     private final RiskRepository riskRepository;
+    
     private final UserRepository userRepository;
+    private final LoginHistoryRepository loginHistoryRepository; 
 
     private final RiskFactory riskFactory;
     private final RiskEvaluator riskEvaluator;
@@ -31,19 +36,22 @@ public class RiskService {
     // =========================
     // 로그인 위험 분석
     // =========================
-    public RiskEntity analyzeLoginRisk(LoginHistoryEntity loginHistory) {
+    public RiskEntity analyzeLoginRisk(UserEntity user, LoginHistoryEntity loginHistory) {
 
         String username = loginHistory.getUsername();
-        UserEntity user = userRepository.findByUsername(username).orElseThrow(RiskException::userNotFound);
-    	
+        
+        // 로그인 이력 한 번만 조회
+        List<LoginHistoryEntity> histories = loginHistoryRepository.findTop20ByUsernameOrderByLoginAtDesc(username);
+
+        
         // risk 테이블에 없을 경우 user가 없으면 초기화 로직 
         RiskEntity risk = riskRepository.findByUserUsername(username).orElseGet(() -> riskFactory.create(user));
         
         // 점수 계산 
-        int score = riskEvaluator.increaseScore(loginHistory) + riskEvaluator.decreaseScore(loginHistory);
+        int score = riskEvaluator.increaseScore(loginHistory, histories) + riskEvaluator.decreaseScore(loginHistory, histories);
         
         // 리즌 빌드
-        String reason = buildReason(loginHistory);
+        String reason = buildReason(loginHistory, histories);
 
         // 위험 점수 있을 때만 저장
         if (score > 0) {
@@ -113,11 +121,11 @@ public class RiskService {
     // =========================
     // 내부 메서드
     // =========================
-    private String buildReason(LoginHistoryEntity loginHistory) {
+    private String buildReason(LoginHistoryEntity loginHistory,List<LoginHistoryEntity> histories) {
         StringBuilder reason = new StringBuilder();
         if (!loginHistory.isSuccess()) reason.append("LOGIN_FAIL;");
-        if (riskEvaluator.isNewIp(loginHistory)) reason.append("NEW_IP;");
-        if (riskEvaluator.isNewDevice(loginHistory)) reason.append("NEW_DEVICE;");
+        if (riskEvaluator.isNewIp(loginHistory, histories)) reason.append("NEW_IP;");
+        if (riskEvaluator.isNewDevice(loginHistory, histories)) reason.append("NEW_DEVICE;");
         if (riskEvaluator.isAbnormalTime(loginHistory)) reason.append("ABNORMAL_TIME;");
         return reason.toString();
     }

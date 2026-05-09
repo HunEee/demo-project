@@ -46,5 +46,8 @@ public interface LoginHistoryRepository extends JpaRepository<LoginHistoryEntity
 
     @Query("SELECT l FROM LoginHistory l ORDER BY l.loginAt DESC")
     List<LoginHistoryEntity> findRecentLogins(Pageable pageable);
+
+    // 최근 로그인 이력 조회 -> 리스크 서비스에서 위험을 계산 하기 위함
+	List<LoginHistoryEntity> findTop20ByUsernameOrderByLoginAtDesc(String username);
 	
 }
