@@ -49,7 +49,7 @@ public class UserCommandService {
                 .profileImage(dto.profileImage())
                 .locked(false)
                 .enabled(true)
-                .isSocial(false)
+                .social(false)
                 .socialProviderType(null)
                 .providerId(null)
                 .build();

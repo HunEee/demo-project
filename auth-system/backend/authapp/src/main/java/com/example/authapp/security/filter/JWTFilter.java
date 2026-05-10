@@ -56,7 +56,7 @@ public class JWTFilter extends OncePerRequestFilter {
             String jti = JWTUtil.getJti(accessToken);
 
             UserPrincipal userPrincipal = userDetailsService.loadUserByUsername(username);
-            userPrincipal.setJti(jti);
+            //userPrincipal.setJti(jti);
             Authentication auth = new UsernamePasswordAuthenticationToken(userPrincipal, null, userPrincipal.getAuthorities());
             SecurityContextHolder.getContext().setAuthentication(auth);
 

@@ -43,6 +43,11 @@ public class UserQueryService {
     // 단건 조회
     // ==================================================================================================================
 
+    // 로그인 성공 반환
+	public UserEntity getUser(Long userId) {
+        return userRepository.findById(userId).orElseThrow(UserException::userNotFound);
+	}
+    
     public UserEntity getByUsername(String username) {
         return userRepository.findByUsernameAndDeletedAtIsNull(username).orElseThrow(UserException::userNotFound);
     }
@@ -64,7 +69,7 @@ public class UserQueryService {
 
     public UserResponse getMyInfo(String username) {
         var user = userRepository.findByUsernameAndLocked(username, false).orElseThrow(UserException::userNotFound);
-        return new UserResponse(user.getUsername(),user.getIsSocial(),user.getNickname(),user.getEmail());
+        return new UserResponse(user.getUsername(),user.isSocial(),user.getNickname(),user.getEmail());
     }
     
     // ==================================================================================================================
@@ -86,13 +91,14 @@ public class UserQueryService {
                 .filter(user -> user.getDeletedAt() == null) // soft delete 제외
                 .map(user -> new UserResponse(
                         user.getUsername(),
-                        user.getIsSocial(),
+                        user.isSocial(),
                         user.getNickname(),
                         user.getEmail()
                 ))
                 .toList();
     }
-    
+
+
 
     
 }

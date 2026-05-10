@@ -65,7 +65,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                     .nickname(info.nickname())
                     .enabled(true)
                     .locked(false)
-                    .isSocial(true)
+                    .social(true)
                     .providerId(info.providerId())
                     .socialProviderType(SocialProviderType.valueOf(info.provider()))
                     .build();

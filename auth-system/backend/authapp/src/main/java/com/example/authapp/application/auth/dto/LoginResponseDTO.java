@@ -1,4 +1,6 @@
-package com.example.authapp.security.handler.dto;
+package com.example.authapp.application.auth.dto;
+
+import com.example.authapp.security.handler.dto.UserResponseDTO;
 
 import lombok.Builder;
 import lombok.Getter;

@@ -32,8 +32,8 @@ public class UserResponseDTO {
                 .email(user.getEmail())
                 .nickname(user.getNickname())
                 .image(user.getProfileImage())
-                .enabled(user.getEnabled())
-                .provider(user.getIsSocial() ? user.getSocialProviderType().name() : "LOCAL")
+                .enabled(user.isEnabled())
+                .provider(user.isSocial() ? user.getSocialProviderType().name() : "LOCAL")
                 .roles(
                         user.getRoles().stream()
                                 .map(RoleEntity::getName)

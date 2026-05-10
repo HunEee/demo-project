@@ -8,6 +8,6 @@ import lombok.Getter;
 public class CustomUserDetails {
 
     private String username;
-    private String jti;
+    //private String jti;
     
 }

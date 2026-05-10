@@ -51,13 +51,13 @@ public class UserEntity {
     
     
     @Column(name = "locked", nullable = false)
-    private Boolean locked;		// 계정 잠금 처리
+    private boolean locked;		// 계정 잠금 처리
     @Column(name = "enabled",nullable = false)
-    private Boolean enabled;	// 계정 탈퇴시 false 처리
+    private boolean enabled;	// 계정 탈퇴시 false 처리
 
     
     @Column(name = "is_social", nullable = false)
-    private Boolean isSocial;
+    private boolean social;
     
     @Enumerated(EnumType.STRING)
     @Column(name = "social_provider_type", nullable = true)

@@ -8,6 +8,9 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 public class JWTUtil {
@@ -42,9 +45,11 @@ public class JWTUtil {
         return Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token).getPayload().getSubject();
     }
 
-    // JWT 클레임 role 파싱
-    public static String getRole(String token) {
-        return Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token).getPayload().get("role", String.class);
+    // JWT 클레임 roles 파싱
+    @SuppressWarnings("unchecked") // 타입 안정성 경고 무시
+    public static Set<String> getRoles (String token) {
+    	Claims claims =  Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token).getPayload();
+        return new HashSet<>( claims.get("roles",List.class));
     }
     
     // JWT_ID 파싱
@@ -74,20 +79,14 @@ public class JWTUtil {
         return claims;
     }
 
-    // JWT(Access/Refresh) 생성
-    // 기존 메서드 유지 (혹시 다른 곳에서 쓸 수 있으니까)
-//    public static String createJWT(String username, String role, Boolean isAccess) {
-//        return createJWT(username, role, UUID.randomUUID().toString(), isAccess);
-//    }
-
     // jti 주입 버전 추가
-    public static String createJWT(String username, String role, String jti, Boolean isAccess) {
+    public static String createJWT(String username, Set<String> roles , String jti, Boolean isAccess) {
         long now = System.currentTimeMillis();
         long expiry = isAccess ? accessTokenExpiresIn : refreshTokenExpiresIn;
         String type = isAccess ? "access" : "refresh";
         return Jwts.builder()
                 .subject(username)
-                .claim("role", role)
+                .claim("roles", roles)
                 .claim("type", type)
                 .id(jti) // 외부에서 받은 jti 사용
                 .issuedAt(new Date(now))

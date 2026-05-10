@@ -2,6 +2,7 @@ package com.example.authapp.domain.jwt.service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -55,12 +56,12 @@ public class JwtService {
 
         // 정보 추출
         String username = JWTUtil.getUsername(refreshToken);
-        String role = JWTUtil.getRole(refreshToken);
+        Set<String> roles = JWTUtil.getRoles(refreshToken);
 
         // 토큰 생성
         String jti = UUID.randomUUID().toString();
-        String newAccessToken = JWTUtil.createJWT(username, role, jti, true);
-        String newRefreshToken = JWTUtil.createJWT(username, role, jti, false);
+        String newAccessToken = JWTUtil.createJWT(username, roles, jti, true);
+        String newRefreshToken = JWTUtil.createJWT(username, roles, jti, false);
         
         // JWT에서 jti 추출
         String newJti = JWTUtil.getJti(newRefreshToken);
@@ -118,9 +119,9 @@ public class JwtService {
         
         // 토큰 생성
         String jti = UUID.randomUUID().toString();
-        String role = JWTUtil.getRole(refreshToken);
-        String newAccessToken = JWTUtil.createJWT(username, role, jti, true);
-        String newRefreshToken = JWTUtil.createJWT(username, role, jti, false);
+        Set<String> roles  = JWTUtil.getRoles(refreshToken);
+        String newAccessToken = JWTUtil.createJWT(username, roles, jti, true);
+        String newRefreshToken = JWTUtil.createJWT(username, roles, jti, false);
         
         // 기존 토큰 revoke
         oldEntity.revoke();
