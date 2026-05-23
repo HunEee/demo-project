@@ -1,4 +1,5 @@
 package com.example.authapp.domain.audit.entity;
+
 import java.time.LocalDateTime;
 
 import org.springframework.data.annotation.CreatedDate;
@@ -27,6 +28,7 @@ import lombok.NoArgsConstructor;
     name = "login_history",
     indexes = {
         @Index(name = "idx_login_username", columnList = "username"),
+        @Index(name = "idx_login_username_login_at", columnList = "username, login_at"),
         @Index(name = "idx_login_created_at", columnList = "login_at"),
         @Index(name = "idx_login_status", columnList = "status")
     }

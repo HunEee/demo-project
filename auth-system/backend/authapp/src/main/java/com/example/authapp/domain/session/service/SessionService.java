@@ -1,5 +1,6 @@
 package com.example.authapp.domain.session.service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -38,7 +39,7 @@ public class SessionService {
                         .id(token.getId())
                         .ip(token.getIpAddress())
                         .device(token.getDevice())
-                        .createdAt(loginHistoryService.getSessionStartTime(token.getLoginHistory().getId()))
+                        .createdAt(resolveSessionStartTime(token))
                         .lastAccessAt(token.getLastUsedAt() != null
                                 ? token.getLastUsedAt().toString()
                                 : token.getCreatedAt().toString())
@@ -96,6 +97,13 @@ public class SessionService {
     }
     
     // 로그아웃 기록 및 이벤트 기록
+    private LocalDateTime resolveSessionStartTime(RefreshTokenEntity token) {
+        if (token.getLoginHistory() != null) {
+            return token.getLoginHistory().getLoginAt();
+        }
+        return token.getCreatedAt();
+    }
+
     private void processLogout(String refreshTokenValue) {
         LoginHistoryResponse history = refreshTokenService.revokeRefresh(refreshTokenValue);
 

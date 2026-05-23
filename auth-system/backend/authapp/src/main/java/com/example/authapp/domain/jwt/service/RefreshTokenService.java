@@ -50,7 +50,7 @@ public class RefreshTokenService {
 
     @Transactional(readOnly = true)
     public List<RefreshTokenEntity> findActiveByUsername(String username) {
-        return refreshTokenRepository.findByUsernameAndRevokedFalse(username);
+        return refreshTokenRepository.findActiveSessionsByUsername(username);
     }
     
     // ========================================================================================================

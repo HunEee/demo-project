@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.authapp.domain.jwt.entity.RefreshTokenEntity;
@@ -34,5 +36,16 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshTokenEntity
     
     // 세션 관리
     List<RefreshTokenEntity> findByUsernameAndRevokedFalse(String username);
+
+    @Query("""
+            SELECT r
+            FROM RefreshTokenEntity r
+            LEFT JOIN FETCH r.loginHistory
+            WHERE r.username = :username
+              AND r.revoked = false
+            """)
+    List<RefreshTokenEntity> findActiveSessionsByUsername(@Param("username") String username);
+    
     Optional<RefreshTokenEntity> findByIdAndUsername(Long id, String username);
+    
 }
