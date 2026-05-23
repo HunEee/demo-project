@@ -1,4 +1,4 @@
-package com.example.authapp.domain.user.oauth;
+package com.example.authapp.security.oauth2.provider;
 
 import java.util.List;
 import java.util.Map;

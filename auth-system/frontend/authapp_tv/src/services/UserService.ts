@@ -7,9 +7,11 @@ import type {
   UserResponse,
   UpdateUserRequest,
   FindUsernameRequest,
+} from "@/models/user/UserModels";
+import type {
   ChangePasswordRequest,
   ResetPasswordRequest,
-} from "@/models/user/UserModels";
+} from "@/models/user/PasswordModels";
 
 
 // =============================

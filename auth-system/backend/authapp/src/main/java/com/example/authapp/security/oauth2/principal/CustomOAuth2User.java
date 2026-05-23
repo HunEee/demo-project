@@ -1,4 +1,4 @@
-package com.example.authapp.domain.user.oauth;
+package com.example.authapp.security.oauth2.principal;
 
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.core.user.OAuth2User;

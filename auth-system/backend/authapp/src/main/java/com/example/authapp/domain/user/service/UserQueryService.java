@@ -2,11 +2,6 @@ package com.example.authapp.domain.user.service;
 
 import java.util.List;
 
-import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.authentication.AnonymousAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -77,6 +72,9 @@ public class UserQueryService {
     // ==================================================================================================================
     public String findUsername(FindUsernameRequest dto) {
         UserEntity user = userRepository.findByEmailAndDeletedAtIsNull(dto.email()).orElseThrow(UserException::userNotFound);
+        if (user.isSocial() && !user.hasPasswordLogin()) {
+            return "소셜 로그인 계정입니다.";
+        }
         return user.getUsername();
     }
     

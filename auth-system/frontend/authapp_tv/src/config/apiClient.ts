@@ -99,11 +99,13 @@ apiClient.interceptors.response.use(
       const loginResponse = await refreshToken();
       const newToken = loginResponse.accessToken;
       if (!newToken) throw new Error("토큰이 존재하지 않습니다.");
+      const currentUser = useAuth.getState().user;
+      if (!currentUser) throw new Error("사용자 정보가 존재하지 않습니다.");
       
       // zustand 상태 업데이트
       useAuth.getState().changeLocalLoginData(
         loginResponse.accessToken,
-        loginResponse.user,
+        currentUser,
         true
       );
 

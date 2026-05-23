@@ -1,6 +1,7 @@
 package com.example.authapp.domain.user.service;
 
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -57,7 +58,11 @@ public class UserCommandService {
         user.addRole(userRole);
         
         // 4. 저장
-        userRepository.save(user);
+        try {
+            userRepository.save(user);
+        } catch (DataIntegrityViolationException e) {
+            throw UserException.emailAlreadyExists();
+        }
         
         // 5. 이벤트 발행
         eventPublisher.publishEvent(new UserSignedUpEvent(user.getId(), user.getUsername(), user.getEmail()));

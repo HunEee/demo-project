@@ -1,15 +1,15 @@
 import { Button } from "./ui/button";
-import { Chrome, Github } from "lucide-react";
-import { NavLink } from "react-router";
+import { Chrome, MessageCircle } from "lucide-react";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
+const OAUTH2_BASE_URL = API_BASE_URL.replace(/\/api\/v\d+\/?$/, "");
 
 function OAuth2Buttons() {
   return (
     <div className="space-y-3">
       {/* Naver */}
-      <NavLink
-        to={`${BASE_URL}/oauth2/authorization/naver`}
+      <a
+        href={`${OAUTH2_BASE_URL}/oauth2/authorization/naver`}
         className="block"
       >
         <Button
@@ -18,11 +18,24 @@ function OAuth2Buttons() {
         >
           Naver로 계속하기
         </Button>
-      </NavLink>
+      </a>
+
+      {/* Kakao */}
+      <a
+        href={`${OAUTH2_BASE_URL}/oauth2/authorization/kakao`}
+        className="block"
+      >
+        <Button
+          type="button"
+          className="w-full flex cursor-pointer items-center justify-center gap-3 rounded-2xl bg-yellow-300 hover:bg-yellow-400 text-neutral-950"
+        >
+          <MessageCircle className="w-5 h-5" /> Kakao로 계속하기
+        </Button>
+      </a>
 
       {/* Google */}
-      <NavLink
-        to={`${BASE_URL}/oauth2/authorization/google`}
+      <a
+        href={`${OAUTH2_BASE_URL}/oauth2/authorization/google`}
         className="block"
       >
         <Button
@@ -32,23 +45,7 @@ function OAuth2Buttons() {
         >
           <Chrome className="w-5 h-5" /> Google로 계속하기
         </Button>
-      </NavLink>
-
-      {/* GitHub */}
-      <NavLink
-        to={`${BASE_URL}/oauth2/authorization/github`}
-        className="block"
-      >
-        <Button
-          type="button"
-          variant="outline"
-          className="w-full flex cursor-pointer items-center gap-3 rounded-2xl"
-        >
-          <Github className="w-5 h-5" /> GitHub로 계속하기
-        </Button>
-      </NavLink>
-
-
+      </a>
     </div>
   );
 }

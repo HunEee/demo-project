@@ -42,7 +42,7 @@ public class UserEntity {
     private String username;
     @Column(name = "password", nullable = false)
     private String password;
-    @Column(name = "email")
+    @Column(name = "email", unique = true)
     private String email;
     @Column(name = "nickname")
     private String nickname;
@@ -141,6 +141,17 @@ public class UserEntity {
         if (nickname != null && !nickname.isBlank()) {
             this.nickname = nickname;
         }
+    }
+
+    // 소셜 계정 연결
+    public void linkSocialAccount(SocialProviderType providerType, String providerId) {
+        this.social = true;
+        this.socialProviderType = providerType;
+        this.providerId = providerId;
+    }
+
+    public boolean hasPasswordLogin() {
+        return this.password != null && !this.password.isBlank();
     }
     
     

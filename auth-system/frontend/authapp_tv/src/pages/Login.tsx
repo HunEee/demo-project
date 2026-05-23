@@ -11,7 +11,6 @@ import { Alert, AlertTitle } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
 import OAuth2Buttons from "@/components/OAuth2Buttons";
 import type LoginData from "@/models/LoginData";
-import { loginUser } from "@/services/AuthService";
 import useAuth from "@/auth/store";
 
 
@@ -52,13 +51,14 @@ function Login() {
 
     try {
       setLoading(true);
+      setError(null);
       // 실제 로그인 (zustand or API 연결)
       // const userInfo = await loginUser(loginData);
       await login(loginData);
       toast.success("로그인 성공 🎉");
 
       // 로그인 성공 시 이동
-      navigate("/dashboard");
+      navigate("/dashboard", { replace: true });
 
     } catch (error: any) {
       console.error(error);

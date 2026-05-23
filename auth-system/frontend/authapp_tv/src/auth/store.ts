@@ -1,7 +1,7 @@
 import type LoginData from "@/models/LoginData";
 import type LoginResponseData from "@/models/LoginResponseData";
 import type User from "@/models/User";
-import { loginUser, logoutUser } from "@/services/AuthService";
+import { loginUser, logoutUser, refreshToken } from "@/services/AuthService";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
@@ -19,6 +19,7 @@ type AuthState = {
   login: (loginData: LoginData) => Promise<LoginResponseData>;
   logout: (silent?: boolean) => void;
   checkLogin: () => boolean;
+  restoreSession: () => Promise<void>;
 
   changeLocalLoginData: (
     accessToken: string,
@@ -36,7 +37,7 @@ const useAuth = create<AuthState>()(
       accessToken: null,
       user: null,
       authStatus: false,
-      authLoading: false,
+      authLoading: true,
 
       // 로그인 상태를 직접 변경 (토큰 재발급 등에서 사용)
       changeLocalLoginData: (accessToken, user, authStatus) => {
@@ -58,6 +59,10 @@ const useAuth = create<AuthState>()(
           const loginResponseData = await loginUser(loginData);
           console.log("로그인 응답:", loginResponseData);
 
+          if (!loginResponseData.accessToken || !loginResponseData.user) {
+            throw new Error("로그인 응답에 인증 정보가 없습니다.");
+          }
+
           set({
             accessToken: loginResponseData.accessToken,
             user: loginResponseData.user,
@@ -70,6 +75,54 @@ const useAuth = create<AuthState>()(
           throw error;
         } finally {
           set({
+            authLoading: false,
+          });
+        }
+      },
+
+      // =============================
+      // 새로고침 후 세션 복원
+      // =============================
+      restoreSession: async () => {
+        const { accessToken, user, authStatus } = get();
+
+        if (accessToken) {
+          set({ authLoading: false });
+          return;
+        }
+
+        if (!user || !authStatus) {
+          set({ authLoading: false });
+          return;
+        }
+
+        try {
+          const response = await refreshToken();
+          if (!response.accessToken) throw new Error("토큰이 존재하지 않습니다.");
+
+          if (get().accessToken) {
+            set({ authLoading: false });
+            return;
+          }
+
+          set({
+            accessToken: response.accessToken,
+            user,
+            authStatus: true,
+            authLoading: false,
+          });
+        } catch (error) {
+          console.error("세션 복원 실패:", error);
+
+          if (get().accessToken) {
+            set({ authLoading: false });
+            return;
+          }
+
+          set({
+            accessToken: null,
+            user: null,
+            authStatus: false,
             authLoading: false,
           });
         }
@@ -112,6 +165,18 @@ const useAuth = create<AuthState>()(
 
     {
       name: LOCAL_KEY, // localStorage key
+      version: 1,
+      migrate: (persistedState) => {
+        const state = persistedState as Partial<AuthState>;
+        return {
+          user: state.user ?? null,
+          authStatus: state.authStatus ?? false,
+        };
+      },
+      partialize: (state) => ({
+        user: state.user,
+        authStatus: state.authStatus,
+      }),
     }
 
   ) 

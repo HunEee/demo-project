@@ -6,10 +6,9 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.transaction.annotation.Transactional;
 
+import com.example.authapp.domain.user.entity.SocialProviderType;
 import com.example.authapp.domain.user.entity.UserEntity;
-import com.example.authapp.domain.verificatoin.entity.EmailCodeEntity;
 
 public interface UserRepository extends JpaRepository<UserEntity, Long> {
 	
@@ -30,11 +29,12 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
 	
 	
 	// ROLE가 LAZY 로딩이라 한번에 조회
-	@Query("SELECT u FROM UserEntity u JOIN FETCH u.roles WHERE u.username = :username AND u.locked = false AND u.isSocial = false")
+	@Query("SELECT u FROM UserEntity u JOIN FETCH u.roles WHERE u.username = :username AND u.locked = false")
 	Optional<UserEntity> findWithRoles(@Param("username") String username);
 	
 	// 소셜 로그인 회원 존재 여부 확인
-	Optional<UserEntity> findByUsernameAndIsSocial(String username, Boolean isSocial);
+	Optional<UserEntity> findByUsernameAndSocial(String username, Boolean social);
+	Optional<UserEntity> findBySocialProviderTypeAndProviderId(SocialProviderType socialProviderType, String providerId);
 	
 	
 	// 자체/소셜 유저 정보 조회

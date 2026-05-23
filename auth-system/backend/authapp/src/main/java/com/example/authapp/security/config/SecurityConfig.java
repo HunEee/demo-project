@@ -37,6 +37,7 @@ import com.example.authapp.security.filter.LoginFilter;
 import com.example.authapp.security.handler.RefreshTokenLogoutHandler;
 import com.example.authapp.security.principal.CustomUserDetailsService;
 
+import jakarta.servlet.DispatcherType;
 import jakarta.servlet.http.HttpServletResponse;
 
 @Configuration
@@ -150,6 +151,10 @@ public class SecurityConfig {
 
         // 인가
         http.authorizeHttpRequests(auth -> auth
+                // 내부 에러 처리 요청이 인증 필터에 막히지 않도록 정리
+                .dispatcherTypeMatchers(DispatcherType.ERROR, DispatcherType.FORWARD).permitAll()
+                .requestMatchers("/error").permitAll()
+                .requestMatchers("/favicon.ico").permitAll()
         		// 인증관련
                 .requestMatchers(API_PREFIX + "/jwt/exchange", API_PREFIX + "/jwt/refresh").permitAll()
                 // 비인증 API

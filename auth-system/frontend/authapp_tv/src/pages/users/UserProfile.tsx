@@ -11,6 +11,7 @@ import { Pencil, Shield, Mail } from "lucide-react";
 function Userprofile() {
   const [isEditing, setIsEditing] = useState(false);
   const user = useAuth((state) => state.user);
+  const displayName = user?.nickname || user?.username || "";
 
   return (
     <div className="min-h-screen bg-background px-6 py-10">
@@ -44,15 +45,15 @@ function Userprofile() {
             {/* 상단 프로필 */}
             <div className="flex items-center gap-6 mb-8">
               <Avatar className="w-20 h-20">
-                <AvatarImage src={`https://api.dicebear.com/7.x/thumbs/svg?seed=${user?.username}`} />
+                <AvatarImage src={`https://api.dicebear.com/7.x/thumbs/svg?seed=${displayName}`} />
                 <AvatarFallback>
-                  {user?.username?.charAt(0).toUpperCase()}
+                  {displayName.charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
 
               <div>
                 <h2 className="text-xl font-semibold">
-                  {user?.username}
+                  {displayName}
                 </h2>
                 <p className="text-sm text-muted-foreground">
                   {user?.email}

@@ -1,29 +1,23 @@
 package com.example.authapp.security.filter;
 
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import lombok.RequiredArgsConstructor;
+import java.io.IOException;
 
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import com.example.authapp.security.principal.CustomUserDetails;
 import com.example.authapp.security.principal.CustomUserDetailsService;
 import com.example.authapp.security.principal.UserPrincipal;
 import com.example.authapp.util.JWTUtil;
 
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
-
-import java.io.IOException;
-import java.util.Collections;
-import java.util.List;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class JWTFilter extends OncePerRequestFilter {
@@ -41,8 +35,9 @@ public class JWTFilter extends OncePerRequestFilter {
         }
 
         if (!authorization.startsWith("Bearer ")) {
+        	// 응답 작성 후 예외 재전파
         	sendError(response, "INVALID_TOKEN", "Invalid Authorization header");
-            throw new ServletException("Invalid JWT token");
+            return;
         }
 
         // 토큰 파싱

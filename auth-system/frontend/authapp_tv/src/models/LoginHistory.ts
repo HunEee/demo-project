@@ -6,5 +6,5 @@ export default interface LoginHistory {
   device: string;
   location?: string;
   loginAt: string;
-  status: "ACTIVE" | "LOGOUT" | "EXPIRED" | "FAILED";
+  status: "SUCCESS" | "LOGOUT" | "EXPIRED" | "FAILED";
 }

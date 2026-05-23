@@ -18,6 +18,7 @@ export default function Navbar() {
 
   const isLogin = checkLogin();
   const isAdmin = user?.roles?.includes("ROLE_ADMIN");
+  const displayName = user?.nickname || user?.username || "";
 
   const navStyle: NavLinkProps["className"] = ({ isActive }) =>
     `text-sm font-medium px-3 py-1.5 rounded-full transition ${
@@ -130,13 +131,13 @@ export default function Navbar() {
           {isLogin ? (
             <DropdownMenu>
               <DropdownMenuTrigger >
-                <button className="flex items-center gap-2 px-3 py-1.5 rounded-full border bg-white/80 dark:bg-gray-900/60 hover:shadow">
+                <span className="flex items-center gap-2 px-3 py-1.5 rounded-full border bg-white/80 dark:bg-gray-900/60 hover:shadow">
                   <div className="h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center">
-                    {user?.username?.charAt(0).toUpperCase()}
+                    {displayName.charAt(0).toUpperCase()}
                   </div>
-                  <span className="text-sm">{user?.username}</span>
+                  <span className="text-sm">{displayName}</span>
                   <ChevronDown size={16} />
-                </button>
+                </span>
               </DropdownMenuTrigger>
 
               <DropdownMenuContent align="end">

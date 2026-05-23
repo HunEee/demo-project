@@ -3,7 +3,6 @@ package com.example.authapp.api;
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,17 +12,14 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.example.authapp.domain.session.dto.SessionResponse;
 import com.example.authapp.domain.session.service.SessionService;
-import com.example.authapp.security.principal.CustomUserDetails;
 import com.example.authapp.security.principal.UserPrincipal;
-import com.example.authapp.util.JWTUtil;
 
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/sessions")
+@RequestMapping("${api.prefix}/sessions")
 public class SessionController {
 
     private final SessionService sessionService;

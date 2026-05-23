@@ -21,6 +21,7 @@ import lombok.RequiredArgsConstructor;
 public class LoginSuccessHandler implements AuthenticationSuccessHandler {
 
     private final AuthFacade authFacade;
+    private final ObjectMapper objectMapper;
     
 	@Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
@@ -33,7 +34,7 @@ public class LoginSuccessHandler implements AuthenticationSuccessHandler {
         // 응답
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
-        new ObjectMapper().writeValue(response.getWriter(), result);
+        objectMapper.writeValue(response.getWriter(), result);
         
     }
     

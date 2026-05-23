@@ -4,14 +4,21 @@ import type LoginData from "@/models/LoginData";
 import type LoginResponseData from "@/models/LoginResponseData";
 import type User from "@/models/User";
 
+const normalizeLoginResponse = (data: LoginResponseData | string): LoginResponseData => {
+  if (typeof data === "string") {
+    return JSON.parse(data) as LoginResponseData;
+  }
+
+  return data;
+};
 
 // =============================
 // 로그인
 // =============================
 export const loginUser = async (loginData: LoginData) => {
   // 로그인 요청 → accessToken + user 정보 반환
-  const response = await authClient.post<LoginResponseData>("/login",loginData);
-  return response.data;
+  const response = await authClient.post<LoginResponseData | string>("/login", loginData);
+  return normalizeLoginResponse(response.data);
 };
 
 // =============================
@@ -43,7 +50,15 @@ export const getCurrentUserByEmail = async (emailId: string | undefined) => {
 // =============================
 export const refreshToken = async () => {
   // accessToken 만료 시 새로운 토큰 발급 요청
-  const response = await authClient.post<LoginResponseData>(`/jwt/refresh`);
+  const response = await authClient.post<{ accessToken: string }>(`/jwt/refresh`);
+  return response.data;
+};
+
+// =============================
+// OAUth 쿠키 처리(Refresh Token으로 Access토큰 발급)
+// =============================
+export const exchangeOAuthCookie = async () => {
+  const response = await authClient.post<LoginResponseData>(`/jwt/exchange`);
   return response.data;
 };
 

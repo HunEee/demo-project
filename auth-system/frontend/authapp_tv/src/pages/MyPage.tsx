@@ -14,6 +14,7 @@ export default function MyPage() {
   }
 
   const isSocial = user.provider !== "LOCAL";
+  const displayName = user.nickname || user.username;
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-10">
@@ -25,14 +26,14 @@ export default function MyPage() {
           
           {/* 프로필 이미지 */}
           <div className="h-24 w-24 rounded-full bg-primary text-white flex items-center justify-center text-2xl font-bold">
-            {user.username.charAt(0).toUpperCase()}
+            {displayName.charAt(0).toUpperCase()}
           </div>
 
           {/* 정보 */}
           <div className="flex-1 w-full space-y-2">
             <div>
-              <p className="text-sm text-gray-500">아이디</p>
-              <p className="font-medium">{user.username}</p>
+              <p className="text-sm text-gray-500">표시 이름</p>
+              <p className="font-medium">{displayName}</p>
             </div>
 
             <div>

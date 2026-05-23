@@ -11,6 +11,7 @@ import useAuth from "@/auth/store";
 function Userhome() {
   const user = useAuth((state) => state.user);
   const [user1, setUser1] = useState<UserT | null>(null);
+  const displayName = user?.nickname || user?.username || "";
 
   const getUserData = async () => {
     try {
@@ -35,7 +36,7 @@ function Userhome() {
           <div>
             <h1 className="text-3xl font-bold">대시보드</h1>
             <p className="text-muted-foreground text-sm mt-1">
-              {user?.username}님의 보안 및 활동 현황
+              {displayName}님의 보안 및 활동 현황
             </p>
           </div>
 
@@ -123,10 +124,10 @@ function Userhome() {
 
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-full bg-primary text-white flex items-center justify-center font-bold">
-                  {user?.username?.charAt(0).toUpperCase()}
+                  {displayName.charAt(0).toUpperCase()}
                 </div>
                 <div>
-                  <p className="font-medium">{user?.username}</p>
+                  <p className="font-medium">{displayName}</p>
                   <p className="text-sm text-muted-foreground">
                     {user1?.nickname || "닉네임 없음"}
                   </p>

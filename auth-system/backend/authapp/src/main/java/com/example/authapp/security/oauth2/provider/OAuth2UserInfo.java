@@ -1,4 +1,4 @@
-package com.example.authapp.domain.user.oauth;
+package com.example.authapp.security.oauth2.provider;
 
 //공급자별 사용자 정보 표준화 DTO
 public record OAuth2UserInfo(

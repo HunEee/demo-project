@@ -14,7 +14,7 @@ import com.example.authapp.security.principal.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/login-histories")
+@RequestMapping("${api.prefix}/login-histories")
 @RequiredArgsConstructor
 public class LoginHistoryController {
 	

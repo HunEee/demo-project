@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,10 +26,8 @@ import com.example.authapp.util.JWTUtil;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.RequiredArgsConstructor;
 
 @Service
-@RequiredArgsConstructor
 @Transactional
 public class AuthFacade {
 
@@ -38,6 +37,25 @@ public class AuthFacade {
     private final LoginHistoryService loginHistoryService;
     private final RiskService riskService;
     private final AuthEventLogService authEventLogService;
+    private final String frontendUrl;
+
+    public AuthFacade(
+            UserQueryService userQueryService,
+            RefreshTokenService refreshTokenService,
+            CookieService cookieService,
+            LoginHistoryService loginHistoryService,
+            RiskService riskService,
+            AuthEventLogService authEventLogService,
+            @Value("${app.frontend-url:http://localhost:5173}") String frontendUrl
+    ) {
+        this.userQueryService = userQueryService;
+        this.refreshTokenService = refreshTokenService;
+        this.cookieService = cookieService;
+        this.loginHistoryService = loginHistoryService;
+        this.riskService = riskService;
+        this.authEventLogService = authEventLogService;
+        this.frontendUrl = frontendUrl;
+    }
 
     
     public LoginResponseDTO loginSuccess(UserPrincipal principal, HttpServletRequest request, HttpServletResponse response) {
@@ -74,7 +92,6 @@ public class AuthFacade {
 
         return LoginResponseDTO.builder()
                 .accessToken(accessToken)
-                .refreshToken(refreshToken)
                 .expiresIn(expiresIn)
                 .user(UserResponseDTO.from(user))
                 .build();
@@ -103,13 +120,17 @@ public class AuthFacade {
 
         var history = loginHistoryService.saveSuccess(username, ip, userAgent, device);
 
+        UserEntity user = userQueryService.getByUsername(username);
+
+        riskService.analyzeLoginRisk(user, history);
+
         refreshTokenService.addRefresh(username, refreshToken, ip, userAgent, device, history);
 
         authEventLogService.loginSuccess(username);
 
         cookieService.addRefreshCookie(response,refreshToken);
 
-        response.sendRedirect("http://localhost:5173/cookie");
+        response.sendRedirect(frontendUrl + "/cookie");
     }
     
     

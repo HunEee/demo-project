@@ -14,6 +14,7 @@ import LoginHistoryPage from './pages/LoginHistoryPage.tsx';
 import SecurityPage from './pages/SecurityPage.tsx';
 import ChangePasswordPage from './pages/ChangePasswordPage.tsx';
 import SessionsPage from './pages/SessionsPage.tsx';
+import OAuth2CookieCallback from './pages/OAuth2CookieCallback.tsx';
 
 
 createRoot(document.getElementById('root')!).render(
@@ -24,6 +25,7 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/about" element={<About />} />
+        <Route path="/cookie" element={<OAuth2CookieCallback />} />
 
         <Route path="/dashboard" element={<UserLayout />}>
           <Route index element={<UserHome />} />

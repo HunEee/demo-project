@@ -13,6 +13,10 @@ import { EmailCodePurpose } from "@/models/verification/EmailCodePurpose";
 import { sendEmailCode, verifyEmailCode } from "@/services/verification/VerificationService";
 import { signup, checkUsername } from "@/services/user/AuthService";
 
+const getErrorMessage = (error: any, fallback: string) => {
+    return error.response?.data?.message || error.message || fallback;
+};
+
 
 function Signup() {
 
@@ -47,8 +51,8 @@ function Signup() {
     // 검증 함수 
     const isValidNickname = (nickname: string) => /^[가-힣a-zA-Z0-9]{2,10}$/.test(nickname); // 한글/영문/숫자 2~10자
     const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);   // 이메일 형식
-    const isValidUsername = (username: string) => /^[a-zA-Z0-9]{4,12}$/.test(username); // 영문/숫자 4~12자
-    const isValidPassword = (password: string) => /^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,20}$/.test(password); // 최소 8자, 영문, 숫자, 특수문자 포함
+    const isValidUsername = (username: string) => /^[a-zA-Z0-9]{4,20}$/.test(username); // 영문/숫자 4~20자
+    const isValidPassword = (password: string) => /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&]).{8,20}$/.test(password); // 최소 8자, 영문, 숫자, 특수문자 포함
 
     // input 값 변경 처리
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -64,8 +68,8 @@ function Signup() {
 
         if (name === "nickname" && value && !isValidNickname(value)) errorMsg = "닉네임은 한글/영문/숫자 2~10자";
         if (name === "email" && value && !isValidEmail(value)) errorMsg = "올바른 이메일 형식이 아닙니다.";
-        if (name === "username" && value && !isValidUsername(value)) errorMsg = "아이디는 영문/숫자 4~12자";
-        if (name === "password" && value && !isValidPassword(value)) errorMsg = "비밀번호는 8자 이상 + 영문, 숫자, 특수문자 포함";
+        if (name === "username" && value && !isValidUsername(value)) errorMsg = "아이디는 영문/숫자 4~20자";
+        if (name === "password" && value && !isValidPassword(value)) errorMsg = "비밀번호는 8~20자 + 영문, 숫자, 특수문자(@$!%*#?&) 포함";
 
         setErrors((prev) => ({
             ...prev,
@@ -118,8 +122,8 @@ function Signup() {
             setIsCodeSent(true);
             setTimer(180); // 3분
 
-        } catch (e) {
-            toast.error("인증코드 발송 실패");
+        } catch (e: any) {
+            toast.error(getErrorMessage(e, "인증코드 발송 실패"));
         }
     };
 
@@ -148,7 +152,7 @@ function Signup() {
     // username 중복 체크 API
     const handleCheckUsername = async () => {
         if (!data.username) return toast.error("아이디 입력");
-        if (!isValidUsername(data.username)) return toast.error("아이디는 영문/숫자 4~12자");
+        if (!isValidUsername(data.username)) return toast.error("아이디는 영문/숫자 4~20자");
 
         try {
             const exists = await checkUsername({ username: data.username });
@@ -171,7 +175,7 @@ function Signup() {
         if (!isValidNickname(data.nickname)) return toast.error("닉네임은 2~10자 (한글/영문/숫자)");
         if (!isVerified) return toast.error("이메일 인증 필요");
         if (!isUsernameChecked || !isUsernameAvailable) return toast.error("아이디 중복 확인 필요");
-        if (!isValidPassword(data.password)) return toast.error("비밀번호는 8자 이상 + 영문, 숫자, 특수문자 포함");
+        if (!isValidPassword(data.password)) return toast.error("비밀번호는 8~20자 + 영문, 숫자, 특수문자(@$!%*#?&) 포함");
         
         try {
             const result = await signup({...data, verificationCode,});

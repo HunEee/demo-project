@@ -9,11 +9,11 @@ public class UserException extends CustomException {
     }
 
     public static UserException usernameAlreadyExists() {
-        return new UserException(400, "이미 유저가 존재합니다.");
+        return new UserException(400, "이미 사용 중인 아이디입니다.");
     }
 
     public static UserException emailAlreadyExists() {
-        return new UserException(400, "이미 이메일이 존재합니다.");
+        return new UserException(400, "이미 사용 중인 이메일입니다.");
     }
 
     public static UserException userNotFound() {
@@ -28,5 +28,12 @@ public class UserException extends CustomException {
         return new UserException(400, "이미 탈퇴한 계정입니다.");
     }
 
+    public static UserException accountUnavailable() {
+        return new UserException(403, "사용할 수 없는 계정입니다.");
+    }
+
+    public static UserException socialAccountConflict() {
+        return new UserException(409, "소셜 계정 정보가 일치하지 않습니다.");
+    }
     
 }
