@@ -1,4 +1,4 @@
-package com.example.authapp.api;
+package com.example.authapp.api.admin;
 
 import java.util.List;
 
@@ -10,14 +10,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.authapp.domain.admin.AdminService;
+import com.example.authapp.domain.admin.dto.AdminUserResponse;
 import com.example.authapp.domain.audit.entity.LoginHistoryEntity;
 import com.example.authapp.domain.audit.entity.AuthEventLogEntity;
-import com.example.authapp.domain.user.entity.UserEntity;
 
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/admin")
+@RequestMapping("/api/v1/admin/legacy")
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminController {
@@ -25,8 +25,11 @@ public class AdminController {
     private final AdminService adminService;
 
     @GetMapping("/users")
-    public List<UserEntity> getUsers() {
-        return adminService.getAllUsers();
+    public List<AdminUserResponse> getUsers() {
+        return adminService.getAllUsers()
+                .stream()
+                .map(AdminUserResponse::from)
+                .toList();
     }
 
     @PostMapping("/users/{id}/lock")

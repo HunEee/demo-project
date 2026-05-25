@@ -37,6 +37,7 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshTokenEntity
     // 세션 관리
     List<RefreshTokenEntity> findByUsernameAndRevokedFalse(String username);
 
+    // active session 조회 시 loginHistory를 LEFT JOIN FETCH로 같이 로딩 -> N+1 문제 해결
     @Query("""
             SELECT r
             FROM RefreshTokenEntity r

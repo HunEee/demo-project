@@ -35,7 +35,6 @@ import com.example.authapp.domain.user.entity.UserRoleType;
 import com.example.authapp.security.filter.JWTFilter;
 import com.example.authapp.security.filter.LoginFilter;
 import com.example.authapp.security.handler.RefreshTokenLogoutHandler;
-import com.example.authapp.security.principal.CustomUserDetailsService;
 
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.http.HttpServletResponse;
@@ -65,9 +64,6 @@ public class SecurityConfig {
     private final LoginHistoryService loginHistoryService;
     // 이벤트 기록
     private final AuthEventLogService securityEventService;
-    // UserService에서 분리
-    private final CustomUserDetailsService userDetailsService;
-    
     public SecurityConfig(
             AuthenticationConfiguration authenticationConfiguration,
             @Qualifier("loginSuccessHandler") AuthenticationSuccessHandler loginSuccessHandler,
@@ -77,8 +73,7 @@ public class SecurityConfig {
             RefreshTokenService refreshTokenService,
             CookieService cookieService,
             LoginHistoryService loginHistoryService,
-            AuthEventLogService securityEventService,
-            CustomUserDetailsService userDetailsService
+            AuthEventLogService securityEventService
     ) {
         this.authenticationConfiguration = authenticationConfiguration;
         this.loginSuccessHandler = loginSuccessHandler;
@@ -89,7 +84,6 @@ public class SecurityConfig {
         this.cookieService = cookieService;
         this.loginHistoryService = loginHistoryService;
         this.securityEventService = securityEventService;
-        this.userDetailsService = userDetailsService;
     }
     
 
@@ -171,7 +165,9 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PATCH, API_PREFIX + "/users/me").hasRole("USER")
                 .requestMatchers(HttpMethod.DELETE, API_PREFIX + "/users/me").hasRole("USER")
                 .requestMatchers(HttpMethod.PUT, API_PREFIX + "/users/me/password").hasRole("USER")
+                .requestMatchers(HttpMethod.GET, API_PREFIX + "/security").hasRole("USER")
                 // 관리자
+                .requestMatchers(API_PREFIX + "/admin/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.GET, API_PREFIX + "/users").hasRole("ADMIN")
                 .anyRequest().authenticated()
         );
@@ -202,8 +198,8 @@ public class SecurityConfig {
                 UsernamePasswordAuthenticationFilter.class
         );
 
-        // JWT 필터 추가 -> userDetailsService 주입
-        http.addFilterBefore(new JWTFilter(userDetailsService), LogoutFilter.class);
+        // JWT 필터 추가
+        http.addFilterBefore(new JWTFilter(), LogoutFilter.class);
 
         // 세션 필터 설정 (STATELESS)
         http.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));

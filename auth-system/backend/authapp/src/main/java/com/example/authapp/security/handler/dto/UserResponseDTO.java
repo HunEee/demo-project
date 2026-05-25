@@ -26,6 +26,12 @@ public class UserResponseDTO {
 
     // Entity → DTO 변환
     public static UserResponseDTO from(UserEntity user) {
+        return from(user, user.getRoles().stream()
+                .map(RoleEntity::getName)
+                .collect(Collectors.toSet()));
+    }
+
+    public static UserResponseDTO from(UserEntity user, Set<String> roles) {
         return UserResponseDTO.builder()
                 .id(user.getId())
                 .username(user.getUsername())
@@ -34,11 +40,7 @@ public class UserResponseDTO {
                 .image(user.getProfileImage())
                 .enabled(user.isEnabled())
                 .provider(user.isSocial() ? user.getSocialProviderType().name() : "LOCAL")
-                .roles(
-                        user.getRoles().stream()
-                                .map(RoleEntity::getName)
-                                .collect(Collectors.toSet())
-                )
+                .roles(roles)
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .build();

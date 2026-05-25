@@ -2,10 +2,11 @@ import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import type LoginHistory from "@/models/LoginHistory";
 import { getLoginHistories } from "@/services/LoginHistoryService";
+import { formatLocalDateInputValue } from "@/lib/dateTime";
 
 // 오늘 날짜
 const getToday = () => {
-  return new Date().toISOString().split("T")[0];
+  return formatLocalDateInputValue();
 };
 
 export default function LoginHistoryPage() {

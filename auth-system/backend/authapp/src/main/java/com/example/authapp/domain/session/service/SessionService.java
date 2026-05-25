@@ -96,7 +96,7 @@ public class SessionService {
         throw new RuntimeException("refreshToken 없음");
     }
     
-    // 로그아웃 기록 및 이벤트 기록
+    // 세션 시작 시간은 별도 재조회 대신 이미 fetch된 loginHistory.loginAt 사용 -> N+1 해결용(DB 별도 조회 안함)
     private LocalDateTime resolveSessionStartTime(RefreshTokenEntity token) {
         if (token.getLoginHistory() != null) {
             return token.getLoginHistory().getLoginAt();
@@ -104,6 +104,7 @@ public class SessionService {
         return token.getCreatedAt();
     }
 
+    // 로그아웃 기록 및 이벤트 기록
     private void processLogout(String refreshTokenValue) {
         LoginHistoryResponse history = refreshTokenService.revokeRefresh(refreshTokenValue);
 

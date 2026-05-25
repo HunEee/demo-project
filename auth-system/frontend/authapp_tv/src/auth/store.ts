@@ -107,7 +107,7 @@ const useAuth = create<AuthState>()(
 
           set({
             accessToken: response.accessToken,
-            user,
+            user: response.user ?? user,
             authStatus: true,
             authLoading: false,
           });

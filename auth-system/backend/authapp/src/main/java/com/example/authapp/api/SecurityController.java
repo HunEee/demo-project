@@ -12,7 +12,7 @@ import com.example.authapp.security.principal.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/security")
+@RequestMapping("/api/v1/security")
 @RequiredArgsConstructor
 public class SecurityController {
 

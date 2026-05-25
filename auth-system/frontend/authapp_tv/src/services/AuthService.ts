@@ -34,7 +34,7 @@ export const logoutUser = async () => {
 // 현재 로그인 사용자 조회
 // =============================
 export const getCurrentUser = async () => {
-  const response = await apiClient.get<User>(`/user`);
+  const response = await apiClient.get<User>("/users/me");
   return response.data;
 };
 
@@ -50,7 +50,7 @@ export const getCurrentUserByEmail = async (emailId: string | undefined) => {
 // =============================
 export const refreshToken = async () => {
   // accessToken 만료 시 새로운 토큰 발급 요청
-  const response = await authClient.post<{ accessToken: string }>(`/jwt/refresh`);
+  const response = await authClient.post<LoginResponseData>(`/jwt/refresh`);
   return response.data;
 };
 

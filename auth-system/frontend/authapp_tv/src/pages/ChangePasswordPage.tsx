@@ -2,11 +2,13 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { changePassword } from "@/services/user/PasswordService";
 
 export default function ChangePasswordPage() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -27,7 +29,7 @@ export default function ChangePasswordPage() {
     return "";
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const validationError = validate();
     if (validationError) {
       setError(validationError);
@@ -35,19 +37,21 @@ export default function ChangePasswordPage() {
       return;
     }
 
-    // API 연결
-    console.log({
-      currentPassword,
-      newPassword,
-    });
-
-    setError("");
-    setSuccess("비밀번호가 성공적으로 변경되었습니다.");
-
-    // 입력값 초기화
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
+    try {
+      setIsSubmitting(true);
+      await changePassword({ currentPassword, newPassword });
+      setError("");
+      setSuccess("비밀번호가 성공적으로 변경되었습니다.");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (error) {
+      console.error(error);
+      setSuccess("");
+      setError("비밀번호 변경에 실패했습니다. 현재 비밀번호를 확인해주세요.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -56,52 +60,42 @@ export default function ChangePasswordPage() {
 
       <Card className="rounded-2xl shadow-md">
         <CardContent className="p-6 space-y-4">
-
-          {/* 현재 비밀번호 */}
           <div>
             <p className="text-sm text-gray-500 mb-1">현재 비밀번호</p>
             <Input
               type="password"
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
+              disabled={isSubmitting}
             />
           </div>
 
-          {/* 새 비밀번호 */}
           <div>
             <p className="text-sm text-gray-500 mb-1">새 비밀번호</p>
             <Input
               type="password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
+              disabled={isSubmitting}
             />
           </div>
 
-          {/* 새 비밀번호 확인 */}
           <div>
             <p className="text-sm text-gray-500 mb-1">새 비밀번호 확인</p>
             <Input
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
+              disabled={isSubmitting}
             />
           </div>
 
-          {/* 에러 메시지 */}
-          {error && (
-            <p className="text-sm text-red-500">{error}</p>
-          )}
+          {error && <p className="text-sm text-red-500">{error}</p>}
+          {success && <p className="text-sm text-green-500">{success}</p>}
 
-          {/* 성공 메시지 */}
-          {success && (
-            <p className="text-sm text-green-500">{success}</p>
-          )}
-
-          {/* 버튼 */}
-          <Button className="w-full" onClick={handleSubmit}>
-            변경하기
+          <Button className="w-full" onClick={handleSubmit} disabled={isSubmitting}>
+            {isSubmitting ? "변경 중..." : "변경하기"}
           </Button>
-
         </CardContent>
       </Card>
     </div>

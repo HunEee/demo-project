@@ -8,6 +8,7 @@ import useAuth from "@/auth/store";
 
 function RootLayout() {
   const restoreSession = useAuth((state) => state.restoreSession);
+  const authLoading = useAuth((state) => state.authLoading);
 
   useEffect(() => {
     restoreSession();
@@ -17,7 +18,14 @@ function RootLayout() {
     <div>
       <Toaster />
       <Navbar />
-      <Outlet />
+      {/* restoreSession() 중에는 Outlet을 렌더하지 않음 -> useEffect가 access token 복원 전 먼저 API를 때리지 않음 */}
+      {    
+        authLoading ? (
+          <main className="min-h-[60vh] flex items-center justify-center text-sm text-muted-foreground">
+            세션 확인 중...
+          </main>
+        ) : (<Outlet />)
+      }
       <Footer />
     </div>
   );

@@ -113,6 +113,24 @@ export default function Navbar() {
                       <DropdownMenuItem onClick={() => navigate("/admin/audit-logs")}>
                         감사 로그
                       </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate("/admin/login-history")}>
+                        로그인 이력
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate("/admin/security-events")}>
+                        보안 이벤트
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate("/admin/incidents")}>
+                        보안 사고
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate("/admin/sessions")}>
+                        세션/토큰
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate("/admin/risk")}>
+                        위험 사용자
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate("/admin/settings")}>
+                        설정
+                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}

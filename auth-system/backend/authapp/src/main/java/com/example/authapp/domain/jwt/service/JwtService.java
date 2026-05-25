@@ -101,7 +101,7 @@ public class JwtService {
         refreshTokenService.save(newEntity);
         cookieService.addRefreshCookie(response, newRefreshToken);
 
-        UserResponseDTO user = UserResponseDTO.from(userQueryService.getByUsername(username));
+        UserResponseDTO user = UserResponseDTO.from(userQueryService.getByUsername(username), roles);
         return new JWTResponseDTO(newAccessToken, user, JWTUtil.getAccessTokenExpiresIn());
     }
 

@@ -57,8 +57,8 @@ apiClient.interceptors.response.use(
 
     const is401 = status === 401;
 
-    // TOKEN_EXPIRED만 refresh
-    const isTokenExpired = is401 && errorCode === "TOKEN_EXPIRED";
+    // TOKEN_EXPIRED 또는 Authorization 헤더 없이 보호 API에 먼저 진입한 401은 refresh 시도
+    const isRefreshable401 = is401 && (errorCode === "TOKEN_EXPIRED" || !errorCode);
 
     console.log("status:", status);
     console.log("errorCode:", errorCode);
@@ -66,7 +66,7 @@ apiClient.interceptors.response.use(
     console.log("재시도 여부:", original._retry);
 
     // refresh 대상이 아니면 그냥 에러 처리
-    if (!isTokenExpired || original._retry) {
+    if (!isRefreshable401 || original._retry) {
       toast.error(errorMessage || "오류가 발생했습니다.");
       return Promise.reject(error);
     }
@@ -99,12 +99,12 @@ apiClient.interceptors.response.use(
       const loginResponse = await refreshToken();
       const newToken = loginResponse.accessToken;
       if (!newToken) throw new Error("토큰이 존재하지 않습니다.");
-      const currentUser = useAuth.getState().user;
+      const currentUser = loginResponse.user ?? useAuth.getState().user;
       if (!currentUser) throw new Error("사용자 정보가 존재하지 않습니다.");
       
       // zustand 상태 업데이트
       useAuth.getState().changeLocalLoginData(
-        loginResponse.accessToken,
+        newToken,
         currentUser,
         true
       );
