@@ -129,7 +129,7 @@ export default function AdminUsersPage() {
               {users.map((item) => (
                 <tr key={item.username} className={adminRowClassName}>
                   <td className={adminCellClassName}>
-                    <Link className="font-medium text-primary hover:underline" to={`/admin/users/${item.username}`}>
+                    <Link className="font-medium text-primary hover:underline" to={`/admin/account/users/${item.username}`}>
                       {item.username}
                     </Link>
                     <div className="text-xs text-muted-foreground">{item.roles?.join(", ") || "ROLE_USER"}</div>
