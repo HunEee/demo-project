@@ -6,6 +6,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.function.Predicate;
 import java.util.function.Function;
 
@@ -13,19 +14,29 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
+import com.example.authapp.domain.admin.dto.AdminActionLogResponse;
 import com.example.authapp.domain.admin.dto.AdminAuditLogResponse;
 import com.example.authapp.domain.admin.dto.AdminDashboardSummaryResponse;
 import com.example.authapp.domain.admin.dto.AdminFilterOption;
 import com.example.authapp.domain.admin.dto.AdminFilterOptionsResponse;
 import com.example.authapp.domain.admin.dto.AdminIncidentResponse;
 import com.example.authapp.domain.admin.dto.AdminLoginHistoryResponse;
+import com.example.authapp.domain.admin.dto.AdminPasswordResetResponse;
 import com.example.authapp.domain.admin.dto.AdminRiskResponse;
 import com.example.authapp.domain.admin.dto.AdminSessionResponse;
 import com.example.authapp.domain.admin.dto.AdminUserDetailResponse;
 import com.example.authapp.domain.admin.dto.AdminUserResponse;
+import com.example.authapp.domain.admin.type.AdminSessionStatus;
+import com.example.authapp.domain.admin.type.AdminUserStatus;
+import com.example.authapp.domain.audit.entity.AdminActionLogEntity;
+import com.example.authapp.domain.audit.entity.AdminActionType;
 import com.example.authapp.domain.audit.entity.AuthEventLogEntity;
 import com.example.authapp.domain.audit.entity.AuthEventType;
 import com.example.authapp.domain.audit.entity.LoginHistoryEntity;
@@ -38,13 +49,19 @@ import com.example.authapp.domain.audit.repository.LoginHistoryRepository;
 import com.example.authapp.domain.audit.repository.SecurityIncidentRepository;
 import com.example.authapp.domain.jwt.entity.RefreshTokenEntity;
 import com.example.authapp.domain.jwt.repository.RefreshTokenRepository;
+import com.example.authapp.domain.mfa.repository.MfaMethodRepository;
+import com.example.authapp.domain.organization.repository.GroupUserRepository;
+import com.example.authapp.domain.profile.entity.UserProfileEntity;
+import com.example.authapp.domain.profile.repository.UserProfileRepository;
 import com.example.authapp.domain.risk.entity.RiskEntity;
 import com.example.authapp.domain.risk.entity.RiskLevel;
 import com.example.authapp.domain.risk.repository.RiskRepository;
-import com.example.authapp.domain.user.entity.RoleEntity;
 import com.example.authapp.domain.user.entity.UserEntity;
-import com.example.authapp.domain.user.repository.RoleRepository;
+import com.example.authapp.domain.user.entity.UserRoleType;
 import com.example.authapp.domain.user.repository.UserRepository;
+import com.example.authapp.util.ClientUtil;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 import lombok.RequiredArgsConstructor;
 
@@ -58,7 +75,11 @@ public class AdminConsoleService {
     private final SecurityIncidentRepository securityIncidentRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final RiskRepository riskRepository;
-    private final RoleRepository roleRepository;
+    private final UserProfileRepository userProfileRepository;
+    private final MfaMethodRepository mfaMethodRepository;
+    private final GroupUserRepository groupUserRepository;
+    private final com.example.authapp.domain.audit.repository.AdminActionLogRepository adminActionLogRepository;
+    private final PasswordEncoder passwordEncoder;
 
     // 관리자 대시보드용 주요 지표를 한 번에 계산
     @Transactional(readOnly = true)
@@ -83,26 +104,14 @@ public class AdminConsoleService {
     @Transactional(readOnly = true)
     public AdminFilterOptionsResponse filterOptions() {
         return new AdminFilterOptionsResponse(
-                List.of(
-                        option("활성", "ACTIVE"),
-                        option("잠금", "LOCKED"),
-                        option("비활성", "DISABLED"),
-                        option("탈퇴", "DELETED")
-                ),
-                roleRepository.findAll().stream()
-                        .map(RoleEntity::getName)
-                        .sorted()
-                        .map(role -> option(roleLabel(role), role))
-                        .toList(),
-                enumOptions(AuthEventType.values()),
-                enumOptions(LoginStatus.values()),
-                enumOptions(SecurityIncidentType.values()),
-                enumOptions(Severity.values()),
-                List.of(
-                        option("활성", "ACTIVE"),
-                        option("폐기", "REVOKED")
-                ),
-                enumOptions(RiskLevel.values())
+                enumOptions(AdminUserStatus.values(), AdminUserStatus::getLabel),
+                enumOptions(UserRoleType.values(), UserRoleType::getLabel),
+                enumOptions(AuthEventType.values(), AuthEventType::getLabel),
+                enumOptions(LoginStatus.values(), LoginStatus::getLabel),
+                enumOptions(SecurityIncidentType.values(), SecurityIncidentType::getLabel),
+                enumOptions(Severity.values(), Severity::getLabel),
+                enumOptions(AdminSessionStatus.values(), AdminSessionStatus::getLabel),
+                enumOptions(RiskLevel.values(), RiskLevel::getLabel)
         );
     }
 
@@ -118,7 +127,7 @@ public class AdminConsoleService {
                 .filter(user -> status == null || status.isBlank() || statusMatches(user, status))
                 .filter(user -> role == null || role.isBlank() || user.getRoles().stream().anyMatch(item -> item.getName().equals(role)))
                 .sorted(applyDirection(userComparator(sort), direction))
-                .map(AdminUserResponse::from)
+                .map(this::toAdminUserResponse)
                 .toList();
 
         return page(content, page, size);
@@ -149,36 +158,71 @@ public class AdminConsoleService {
                 .map(AdminSessionResponse::from)
                 .toList();
 
+        List<AdminActionLogResponse> adminActions = adminActionLogRepository
+                .findByTargetUsernameOrderByCreatedAtDesc(username)
+                .stream()
+                .limit(20)
+                .map(AdminActionLogResponse::from)
+                .toList();
+
         AdminRiskResponse risk = riskRepository.findByUserUsername(username)
                 .map(AdminRiskResponse::from)
                 .orElse(null);
 
-        return new AdminUserDetailResponse(AdminUserResponse.from(user), recentLogins, recentEvents, sessions, risk);
+        return new AdminUserDetailResponse(toAdminUserResponse(user), recentLogins, recentEvents, sessions, adminActions, risk);
     }
 
     @Transactional
     public void lockUser(String username) {
-        userRepository.findByUsername(username).orElseThrow().lock();
+        UserEntity user = userRepository.findByUsername(username).orElseThrow();
+        String before = accountState(user);
+        user.lock();
+        saveAdminAction(username, AdminActionType.LOCK_USER, before, accountState(user), "관리자 계정 잠금");
     }
 
     @Transactional
     public void unlockUser(String username) {
-        userRepository.findByUsername(username).orElseThrow().unlock();
+        UserEntity user = userRepository.findByUsername(username).orElseThrow();
+        String before = accountState(user);
+        user.unlock();
+        saveAdminAction(username, AdminActionType.UNLOCK_USER, before, accountState(user), "관리자 계정 잠금 해제");
     }
 
     @Transactional
     public void disableUser(String username) {
-        userRepository.findByUsername(username).orElseThrow().disable();
+        UserEntity user = userRepository.findByUsername(username).orElseThrow();
+        String before = accountState(user);
+        user.disable();
+        saveAdminAction(username, AdminActionType.DISABLE_USER, before, accountState(user), "관리자 계정 비활성화");
     }
 
     @Transactional
     public void enableUser(String username) {
-        userRepository.findByUsername(username).orElseThrow().enable();
+        UserEntity user = userRepository.findByUsername(username).orElseThrow();
+        String before = accountState(user);
+        user.enable();
+        saveAdminAction(username, AdminActionType.ENABLE_USER, before, accountState(user), "관리자 계정 활성화");
     }
 
     @Transactional
     public void revokeUserTokens(String username) {
         refreshTokenRepository.findByUsername(username).forEach(RefreshTokenEntity::revoke);
+        saveAdminAction(username, AdminActionType.TOKEN_REVOKE, null, "{\"revoked\":true}", "관리자 전체 토큰 폐기");
+    }
+
+    @Transactional
+    public AdminPasswordResetResponse resetPassword(String username) {
+        UserEntity user = userRepository.findByUsername(username).orElseThrow();
+        String temporaryPassword = "Temp-" + UUID.randomUUID().toString().substring(0, 8);
+        user.changePassword(passwordEncoder.encode(temporaryPassword));
+        saveAdminAction(username, AdminActionType.PASSWORD_RESET, null, "{\"passwordReset\":true}", "관리자 비밀번호 초기화");
+        return new AdminPasswordResetResponse(username, temporaryPassword);
+    }
+
+    @Transactional
+    public void resetMfa(String username) {
+        mfaMethodRepository.deleteByUsername(username);
+        saveAdminAction(username, AdminActionType.MFA_RESET, null, "{\"mfaReset\":true}", "관리자 MFA 초기화");
     }
 
     @Transactional(readOnly = true)
@@ -397,53 +441,64 @@ public class AdminConsoleService {
         return new PageImpl<>(content.subList(from, to), pageable, content.size());
     }
 
+    private AdminUserResponse toAdminUserResponse(UserEntity user) {
+        UserProfileEntity profile = userProfileRepository.findByUsername(user.getUsername()).orElse(null);
+        LoginHistoryEntity latestLogin = loginHistoryRepository.findTopByUsernameAndSuccessTrueOrderByLoginAtDesc(user.getUsername());
+        LocalDateTime latestLoginAt = latestLogin != null ? latestLogin.getLoginAt() : null;
+        boolean mfaEnabled = mfaMethodRepository.existsByUsernameAndEnabledTrue(user.getUsername());
+        return AdminUserResponse.from(user, profile, mfaEnabled, latestLoginAt);
+    }
+
+    private void saveAdminAction(
+            String targetUsername,
+            AdminActionType actionType,
+            String beforeValue,
+            String afterValue,
+            String reason
+    ) {
+        HttpServletRequest request = currentRequest();
+        String userAgent = request != null ? ClientUtil.getUserAgent(request) : null;
+        adminActionLogRepository.save(AdminActionLogEntity.builder()
+                .actorUsername(currentActor())
+                .targetUsername(targetUsername)
+                .actionType(actionType)
+                .reason(reason)
+                .beforeValue(beforeValue)
+                .afterValue(afterValue)
+                .ipAddress(request != null ? ClientUtil.getIp(request) : "UNKNOWN")
+                .device(userAgent != null ? ClientUtil.getDevice(userAgent) : "UNKNOWN")
+                .build());
+    }
+
+    private String currentActor() {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || authentication.getName() == null) return "UNKNOWN";
+        return authentication.getName();
+    }
+
+    private HttpServletRequest currentRequest() {
+        var attributes = RequestContextHolder.getRequestAttributes();
+        if (attributes instanceof ServletRequestAttributes servletRequestAttributes) {
+            return servletRequestAttributes.getRequest();
+        }
+        return null;
+    }
+
+    private String accountState(UserEntity user) {
+        return "{\"locked\":" + user.isLocked()
+                + ",\"enabled\":" + user.isEnabled()
+                + ",\"deleted\":" + user.isDeleted()
+                + "}";
+    }
+
     private AdminFilterOption option(String label, String value) {
         return new AdminFilterOption(label, value);
     }
 
-    private <E extends Enum<E>> List<AdminFilterOption> enumOptions(E[] values) {
+    private <E extends Enum<E>> List<AdminFilterOption> enumOptions(E[] values, Function<E, String> labelGetter) {
         return java.util.Arrays.stream(values)
-                .map(value -> option(enumLabel(value.name()), value.name()))
+                .map(value -> option(labelGetter.apply(value), value.name()))
                 .toList();
     }
 
-    private String roleLabel(String role) {
-        return switch (role) {
-            case "ROLE_ADMIN" -> "관리자";
-            case "ROLE_USER" -> "사용자";
-            default -> role;
-        };
-    }
-
-    private String enumLabel(String value) {
-        return switch (value) {
-            case "LOGIN_SUCCESS" -> "로그인 성공";
-            case "LOGIN_FAIL" -> "로그인 실패";
-            case "LOGOUT" -> "로그아웃";
-            case "TOKEN_REISSUE" -> "토큰 재발급";
-            case "PASSWORD_CHANGE" -> "비밀번호 변경";
-            case "PASSWORD_RESET" -> "비밀번호 초기화";
-            case "SIGNUP_SUCCESS" -> "회원가입";
-            case "SIGNUP_OAUTH2_SUCCESS" -> "소셜 회원가입";
-            case "ADMIN_FORCE_LOGOUT" -> "관리자 강제 로그아웃";
-            case "SECURITY_FORCE_LOGOUT" -> "보안 강제 로그아웃";
-            case "ACCOUNT_PROFILE_UPDATED" -> "프로필 수정";
-            case "ACCOUNT_DEACTIVATED" -> "계정 비활성화";
-            case "ACCOUNT_DELETE" -> "계정 삭제";
-            case "SUCCESS" -> "성공";
-            case "FAILED" -> "실패";
-            case "EXPIRED" -> "만료";
-            case "TOKEN_THEFT_DETECTED" -> "토큰 탈취 의심";
-            case "SUSPICIOUS_LOGIN" -> "의심 로그인";
-            case "BRUTE_FORCE_ATTACK" -> "무차별 대입";
-            case "IMPOSSIBLE_TRAVEL" -> "비정상 지역 이동";
-            case "MFA_BYPASS_ATTEMPT" -> "MFA 우회 시도";
-            case "ABNORMAL_SESSION_ACTIVITY" -> "비정상 세션 활동";
-            case "LOW" -> "낮음";
-            case "MEDIUM" -> "보통";
-            case "HIGH" -> "높음";
-            case "CRITICAL" -> "치명";
-            default -> value;
-        };
-    }
 }

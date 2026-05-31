@@ -51,7 +51,7 @@ public class JwtService {
             throw JwtException.revokedRefreshToken();
         }
 
-        return rotateRefreshToken(refreshToken, oldEntity, response);
+        return rotateRefreshToken(refreshToken, oldEntity, response, ip, userAgent, device);
     }
 
     // Refresh 토큰으로 Access 토큰 재발급 로직 (Rotate 포함)
@@ -70,12 +70,19 @@ public class JwtService {
             return new JWTResponseDTO(null);
         }
 
-        JWTResponseDTO result = rotateRefreshToken(refreshToken, oldEntity, response);
+        JWTResponseDTO result = rotateRefreshToken(refreshToken, oldEntity, response, ip, userAgent, device);
         securityEventService.tokenReissue(oldEntity.getUsername());
         return result;
     }
     
-    private JWTResponseDTO rotateRefreshToken(String refreshToken, RefreshTokenEntity oldEntity, HttpServletResponse response) {
+    private JWTResponseDTO rotateRefreshToken(
+            String refreshToken,
+            RefreshTokenEntity oldEntity,
+            HttpServletResponse response,
+            String ip,
+            String userAgent,
+            String device
+    ) {
         String username = oldEntity.getUsername();
         Set<String> roles = JWTUtil.getRoles(refreshToken);
 
@@ -91,9 +98,9 @@ public class JwtService {
                 .refresh(newRefreshToken)
                 .jti(jti)
                 .expiresAt(LocalDateTime.now().plusDays(7))
-                .ipAddress(oldEntity.getIpAddress())
-                .userAgent(oldEntity.getUserAgent())
-                .device(oldEntity.getDevice())
+                .ipAddress(ip)
+                .userAgent(userAgent)
+                .device(device)
                 .revoked(false)
                 .loginHistory(oldEntity.getLoginHistory())
                 .build();

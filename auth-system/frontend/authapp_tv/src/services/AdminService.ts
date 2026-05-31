@@ -6,6 +6,7 @@ import type {
   AdminIncident,
   AdminLoginHistory,
   AdminParams,
+  AdminPasswordResetResponse,
   AdminRisk,
   AdminSession,
   AdminSettings,
@@ -52,8 +53,25 @@ export const unlockAdminUser = async (id: string | number) => {
   await apiClient.post(`/admin/users/${id}/unlock`);
 };
 
+export const disableAdminUser = async (username: string) => {
+  await apiClient.post(`/admin/users/${username}/disable`);
+};
+
+export const enableAdminUser = async (username: string) => {
+  await apiClient.post(`/admin/users/${username}/enable`);
+};
+
 export const revokeAdminUserTokens = async (username: string) => {
   await apiClient.post(`/admin/users/${username}/tokens/revoke`);
+};
+
+export const resetAdminUserPassword = async (username: string) => {
+  const response = await apiClient.post<AdminPasswordResetResponse>(`/admin/users/${username}/password/reset`);
+  return response.data;
+};
+
+export const resetAdminUserMfa = async (username: string) => {
+  await apiClient.post(`/admin/users/${username}/mfa/reset`);
 };
 
 // 감사/로그인/보안 이벤트 목록 API

@@ -12,8 +12,18 @@ export type PageResponse<T> = {
 export type AdminUser = {
   id: number;
   username: string;
+  name?: string;
   email?: string;
   nickname?: string;
+  employeeNo?: string;
+  department?: string;
+  position?: string;
+  employmentType?: string;
+  status?: string;
+  userType?: string;
+  authMethod?: string;
+  mfaEnabled: boolean;
+  lastLoginAt?: string;
   locked: boolean;
   enabled: boolean;
   deleted: boolean;
@@ -107,6 +117,24 @@ export type AdminRisk = {
   updatedAt?: string;
 };
 
+export type AdminActionLog = {
+  id: number;
+  actorUsername: string;
+  targetUsername: string;
+  actionType: string;
+  reason?: string;
+  beforeValue?: string;
+  afterValue?: string;
+  ipAddress?: string;
+  device?: string;
+  createdAt?: string;
+};
+
+export type AdminPasswordResetResponse = {
+  username: string;
+  temporaryPassword: string;
+};
+
 export type AdminSettings = {
   maxLoginFailures: number;
   highRiskThreshold: number;
@@ -120,5 +148,6 @@ export type AdminUserDetail = {
   recentLogins: AdminLoginHistory[];
   recentEvents: AdminAuditLog[];
   sessions: AdminSession[];
+  adminActions: AdminActionLog[];
   risk?: AdminRisk | null;
 };

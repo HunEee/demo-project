@@ -8,5 +8,6 @@ public record AdminUserDetailResponse(
         List<AdminLoginHistoryResponse> recentLogins,
         List<AdminAuditLogResponse> recentEvents,
         List<AdminSessionResponse> sessions,
+        List<AdminActionLogResponse> adminActions,
         AdminRiskResponse risk
 ) {}

@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.authapp.domain.admin.AdminConsoleService;
+import com.example.authapp.domain.admin.dto.AdminPasswordResetResponse;
 import com.example.authapp.domain.admin.dto.AdminUserDetailResponse;
 import com.example.authapp.domain.admin.dto.AdminUserResponse;
 import com.example.authapp.domain.audit.dto.PageResponseDTO;
@@ -66,6 +67,16 @@ public class AdminUserController {
     @PostMapping("/{username}/tokens/revoke")
     public void revokeTokens(@PathVariable String username) {
         adminConsoleService.revokeUserTokens(username);
+    }
+
+    @PostMapping("/{username}/password/reset")
+    public AdminPasswordResetResponse resetPassword(@PathVariable String username) {
+        return adminConsoleService.resetPassword(username);
+    }
+
+    @PostMapping("/{username}/mfa/reset")
+    public void resetMfa(@PathVariable String username) {
+        adminConsoleService.resetMfa(username);
     }
     
 }

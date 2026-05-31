@@ -1,0 +1,14 @@
+package com.example.authapp.domain.audit.entity;
+
+public enum AdminActionType {
+    LOCK_USER,
+    UNLOCK_USER,
+    DISABLE_USER,
+    ENABLE_USER,
+    PASSWORD_RESET,
+    MFA_RESET,
+    TOKEN_REVOKE,
+    ROLE_CHANGE,
+    DEPARTMENT_CHANGE,
+    PROFILE_UPDATE
+}
