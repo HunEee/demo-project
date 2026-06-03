@@ -80,5 +80,21 @@ public class UserProfileEntity {
     @LastModifiedDate
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    public void updateAdminProfile(
+            String employeeNo,
+            DepartmentEntity department,
+            String position,
+            EmploymentType employmentType,
+            UserProfileStatus status,
+            LocalDateTime expiresAt
+    ) {
+        this.employeeNo = employeeNo;
+        this.department = department;
+        this.position = position;
+        this.employmentType = employmentType;
+        this.status = status;
+        this.expiresAt = expiresAt;
+    }
     
 }

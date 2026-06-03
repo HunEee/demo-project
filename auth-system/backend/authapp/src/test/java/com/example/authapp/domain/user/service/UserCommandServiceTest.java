@@ -19,11 +19,11 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.example.authapp.application.user.dto.SignupRequest;
-import com.example.authapp.domain.user.entity.RoleEntity;
+import com.example.authapp.domain.authorization.entity.RoleEntity;
 import com.example.authapp.domain.user.entity.UserEntity;
 import com.example.authapp.domain.user.event.UserSignedUpEvent;
 import com.example.authapp.domain.user.exception.UserException;
-import com.example.authapp.domain.user.repository.RoleRepository;
+import com.example.authapp.domain.authorization.repository.RoleRepository;
 import com.example.authapp.domain.user.repository.UserRepository;
 
 @ExtendWith(MockitoExtension.class)

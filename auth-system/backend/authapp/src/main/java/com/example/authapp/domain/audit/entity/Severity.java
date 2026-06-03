@@ -15,5 +15,4 @@ public enum Severity {
     public String getLabel() {
         return label;
     }
-    
 }

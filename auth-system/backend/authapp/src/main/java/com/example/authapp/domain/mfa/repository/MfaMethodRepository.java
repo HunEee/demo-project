@@ -13,5 +13,4 @@ public interface MfaMethodRepository extends JpaRepository<MfaMethodEntity, Long
     List<MfaMethodEntity> findByUsername(String username);
 
     void deleteByUsername(String username);
-    
 }

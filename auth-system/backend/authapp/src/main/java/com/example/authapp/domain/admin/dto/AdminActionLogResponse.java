@@ -7,7 +7,10 @@ import com.example.authapp.domain.audit.entity.AdminActionLogEntity;
 public record AdminActionLogResponse(
         Long id,
         String actorUsername,
+        String targetType,
+        String targetId,
         String targetUsername,
+        String targetName,
         String actionType,
         String reason,
         String beforeValue,
@@ -20,7 +23,10 @@ public record AdminActionLogResponse(
         return new AdminActionLogResponse(
                 log.getId(),
                 log.getActorUsername(),
+                log.getTargetType(),
+                log.getTargetId(),
                 log.getTargetUsername(),
+                log.getTargetName(),
                 log.getActionType().name(),
                 log.getReason(),
                 log.getBeforeValue(),

@@ -8,6 +8,8 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import com.example.authapp.domain.authorization.entity.RoleEntity;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
@@ -110,6 +112,14 @@ public class UserEntity {
         if (!this.roles.contains(role)) {
             this.roles.add(role);
             role.getUsers().add(this);
+        }
+    }
+
+    public void removeRole(RoleEntity role) {
+        if (role == null) return;
+
+        if (this.roles.remove(role)) {
+            role.getUsers().remove(this);
         }
     }
     

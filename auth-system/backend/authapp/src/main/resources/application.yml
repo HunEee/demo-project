@@ -10,7 +10,7 @@ app:
 
 spring:
   datasource:
-    driver-class-name: com.mysql.cj.jdbc.Driver # MySQL DB connection
+    driver-class-name: com.mysql.cj.jdbc.Driver	# MySQL DB connection
     url: jdbc:mysql://localhost:3306/authapp?useSSL=false&useUnicode=true&serverTimezone=Asia/Seoul&allowPublicKeyRetrieval=true
     username: root
     password: admin

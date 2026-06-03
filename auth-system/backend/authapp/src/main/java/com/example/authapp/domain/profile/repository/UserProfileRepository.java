@@ -12,5 +12,9 @@ public interface UserProfileRepository extends JpaRepository<UserProfileEntity, 
     Optional<UserProfileEntity> findByUsername(String username);
 
     List<UserProfileEntity> findByUsernameIn(List<String> usernames);
+
+    List<UserProfileEntity> findByDepartmentId(Long departmentId);
+
+    long countByDepartmentId(Long departmentId);
     
 }

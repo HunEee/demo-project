@@ -4,6 +4,8 @@ public enum AdminUserStatus {
     ACTIVE("활성"),
     LOCKED("잠금"),
     DISABLED("비활성"),
+    EXPIRED("만료"),
+    LEAVE("휴직"),
     DELETED("탈퇴");
 
     private final String label;
@@ -15,5 +17,4 @@ public enum AdminUserStatus {
     public String getLabel() {
         return label;
     }
-    
 }

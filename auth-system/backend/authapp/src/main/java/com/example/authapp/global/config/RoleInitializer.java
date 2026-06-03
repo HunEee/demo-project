@@ -1,10 +1,14 @@
 package com.example.authapp.global.config;
 
+import java.util.Arrays;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 import org.springframework.stereotype.Component;
 
-import com.example.authapp.domain.user.entity.RoleEntity;
+import com.example.authapp.domain.authorization.entity.RoleEntity;
+import com.example.authapp.domain.authorization.repository.RoleRepository;
 import com.example.authapp.domain.user.entity.UserRoleType;
-import com.example.authapp.domain.user.repository.RoleRepository;
 
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -15,20 +19,42 @@ public class RoleInitializer {
 
     private final RoleRepository roleRepository;
 
-    // ROLE 추가되면 자동 생성
     @PostConstruct
     public void init() {
+        Map<String, RoleEntity> existingRoles = roleRepository.findByNameIn(
+                        Arrays.stream(UserRoleType.values())
+                                .map(Enum::name)
+                                .toList()
+                )
+                .stream()
+                .collect(Collectors.toMap(RoleEntity::getName, role -> role));
+
         for (UserRoleType role : UserRoleType.values()) {
-            if (roleRepository.findByName(role.name()).isEmpty()) {
+            RoleEntity existingRole = existingRoles.get(role.name());
+            if (existingRole == null) {
                 roleRepository.save(
                         RoleEntity.builder()
-                        			.name(role.name())
-                        			.build()
+                                .name(role.name())
+                                .displayName(role.getLabel())
+                                .enabled(true)
+                                .systemRole(true)
+                                .build()
                 );
+                continue;
+            }
+
+            if (!existingRole.isEnabled()
+                    || !existingRole.isSystemRole()
+                    || !role.getLabel().equals(existingRole.getDisplayName())) {
+                existingRole.update(
+                        existingRole.getName(),
+                        role.getLabel(),
+                        existingRole.getDescription(),
+                        true,
+                        true
+                );
+                roleRepository.save(existingRole);
             }
         }
-        
     }
-    
-    
 }

@@ -33,4 +33,3 @@ public interface SecurityIncidentRepository extends JpaRepository<SecurityIncide
     long countByCreatedAtBetween(LocalDateTime from, LocalDateTime to);
 	
 }
-

@@ -20,6 +20,7 @@ type AdminFiltersProps<T extends AdminFilterValues> = {
   onChange: (name: string, value: string) => void;
   onSubmit: () => void;
   onReset: () => void;
+  hint?: string;
 };
 
 // 목록 화면의 검색/필터 UI를 한곳에서 관리해 화면별 조작 경험을 맞춥니다.
@@ -29,6 +30,7 @@ export default function AdminFilters<T extends AdminFilterValues>({
   onChange,
   onSubmit,
   onReset,
+  hint = "서버 필터 적용",
 }: AdminFiltersProps<T>) {
   return (
     <Card className="rounded-lg">
@@ -77,7 +79,7 @@ export default function AdminFilters<T extends AdminFilterValues>({
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <span className="inline-flex items-center gap-1">
               <Filter className="h-3.5 w-3.5" />
-              서버 필터 적용
+              {hint}
             </span>
 
             <div className="flex justify-end gap-2">

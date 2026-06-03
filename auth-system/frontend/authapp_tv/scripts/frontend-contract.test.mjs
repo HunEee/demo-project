@@ -102,16 +102,19 @@ assert.notEqual(
 );
 
 for (const childRoute of [
-  '<Route index element={<AdminPage />} />',
-  '<Route path="users" element={<AdminUsersPage />} />',
-  '<Route path="users/:username" element={<AdminUserDetailPage />} />',
-  '<Route path="audit-logs" element={<AdminAuditLogsPage />} />',
-  '<Route path="login-history" element={<AdminLoginHistoryPage />} />',
-  '<Route path="security-events" element={<AdminSecurityEventsPage />} />',
-  '<Route path="incidents" element={<AdminIncidentsPage />} />',
-  '<Route path="sessions" element={<AdminSessionsPage />} />',
-  '<Route path="risk" element={<AdminRiskPage />} />',
-  '<Route path="settings" element={<AdminSettingsPage />} />',
+  '<Route index element={<DashboardPage />} />',
+  '<Route path="status/dashboard" element={<DashboardPage />} />',
+  '<Route path="account/users" element={<UserManagementPage />} />',
+  '<Route path="account/users/:username" element={<UserDetailPage />} />',
+  '<Route path="account/organization" element={<OrganizationPage />} />',
+  '<Route path="account/groups" element={<GroupManagementPage />} />',
+  '<Route path="account/external-users" element={<ExternalUsersPage />} />',
+  '<Route path="audit/logs" element={<AuditLogsPage />} />',
+  '<Route path="audit/login-history" element={<AdminLoginHistoryPage />} />',
+  '<Route path="security/events" element={<SecurityEventsPage />} />',
+  '<Route path="security/sessions" element={<LoginSessionManagementPage />} />',
+  '<Route path="security/risk-logins" element={<RiskLoginDetectionPage />} />',
+  '<Route path="system/settings" element={<SystemSettingsPage />} />',
 ]) {
   const childIndex = main.indexOf(childRoute, adminRouteIndex);
   const closeIndex = main.indexOf("</Route>", adminRouteIndex);
@@ -320,7 +323,97 @@ assert.doesNotMatch(
 
 const adminUsersPage = read("src/pages/admin/AdminUsersPage.tsx");
 assert.match(adminUsersPage, /item\.deleted/, "AdminUsersPage must render deleted account status separately");
-assert.match(adminUsersPage, /item\.deleted/, "AdminUsersPage must render deleted account status separately");
+assert.match(adminUsersPage, /employmentType: filters\.employmentType/, "AdminUsersPage must send employment type to the server");
+assert.match(adminUsersPage, /mfaEnabled: filters\.mfaEnabled/, "AdminUsersPage must send MFA filter to the server");
+
+for (const [page, forbidden] of [
+  ["account/OrganizationPage.tsx", /AdminPlaceholderPage/],
+  ["account/GroupManagementPage.tsx", /AdminPlaceholderPage/],
+  ["account/ExternalUsersPage.tsx", /AdminPlaceholderPage/],
+]) {
+  assert.doesNotMatch(
+    read(`src/pages/admin/${page}`),
+    forbidden,
+    `${page} must be a real account management screen, not a placeholder`,
+  );
+}
+
+for (const modelType of [
+  "AdminUserCreateRequest",
+  "AdminUserUpdateRequest",
+  "AdminDepartment",
+  "AdminDepartmentRequest",
+  "AdminDepartmentUserRequest",
+  "AdminDepartmentUser",
+  "AdminGroup",
+  "AdminGroupDetail",
+  "AdminGroupRequest",
+  "AdminGroupMemberRequest",
+]) {
+  assert.match(adminModels, new RegExp(`export type ${modelType}`), `AdminModels must export ${modelType}`);
+}
+
+for (const serviceMethod of [
+  "createAdminUser",
+  "updateAdminUser",
+  "deleteAdminUser",
+  "getAdminDepartments",
+  "createAdminDepartment",
+  "updateAdminDepartment",
+  "disableAdminDepartment",
+  "getAdminDepartmentUsers",
+  "addAdminDepartmentUser",
+  "updateAdminDepartmentUser",
+  "removeAdminDepartmentUser",
+  "getAdminGroups",
+  "getAdminGroupDetail",
+  "createAdminGroup",
+  "updateAdminGroup",
+  "addAdminGroupMember",
+  "removeAdminGroupMember",
+  "assignAdminGroupRole",
+  "removeAdminGroupRole",
+]) {
+  assert.match(adminService, new RegExp(`export const ${serviceMethod} = async`), `AdminService must export ${serviceMethod}`);
+}
+
+assert.match(
+  read("src/pages/admin/account/ExternalUsersPage.tsx"),
+  /employmentType: "EXTERNAL"/,
+  "ExternalUsersPage must use the shared user API with employmentType=EXTERNAL",
+);
+
+for (const page of [
+  "AdminUsersPage.tsx",
+  "account/OrganizationPage.tsx",
+  "account/GroupManagementPage.tsx",
+  "account/ExternalUsersPage.tsx",
+]) {
+  const source = read(`src/pages/admin/${page}`);
+  assert.match(source, /AdminCrudModal/, `${page} must use a centered modal for add/edit workflows`);
+  assert.doesNotMatch(source, /AdminCrudDrawer/, `${page} must not use the side drawer for add/edit workflows`);
+  assert.match(source, /AdminConfirmDialog/, `${page} must confirm destructive delete/disable workflows`);
+}
+
+for (const page of ["account/OrganizationPage.tsx", "account/GroupManagementPage.tsx"]) {
+  const source = read(`src/pages/admin/${page}`);
+  assert.match(source, /AdminFilters/, `${page} must start with the same filter pattern as the user management list`);
+  assert.match(source, /AdminPagination/, `${page} must paginate the initial list view like user management`);
+  assert.match(source, /AdminSortableHeader/, `${page} must support sortable list columns like user management`);
+}
+
+const organizationPage = read("src/pages/admin/account/OrganizationPage.tsx");
+assert.match(organizationPage, /detailDepartment/, "OrganizationPage must open department detail in a modal state");
+assert.match(organizationPage, /departmentUserFilters/, "Department detail modal must provide user search filters");
+assert.match(organizationPage, /getAdminUsers/, "OrganizationPage must validate department additions against existing users");
+assert.match(organizationPage, /addAdminDepartmentUser/, "OrganizationPage must add existing users to a department");
+assert.match(organizationPage, /updateAdminDepartmentUser/, "OrganizationPage must edit department user profile data");
+assert.match(organizationPage, /removeAdminDepartmentUser/, "OrganizationPage must remove users from a department");
+
+const adminUiCrud = read("src/pages/admin/adminUi.tsx");
+assert.match(adminUiCrud, /export function AdminCrudModal/, "adminUi must expose a reusable centered CRUD modal");
+assert.doesNotMatch(adminUiCrud, /right-0 top-0 h-dvh/, "adminUi CRUD modal must not be styled as a side drawer");
+assert.match(adminUiCrud, /export function AdminConfirmDialog/, "adminUi must expose a reusable confirm dialog");
 
 const adminUserResponse = read("../../backend/authapp/src/main/java/com/example/authapp/domain/admin/dto/AdminUserResponse.java");
 assert.match(adminUserResponse, /boolean deleted/, "AdminUserResponse must expose deleted account state");
@@ -408,6 +501,71 @@ for (const backendFile of [
     `${backendFile} must explicitly name every @RequestParam`,
   );
 }
+
+const adminUserControllerSource = read("../../backend/authapp/src/main/java/com/example/authapp/api/admin/AdminUserController.java");
+assert.match(adminUserControllerSource, /@PostMapping\s*\n\s*public AdminUserResponse create/, "AdminUserController must expose admin user creation");
+assert.match(adminUserControllerSource, /@PatchMapping\("\/\{username\}"\)/, "AdminUserController must expose admin user profile updates");
+assert.match(adminUserControllerSource, /@PostMapping\("\/\{username\}\/delete"\)/, "AdminUserController must expose admin user soft delete");
+
+for (const modelType of [
+  "AdminRole",
+  "AdminRoleDetail",
+  "AdminRoleRequest",
+  "AdminPermission",
+  "AdminPermissionRequest",
+  "AdminRoleAssignmentRequest",
+  "AdminRoleAssignmentHistory",
+]) {
+  assert.match(adminModels, new RegExp(`export type ${modelType}`), `AdminModels must export ${modelType}`);
+}
+
+for (const serviceMethod of [
+  "getAdminRoles",
+  "getAdminRoleDetail",
+  "createAdminRole",
+  "updateAdminRole",
+  "disableAdminRole",
+  "assignAdminRolePermission",
+  "removeAdminRolePermission",
+  "getAdminPermissions",
+  "createAdminPermission",
+  "updateAdminPermission",
+  "deleteAdminPermission",
+  "assignAdminUserRole",
+  "removeAdminUserRole",
+  "getAdminRoleAssignmentHistory",
+]) {
+  assert.match(adminService, new RegExp(`export const ${serviceMethod} = async`), `AdminService must export ${serviceMethod}`);
+}
+
+for (const [path, pattern] of [
+  ["src/pages/admin/permissions/RoleManagementPage.tsx", /getAdminRoles/],
+  ["src/pages/admin/permissions/PermissionManagementPage.tsx", /getAdminPermissions/],
+  ["src/pages/admin/permissions/UserPermissionAssignmentPage.tsx", /assignAdminUserRole/],
+  ["src/pages/admin/permissions/GroupPermissionAssignmentPage.tsx", /assignAdminGroupRole/],
+  ["src/pages/admin/account/GroupManagementPage.tsx", /getAdminRoles/],
+]) {
+  const source = read(path);
+  assert.doesNotMatch(source, /AdminPlaceholderPage/, `${path} must be connected to the authorization API`);
+  assert.match(source, pattern, `${path} must call the authorization API`);
+  assert.match(source, /AdminCrudModal/, `${path} must use modal workflows for add/edit/assignment actions`);
+}
+
+assert.match(
+  adminService,
+  /apiClient\.post\(`\/admin\/users\/\$\{username\}\/roles`, data\)/,
+  "AdminService must assign user roles through POST /admin/users/{username}/roles",
+);
+assert.match(
+  adminService,
+  /apiClient\.get<AdminRole\[\]>\(["'`]\/admin\/roles["'`]\)/,
+  "AdminService must load roles from GET /admin/roles",
+);
+assert.match(
+  adminService,
+  /apiClient\.get<AdminPermission\[\]>\(["'`]\/admin\/permissions["'`]\)/,
+  "AdminService must load permissions from GET /admin/permissions",
+);
 
 /* =========================================================
  * Backend SecurityController 테스트

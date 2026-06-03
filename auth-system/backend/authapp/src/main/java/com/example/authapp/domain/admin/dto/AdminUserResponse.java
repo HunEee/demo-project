@@ -6,7 +6,7 @@ import java.util.stream.Collectors;
 
 import com.example.authapp.domain.profile.entity.UserProfileEntity;
 import com.example.authapp.domain.profile.entity.UserProfileStatus;
-import com.example.authapp.domain.user.entity.RoleEntity;
+import com.example.authapp.domain.authorization.entity.RoleEntity;
 import com.example.authapp.domain.user.entity.SocialProviderType;
 import com.example.authapp.domain.user.entity.UserEntity;
 
@@ -17,6 +17,7 @@ public record AdminUserResponse(
         String email,
         String nickname,
         String employeeNo,
+        Long departmentId,
         String department,
         String position,
         String employmentType,
@@ -24,6 +25,7 @@ public record AdminUserResponse(
         String userType,
         String authMethod,
         boolean mfaEnabled,
+        LocalDateTime expiresAt,
         LocalDateTime lastLoginAt,
         boolean locked,
         boolean enabled,
@@ -58,6 +60,7 @@ public record AdminUserResponse(
                 user.getEmail(),
                 user.getNickname(),
                 profile != null ? profile.getEmployeeNo() : null,
+                profile != null && profile.getDepartment() != null ? profile.getDepartment().getId() : null,
                 profile != null && profile.getDepartment() != null ? profile.getDepartment().getName() : null,
                 profile != null ? profile.getPosition() : null,
                 profile != null && profile.getEmploymentType() != null ? profile.getEmploymentType().name() : "UNKNOWN",
@@ -65,6 +68,7 @@ public record AdminUserResponse(
                 user.isSocial() ? "SOCIAL" : "INTERNAL",
                 authMethod,
                 mfaEnabled,
+                profile != null ? profile.getExpiresAt() : null,
                 lastLoginAt,
                 user.isLocked(),
                 user.isEnabled(),

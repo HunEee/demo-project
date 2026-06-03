@@ -2,6 +2,8 @@ package com.example.authapp.domain.admin.dto;
 
 import java.util.List;
 
+import com.example.authapp.domain.organization.dto.AdminGroupResponse;
+
 // 사용자 상세 화면에서 기본 정보와 최근 보안 정보를 한 번에 보여주기 위한 조합 DTO
 public record AdminUserDetailResponse(
         AdminUserResponse user,
@@ -9,5 +11,6 @@ public record AdminUserDetailResponse(
         List<AdminAuditLogResponse> recentEvents,
         List<AdminSessionResponse> sessions,
         List<AdminActionLogResponse> adminActions,
-        AdminRiskResponse risk
+        AdminRiskResponse risk,
+        List<AdminGroupResponse> groups
 ) {}

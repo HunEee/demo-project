@@ -35,6 +35,7 @@ import com.example.authapp.domain.user.entity.UserRoleType;
 import com.example.authapp.security.filter.JWTFilter;
 import com.example.authapp.security.filter.LoginFilter;
 import com.example.authapp.security.handler.RefreshTokenLogoutHandler;
+import com.example.authapp.security.rbac.RbacAuthorizationManager;
 
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.http.HttpServletResponse;
@@ -64,6 +65,7 @@ public class SecurityConfig {
     private final LoginHistoryService loginHistoryService;
     // 이벤트 기록
     private final AuthEventLogService securityEventService;
+    private final RbacAuthorizationManager rbacAuthorizationManager;
     public SecurityConfig(
             AuthenticationConfiguration authenticationConfiguration,
             @Qualifier("loginSuccessHandler") AuthenticationSuccessHandler loginSuccessHandler,
@@ -73,7 +75,8 @@ public class SecurityConfig {
             RefreshTokenService refreshTokenService,
             CookieService cookieService,
             LoginHistoryService loginHistoryService,
-            AuthEventLogService securityEventService
+            AuthEventLogService securityEventService,
+            RbacAuthorizationManager rbacAuthorizationManager
     ) {
         this.authenticationConfiguration = authenticationConfiguration;
         this.loginSuccessHandler = loginSuccessHandler;
@@ -84,6 +87,7 @@ public class SecurityConfig {
         this.cookieService = cookieService;
         this.loginHistoryService = loginHistoryService;
         this.securityEventService = securityEventService;
+        this.rbacAuthorizationManager = rbacAuthorizationManager;
     }
     
 
@@ -167,8 +171,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PUT, API_PREFIX + "/users/me/password").hasRole("USER")
                 .requestMatchers(HttpMethod.GET, API_PREFIX + "/security").hasRole("USER")
                 // 관리자
-                .requestMatchers(API_PREFIX + "/admin/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.GET, API_PREFIX + "/users").hasRole("ADMIN")
+                .requestMatchers(API_PREFIX + "/admin/**").access(rbacAuthorizationManager)
+                .requestMatchers(HttpMethod.GET, API_PREFIX + "/users").access(rbacAuthorizationManager)
                 .anyRequest().authenticated()
         );
 

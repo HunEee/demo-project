@@ -10,6 +10,7 @@ public record AdminFilterOptionsResponse(
         List<AdminFilterOption> incidentTypes,
         List<AdminFilterOption> incidentSeverities,
         List<AdminFilterOption> sessionStatuses,
-        List<AdminFilterOption> riskLevels
+        List<AdminFilterOption> riskLevels,
+        List<AdminFilterOption> employmentTypes
 ) {
 }

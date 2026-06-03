@@ -4,11 +4,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.authapp.domain.audit.service.AuthEventLogService;
-import com.example.authapp.domain.user.entity.RoleEntity;
+import com.example.authapp.domain.authorization.entity.RoleEntity;
 import com.example.authapp.domain.user.entity.SocialProviderType;
 import com.example.authapp.domain.user.entity.UserEntity;
 import com.example.authapp.domain.user.exception.UserException;
-import com.example.authapp.domain.user.repository.RoleRepository;
+import com.example.authapp.domain.authorization.repository.RoleRepository;
 import com.example.authapp.domain.user.repository.UserRepository;
 import com.example.authapp.security.oauth2.provider.OAuth2UserInfo;
 

@@ -13,5 +13,4 @@ public enum UserRoleType {
 	public String getLabel() {
 		return label;
 	}
-	
 }

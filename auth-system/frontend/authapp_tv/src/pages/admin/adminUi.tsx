@@ -1,6 +1,14 @@
 import type { ReactNode } from "react";
 import { ArrowDown, ArrowUp, ChevronsUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
 const toneClassNames = {
@@ -97,6 +105,85 @@ export function AdminPagination({
         </Button>
       </div>
     </div>
+  );
+}
+
+export function AdminCrudModal({
+  open,
+  title,
+  description,
+  children,
+  footer,
+  onOpenChange,
+  contentClassName,
+}: {
+  open: boolean;
+  title: string;
+  description?: string;
+  children: ReactNode;
+  footer?: ReactNode;
+  onOpenChange: (open: boolean) => void;
+  contentClassName?: string;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className={cn("max-h-[90vh] content-start overflow-y-auto p-5 sm:max-w-[560px]", contentClassName)}>
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          {description ? <DialogDescription>{description}</DialogDescription> : null}
+        </DialogHeader>
+        <div className="grid gap-4">{children}</div>
+        {footer ? <DialogFooter className="-mx-5 -mb-5 mt-2 px-5 py-4">{footer}</DialogFooter> : null}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export const AdminCrudDrawer = AdminCrudModal;
+
+export function AdminConfirmDialog({
+  open,
+  title,
+  description,
+  confirmLabel = "확인",
+  cancelLabel = "취소",
+  destructive = false,
+  onConfirm,
+  onOpenChange,
+}: {
+  open: boolean;
+  title: string;
+  description: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  destructive?: boolean;
+  onConfirm: () => void;
+  onOpenChange: (open: boolean) => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            {cancelLabel}
+          </Button>
+          <Button
+            type="button"
+            variant={destructive ? "destructive" : "default"}
+            onClick={() => {
+              onConfirm();
+              onOpenChange(false);
+            }}
+          >
+            {confirmLabel}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

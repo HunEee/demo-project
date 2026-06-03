@@ -1,6 +1,6 @@
 package com.example.authapp.security.handler.dto;
 
-import com.example.authapp.domain.user.entity.RoleEntity;
+import com.example.authapp.domain.authorization.entity.RoleEntity;
 import com.example.authapp.domain.user.entity.UserEntity;
 import lombok.Builder;
 import lombok.Getter;

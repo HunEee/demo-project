@@ -23,7 +23,7 @@ export default function AdminSettingsPage() {
   const isAdmin = user?.roles?.includes("ROLE_ADMIN");
 
   useEffect(() => {
-    if (isAdmin) void getAdminSettings().then(setSettings);
+    if (isAdmin) void getAdminSettings().then(setSettings).catch(() => undefined);
   }, [isAdmin]);
 
   if (!isAdmin) return <Navigate to="/dashboard" replace />;

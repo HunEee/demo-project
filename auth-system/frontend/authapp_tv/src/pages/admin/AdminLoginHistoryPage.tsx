@@ -51,7 +51,7 @@ export default function AdminLoginHistoryPage() {
       direction: sortState.sort === column && sortState.direction === "DESC" ? "ASC" : "DESC",
     };
     setSortState(nextSort);
-    void load(0, nextSort);
+    void load(0, nextSort).catch(() => undefined);
   };
 
   const resetFilters = async () => {
@@ -64,8 +64,8 @@ export default function AdminLoginHistoryPage() {
 
   useEffect(() => {
     if (isAdmin) {
-      void load();
-      void getAdminFilterOptions().then(setFilterOptions);
+      void load().catch(() => undefined);
+      void getAdminFilterOptions().then(setFilterOptions).catch(() => undefined);
     }
   }, [isAdmin]);
 

@@ -15,9 +15,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import com.example.authapp.domain.user.entity.RoleEntity;
+import com.example.authapp.domain.authorization.entity.RoleEntity;
 import com.example.authapp.domain.user.entity.UserEntity;
-import com.example.authapp.domain.user.repository.RoleRepository;
+import com.example.authapp.domain.authorization.repository.RoleRepository;
 import com.example.authapp.domain.user.repository.UserRepository;
 
 @ExtendWith(MockitoExtension.class)
@@ -64,6 +64,7 @@ class AdminAccountInitializerTest {
 
     @Test
     void doesNotOverwriteExistingAdminAccount() {
+        RoleEntity adminRole = RoleEntity.builder().name("ROLE_ADMIN").build();
         UserEntity existingAdmin = UserEntity.builder()
                 .username("admin")
                 .password("already-encoded")
@@ -73,6 +74,7 @@ class AdminAccountInitializerTest {
                 .enabled(true)
                 .social(false)
                 .build();
+        existingAdmin.addRole(adminRole);
 
         when(userRepository.findByUsername("admin")).thenReturn(Optional.of(existingAdmin));
 
@@ -84,6 +86,35 @@ class AdminAccountInitializerTest {
 
         initializer.run();
 
+        verify(userRepository, never()).save(any(UserEntity.class));
+        verify(passwordEncoder, never()).encode(any());
+    }
+
+    @Test
+    void assignsAdminRoleWhenExistingAdminAccountHasNoRole() {
+        RoleEntity adminRole = RoleEntity.builder().name("ROLE_ADMIN").build();
+        UserEntity existingAdmin = UserEntity.builder()
+                .username("admin")
+                .password("already-encoded")
+                .email("admin@example.com")
+                .nickname("Administrator")
+                .locked(false)
+                .enabled(true)
+                .social(false)
+                .build();
+
+        when(userRepository.findByUsername("admin")).thenReturn(Optional.of(existingAdmin));
+        when(roleRepository.findByName("ROLE_ADMIN")).thenReturn(Optional.of(adminRole));
+
+        AdminAccountInitializer initializer = new AdminAccountInitializer(
+                userRepository,
+                roleRepository,
+                passwordEncoder
+        );
+
+        initializer.run();
+
+        assertThat(existingAdmin.getRoles()).contains(adminRole);
         verify(userRepository, never()).save(any(UserEntity.class));
         verify(passwordEncoder, never()).encode(any());
     }

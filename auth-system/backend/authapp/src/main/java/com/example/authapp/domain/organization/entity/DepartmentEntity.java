@@ -28,7 +28,8 @@ import lombok.NoArgsConstructor;
         name = "departments",
         indexes = {
                 @Index(name = "idx_department_code", columnList = "code", unique = true),
-                @Index(name = "idx_department_parent", columnList = "parent_id")
+                @Index(name = "idx_department_parent", columnList = "parent_id"),
+                @Index(name = "idx_department_manager", columnList = "manager_username")
         }
 )
 @Getter
@@ -51,8 +52,14 @@ public class DepartmentEntity {
     @JoinColumn(name = "parent_id")
     private DepartmentEntity parent;
 
+    @Column(name = "manager_username", length = 100)
+    private String managerUsername;
+
     @Column(nullable = false)
     private boolean enabled;
+
+    @Column(name = "display_order", nullable = false)
+    private int displayOrder;
 
     @CreatedDate
     @Column(name = "created_at", updatable = false)
@@ -61,6 +68,17 @@ public class DepartmentEntity {
     @LastModifiedDate
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-    
-    
+
+    public void update(String name, String code, DepartmentEntity parent, String managerUsername, boolean enabled, int displayOrder) {
+        this.name = name;
+        this.code = code;
+        this.parent = parent;
+        this.managerUsername = managerUsername;
+        this.enabled = enabled;
+        this.displayOrder = displayOrder;
+    }
+
+    public void disable() {
+        this.enabled = false;
+    }
 }

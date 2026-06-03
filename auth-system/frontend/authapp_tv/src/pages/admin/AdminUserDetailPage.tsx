@@ -41,7 +41,7 @@ export default function AdminUserDetailPage() {
   };
 
   useEffect(() => {
-    if (isAdmin && username) void load();
+    if (isAdmin && username) void load().catch(() => undefined);
   }, [isAdmin, username]);
 
   if (!isAdmin) return <Navigate to="/dashboard" replace />;
@@ -134,10 +134,24 @@ export default function AdminUserDetailPage() {
               <CardHeader>
                 <CardTitle>역할/그룹</CardTitle>
               </CardHeader>
-              <CardContent className="flex flex-wrap gap-2">
-                {(detail.user.roles?.length ? detail.user.roles : ["ROLE_USER"]).map((role) => (
-                  <AdminBadge key={role}>{role}</AdminBadge>
-                ))}
+              <CardContent className="space-y-4">
+                <div>
+                  <p className="mb-2 text-xs font-medium text-muted-foreground">역할</p>
+                  <div className="flex flex-wrap gap-2">
+                    {(detail.user.roles?.length ? detail.user.roles : ["ROLE_USER"]).map((role) => (
+                      <AdminBadge key={role}>{role}</AdminBadge>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className="mb-2 text-xs font-medium text-muted-foreground">그룹</p>
+                  <div className="flex flex-wrap gap-2">
+                    {detail.groups.length === 0 ? <span className="text-sm text-muted-foreground">소속 그룹 없음</span> : null}
+                    {detail.groups.map((group) => (
+                      <AdminBadge key={group.id}>{group.name}</AdminBadge>
+                    ))}
+                  </div>
+                </div>
               </CardContent>
             </Card>
           ) : null}

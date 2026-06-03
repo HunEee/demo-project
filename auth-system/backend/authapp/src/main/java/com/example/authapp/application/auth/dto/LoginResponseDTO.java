@@ -12,5 +12,4 @@ public class LoginResponseDTO {
     private String accessToken;
     private long expiresIn;
     private UserResponseDTO user;
-    
 }

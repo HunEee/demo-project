@@ -13,5 +13,4 @@ public enum AdminSessionStatus {
     public String getLabel() {
         return label;
     }
-    
 }

@@ -6,4 +6,3 @@ public record LoginHistoryResponse(
         String ipAddress,
         String device
 ) {}
-

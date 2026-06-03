@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.function.Predicate;
 import java.util.function.Function;
 
 import org.springframework.data.domain.Page;
@@ -26,13 +25,16 @@ import com.example.authapp.domain.admin.dto.AdminAuditLogResponse;
 import com.example.authapp.domain.admin.dto.AdminDashboardSummaryResponse;
 import com.example.authapp.domain.admin.dto.AdminFilterOption;
 import com.example.authapp.domain.admin.dto.AdminFilterOptionsResponse;
+import com.example.authapp.domain.organization.dto.AdminGroupResponse;
 import com.example.authapp.domain.admin.dto.AdminIncidentResponse;
 import com.example.authapp.domain.admin.dto.AdminLoginHistoryResponse;
 import com.example.authapp.domain.admin.dto.AdminPasswordResetResponse;
 import com.example.authapp.domain.admin.dto.AdminRiskResponse;
 import com.example.authapp.domain.admin.dto.AdminSessionResponse;
+import com.example.authapp.domain.admin.dto.AdminUserCreateRequest;
 import com.example.authapp.domain.admin.dto.AdminUserDetailResponse;
 import com.example.authapp.domain.admin.dto.AdminUserResponse;
+import com.example.authapp.domain.admin.dto.AdminUserUpdateRequest;
 import com.example.authapp.domain.admin.type.AdminSessionStatus;
 import com.example.authapp.domain.admin.type.AdminUserStatus;
 import com.example.authapp.domain.audit.entity.AdminActionLogEntity;
@@ -50,14 +52,20 @@ import com.example.authapp.domain.audit.repository.SecurityIncidentRepository;
 import com.example.authapp.domain.jwt.entity.RefreshTokenEntity;
 import com.example.authapp.domain.jwt.repository.RefreshTokenRepository;
 import com.example.authapp.domain.mfa.repository.MfaMethodRepository;
+import com.example.authapp.domain.organization.entity.DepartmentEntity;
+import com.example.authapp.domain.organization.repository.DepartmentRepository;
 import com.example.authapp.domain.organization.repository.GroupUserRepository;
+import com.example.authapp.domain.profile.entity.EmploymentType;
 import com.example.authapp.domain.profile.entity.UserProfileEntity;
+import com.example.authapp.domain.profile.entity.UserProfileStatus;
 import com.example.authapp.domain.profile.repository.UserProfileRepository;
 import com.example.authapp.domain.risk.entity.RiskEntity;
 import com.example.authapp.domain.risk.entity.RiskLevel;
 import com.example.authapp.domain.risk.repository.RiskRepository;
+import com.example.authapp.domain.authorization.entity.RoleEntity;
 import com.example.authapp.domain.user.entity.UserEntity;
 import com.example.authapp.domain.user.entity.UserRoleType;
+import com.example.authapp.domain.authorization.repository.RoleRepository;
 import com.example.authapp.domain.user.repository.UserRepository;
 import com.example.authapp.util.ClientUtil;
 
@@ -78,6 +86,8 @@ public class AdminConsoleService {
     private final UserProfileRepository userProfileRepository;
     private final MfaMethodRepository mfaMethodRepository;
     private final GroupUserRepository groupUserRepository;
+    private final RoleRepository roleRepository;
+    private final DepartmentRepository departmentRepository;
     private final com.example.authapp.domain.audit.repository.AdminActionLogRepository adminActionLogRepository;
     private final PasswordEncoder passwordEncoder;
 
@@ -111,26 +121,121 @@ public class AdminConsoleService {
                 enumOptions(SecurityIncidentType.values(), SecurityIncidentType::getLabel),
                 enumOptions(Severity.values(), Severity::getLabel),
                 enumOptions(AdminSessionStatus.values(), AdminSessionStatus::getLabel),
-                enumOptions(RiskLevel.values(), RiskLevel::getLabel)
+                enumOptions(RiskLevel.values(), RiskLevel::getLabel),
+                enumOptions(EmploymentType.values(), EmploymentType::getLabel)
         );
     }
 
     // 사용자 목록을 검색어/상태/권한으로 거른 뒤 페이지로 반환
     @Transactional(readOnly = true)
     public Page<AdminUserResponse> users(int page, int size, String keyword, String status, String role, String sort, String direction) {
-        Predicate<UserEntity> filter = user -> contains(user.getUsername(), keyword)
-                || contains(user.getEmail(), keyword)
-                || contains(user.getNickname(), keyword);
+        return users(page, size, keyword, status, role, sort, direction, null, null, null, null);
+    }
 
+    @Transactional(readOnly = true)
+    public Page<AdminUserResponse> users(
+            int page,
+            int size,
+            String keyword,
+            String status,
+            String role,
+            String sort,
+            String direction,
+            Long departmentId,
+            String employmentType,
+            String expiresBefore,
+            Boolean mfaEnabled
+    ) {
         List<AdminUserResponse> content = userRepository.findAll().stream()
-                .filter(filter)
-                .filter(user -> status == null || status.isBlank() || statusMatches(user, status))
+                .filter(user -> {
+                    UserProfileEntity profile = userProfileRepository.findByUsername(user.getUsername()).orElse(null);
+                    boolean userMfaEnabled = mfaMethodRepository.existsByUsernameAndEnabledTrue(user.getUsername());
+                    return keywordMatches(user, profile, keyword)
+                            && (status == null || status.isBlank() || statusMatches(user, profile, status))
+                            && departmentMatches(profile, departmentId)
+                            && employmentTypeMatches(profile, employmentType)
+                            && expiresBeforeMatches(profile, expiresBefore)
+                            && mfaMatches(userMfaEnabled, mfaEnabled);
+                })
                 .filter(user -> role == null || role.isBlank() || user.getRoles().stream().anyMatch(item -> item.getName().equals(role)))
                 .sorted(applyDirection(userComparator(sort), direction))
                 .map(this::toAdminUserResponse)
                 .toList();
 
         return page(content, page, size);
+    }
+
+    @Transactional
+    public AdminUserResponse createUser(AdminUserCreateRequest request) {
+        requireText(request.username(), "Username is required.");
+        requireText(request.email(), "Email is required.");
+        requireText(request.password(), "Password is required.");
+        if (userRepository.existsByUsername(request.username())) {
+            throw new IllegalArgumentException("Username already exists.");
+        }
+        if (userRepository.existsByEmail(request.email())) {
+            throw new IllegalArgumentException("Email already exists.");
+        }
+
+        RoleEntity role = roleRepository.findByName(defaultText(request.roleName(), "ROLE_USER")).orElseThrow();
+        UserEntity user = UserEntity.builder()
+                .username(request.username())
+                .password(passwordEncoder.encode(request.password()))
+                .email(request.email())
+                .nickname(defaultText(request.name(), request.username()))
+                .locked(false)
+                .enabled(true)
+                .social(false)
+                .build();
+        user.addRole(role);
+        userRepository.save(user);
+
+        UserProfileEntity profile = UserProfileEntity.builder()
+                .username(user.getUsername())
+                .employeeNo(blankToNull(request.employeeNo()))
+                .department(findDepartment(request.departmentId()))
+                .position(blankToNull(request.position()))
+                .employmentType(parseEmploymentType(request.employmentType()))
+                .status(parseProfileStatus(request.status()))
+                .expiresAt(parseDateTime(request.expiresAt()))
+                .build();
+        userProfileRepository.save(profile);
+        saveAdminAction(user.getUsername(), AdminActionType.PROFILE_UPDATE, null, accountState(user), defaultText(request.reason(), "관리자 사용자 생성"));
+        return AdminUserResponse.from(user, profile, false, null);
+    }
+
+    @Transactional
+    public AdminUserResponse updateUser(String username, AdminUserUpdateRequest request) {
+        UserEntity user = userRepository.findByUsername(username).orElseThrow();
+        UserProfileEntity profile = userProfileRepository.findByUsername(username)
+                .orElseGet(() -> UserProfileEntity.builder()
+                        .username(username)
+                        .employmentType(EmploymentType.UNKNOWN)
+                        .status(UserProfileStatus.ACTIVE)
+                        .build());
+        String before = accountState(user) + profileState(profile);
+
+        user.updateOAuthProfile(request.email(), request.name());
+        profile.updateAdminProfile(
+                blankToNull(request.employeeNo()),
+                findDepartment(request.departmentId()),
+                blankToNull(request.position()),
+                parseEmploymentType(request.employmentType()),
+                parseProfileStatus(request.status()),
+                parseDateTime(request.expiresAt())
+        );
+        userProfileRepository.save(profile);
+        boolean mfaEnabled = mfaMethodRepository.existsByUsernameAndEnabledTrue(username);
+        saveAdminAction(username, AdminActionType.PROFILE_UPDATE, before, accountState(user) + profileState(profile), defaultText(request.reason(), "관리자 사용자 정보 수정"));
+        return AdminUserResponse.from(user, profile, mfaEnabled, null);
+    }
+
+    @Transactional
+    public void deleteUser(String username, String reason) {
+        UserEntity user = userRepository.findByUsername(username).orElseThrow();
+        String before = accountState(user);
+        user.deactivate();
+        saveAdminAction(username, AdminActionType.PROFILE_UPDATE, before, accountState(user), defaultText(reason, "관리자 사용자 삭제"));
     }
 
     // 사용자 상세 화면에 필요한 최근 로그인/이벤트/세션/위험 정보를 조합
@@ -169,7 +274,16 @@ public class AdminConsoleService {
                 .map(AdminRiskResponse::from)
                 .orElse(null);
 
-        return new AdminUserDetailResponse(toAdminUserResponse(user), recentLogins, recentEvents, sessions, adminActions, risk);
+        List<AdminGroupResponse> groups = groupUserRepository.findByUsername(username)
+                .stream()
+                .map(groupUser -> AdminGroupResponse.from(
+                        groupUser.getGroup(),
+                        groupUserRepository.countByGroupId(groupUser.getGroup().getId()),
+                        0
+                ))
+                .toList();
+
+        return new AdminUserDetailResponse(toAdminUserResponse(user), recentLogins, recentEvents, sessions, adminActions, risk, groups);
     }
 
     @Transactional
@@ -315,14 +429,80 @@ public class AdminConsoleService {
         return value.toLowerCase(Locale.ROOT).contains(keyword.toLowerCase(Locale.ROOT));
     }
 
-    private boolean statusMatches(UserEntity user, String status) {
+    private DepartmentEntity findDepartment(Long departmentId) {
+        if (departmentId == null) return null;
+        return departmentRepository.findById(departmentId).orElseThrow();
+    }
+
+    private EmploymentType parseEmploymentType(String value) {
+        if (value == null || value.isBlank()) return EmploymentType.UNKNOWN;
+        return EmploymentType.valueOf(value.toUpperCase(Locale.ROOT));
+    }
+
+    private UserProfileStatus parseProfileStatus(String value) {
+        if (value == null || value.isBlank()) return UserProfileStatus.ACTIVE;
+        return UserProfileStatus.valueOf(value.toUpperCase(Locale.ROOT));
+    }
+
+    private LocalDateTime parseDateTime(String value) {
+        if (value == null || value.isBlank()) return null;
+        if (value.length() == 10) return LocalDate.parse(value).atStartOfDay();
+        return LocalDateTime.parse(value);
+    }
+
+    private String defaultText(String value, String fallback) {
+        return value == null || value.isBlank() ? fallback : value;
+    }
+
+    private String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value;
+    }
+
+    private void requireText(String value, String message) {
+        if (value == null || value.isBlank()) throw new IllegalArgumentException(message);
+    }
+
+    private boolean keywordMatches(UserEntity user, UserProfileEntity profile, String keyword) {
+        return contains(user.getUsername(), keyword)
+                || contains(user.getEmail(), keyword)
+                || contains(user.getNickname(), keyword)
+                || (profile != null && contains(profile.getEmployeeNo(), keyword))
+                || (profile != null && profile.getDepartment() != null && contains(profile.getDepartment().getName(), keyword))
+                || (profile != null && contains(profile.getPosition(), keyword));
+    }
+
+    private boolean statusMatches(UserEntity user, UserProfileEntity profile, String status) {
         return switch (status.toUpperCase(Locale.ROOT)) {
             case "DELETED" -> user.isDeleted();
             case "LOCKED" -> !user.isDeleted() && user.isLocked();
             case "ACTIVE" -> !user.isDeleted() && user.isEnabled() && !user.isLocked();
             case "DISABLED" -> !user.isDeleted() && !user.isEnabled();
+            case "EXPIRED" -> profile != null && profile.getExpiresAt() != null && profile.getExpiresAt().isBefore(LocalDateTime.now());
+            case "LEAVE" -> profile != null && profile.getStatus() != null && "LEAVE".equals(profile.getStatus().name());
             default -> true;
         };
+    }
+
+    private boolean departmentMatches(UserProfileEntity profile, Long departmentId) {
+        if (departmentId == null) return true;
+        return profile != null && profile.getDepartment() != null && departmentId.equals(profile.getDepartment().getId());
+    }
+
+    private boolean employmentTypeMatches(UserProfileEntity profile, String employmentType) {
+        if (employmentType == null || employmentType.isBlank()) return true;
+        return profile != null
+                && profile.getEmploymentType() != null
+                && profile.getEmploymentType().name().equalsIgnoreCase(employmentType);
+    }
+
+    private boolean expiresBeforeMatches(UserProfileEntity profile, String expiresBefore) {
+        if (expiresBefore == null || expiresBefore.isBlank()) return true;
+        if (profile == null || profile.getExpiresAt() == null) return false;
+        return !profile.getExpiresAt().isAfter(parseEndOfDay(expiresBefore));
+    }
+
+    private boolean mfaMatches(boolean userMfaEnabled, Boolean mfaEnabled) {
+        return mfaEnabled == null || userMfaEnabled == mfaEnabled;
     }
 
     private boolean sessionStatusMatches(RefreshTokenEntity token, String status) {
@@ -460,7 +640,10 @@ public class AdminConsoleService {
         String userAgent = request != null ? ClientUtil.getUserAgent(request) : null;
         adminActionLogRepository.save(AdminActionLogEntity.builder()
                 .actorUsername(currentActor())
+                .targetType("USER")
+                .targetId(targetUsername)
                 .targetUsername(targetUsername)
+                .targetName(targetUsername)
                 .actionType(actionType)
                 .reason(reason)
                 .beforeValue(beforeValue)
@@ -489,6 +672,13 @@ public class AdminConsoleService {
                 + ",\"enabled\":" + user.isEnabled()
                 + ",\"deleted\":" + user.isDeleted()
                 + "}";
+    }
+
+    private String profileState(UserProfileEntity profile) {
+        return "{\"employeeNo\":\"" + Optional.ofNullable(profile.getEmployeeNo()).orElse("")
+                + "\",\"employmentType\":\"" + Optional.ofNullable(profile.getEmploymentType()).map(Enum::name).orElse("")
+                + "\",\"status\":\"" + Optional.ofNullable(profile.getStatus()).map(Enum::name).orElse("")
+                + "\"}";
     }
 
     private AdminFilterOption option(String label, String value) {

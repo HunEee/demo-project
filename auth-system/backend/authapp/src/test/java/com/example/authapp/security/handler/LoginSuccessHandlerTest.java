@@ -54,6 +54,4 @@ class LoginSuccessHandlerTest {
         assertThat(response.getContentAsString()).contains("\"accessToken\":\"access-token\"");
         assertThat(response.getContentAsString()).contains("\"createdAt\"");
     }
-    
-    
 }

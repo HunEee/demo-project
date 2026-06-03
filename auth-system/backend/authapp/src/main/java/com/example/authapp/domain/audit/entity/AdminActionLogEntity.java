@@ -27,7 +27,8 @@ import lombok.NoArgsConstructor;
         name = "admin_action_log",
         indexes = {
                 @Index(name = "idx_admin_action_actor", columnList = "actor_username"),
-                @Index(name = "idx_admin_action_target", columnList = "target_username"),
+                @Index(name = "idx_admin_action_target_user", columnList = "target_username"),
+                @Index(name = "idx_admin_action_target", columnList = "target_type, target_id"),
                 @Index(name = "idx_admin_action_type", columnList = "action_type"),
                 @Index(name = "idx_admin_action_created", columnList = "created_at")
         }
@@ -45,8 +46,17 @@ public class AdminActionLogEntity {
     @Column(name = "actor_username", nullable = false, length = 100)
     private String actorUsername;
 
-    @Column(name = "target_username", nullable = false, length = 100)
+    @Column(name = "target_type", nullable = false, length = 50)
+    private String targetType;
+
+    @Column(name = "target_id", length = 100)
+    private String targetId;
+
+    @Column(name = "target_username", length = 100)
     private String targetUsername;
+
+    @Column(name = "target_name", length = 200)
+    private String targetName;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "action_type", nullable = false, length = 50)
@@ -72,5 +82,4 @@ public class AdminActionLogEntity {
     @CreatedDate
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
-    
 }

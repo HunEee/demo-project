@@ -29,5 +29,4 @@ public enum AuthEventType {
     public String getLabel() {
         return label;
     }
-    
 }

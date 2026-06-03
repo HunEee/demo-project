@@ -15,6 +15,4 @@ class LoginResponseDTOTest {
 
         assertThat(hasRefreshTokenField).isFalse();
     }
-    
-    
 }

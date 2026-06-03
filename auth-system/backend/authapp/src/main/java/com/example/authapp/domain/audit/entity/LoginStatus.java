@@ -15,5 +15,4 @@ public enum LoginStatus {
     public String getLabel() {
         return label;
     }
-    
 }
