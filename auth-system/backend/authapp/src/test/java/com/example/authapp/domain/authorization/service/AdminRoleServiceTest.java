@@ -20,6 +20,7 @@ import com.example.authapp.domain.authorization.entity.PermissionEntity;
 import com.example.authapp.domain.authorization.entity.RoleEntity;
 import com.example.authapp.domain.authorization.repository.PermissionRepository;
 import com.example.authapp.domain.authorization.repository.RoleRepository;
+import com.example.authapp.domain.organization.repository.GroupRepository;
 
 @ExtendWith(MockitoExtension.class)
 class AdminRoleServiceTest {
@@ -30,9 +31,16 @@ class AdminRoleServiceTest {
     @Mock
     private PermissionRepository permissionRepository;
 
+    @Mock
+    private GroupRepository groupRepository;
+
+    private AdminRoleService service() {
+        return new AdminRoleService(roleRepository, permissionRepository, groupRepository);
+    }
+
     @Test
     void createsRoleWithMetadata() {
-        AdminRoleService service = new AdminRoleService(roleRepository, permissionRepository);
+        AdminRoleService service = service();
         when(roleRepository.existsByName("ROLE_AUTH_OPERATOR")).thenReturn(false);
         when(roleRepository.save(any(RoleEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -55,7 +63,7 @@ class AdminRoleServiceTest {
 
     @Test
     void assignsPermissionToRoleThroughJoinTableRelationship() {
-        AdminRoleService service = new AdminRoleService(roleRepository, permissionRepository);
+        AdminRoleService service = service();
         RoleEntity role = RoleEntity.builder()
                 .name("ROLE_AUTH_OPERATOR")
                 .displayName("운영자")
@@ -81,7 +89,7 @@ class AdminRoleServiceTest {
 
     @Test
     void rejectsDisablingSystemRole() {
-        AdminRoleService service = new AdminRoleService(roleRepository, permissionRepository);
+        AdminRoleService service = service();
         RoleEntity role = RoleEntity.builder()
                 .name("ROLE_ADMIN")
                 .displayName("Admin")
@@ -103,7 +111,7 @@ class AdminRoleServiceTest {
 
     @Test
     void rejectsDeletingSystemRoleByDisableEndpoint() {
-        AdminRoleService service = new AdminRoleService(roleRepository, permissionRepository);
+        AdminRoleService service = service();
         RoleEntity role = RoleEntity.builder()
                 .name("ROLE_ADMIN")
                 .displayName("Admin")

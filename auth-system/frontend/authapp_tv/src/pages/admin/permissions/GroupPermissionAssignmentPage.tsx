@@ -2,9 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { Navigate } from "react-router";
 import useAuth from "@/auth/store";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import type { AdminGroup, AdminGroupDetail, AdminRole } from "@/models/AdminModels";
 import AdminFilters from "@/pages/admin/AdminFilters";
 import AdminPageShell from "@/pages/admin/AdminPageShell";
@@ -13,14 +10,22 @@ import {
   AdminConfirmDialog,
   AdminCrudModal,
   AdminEmptyRow,
+  AdminFormField,
+  AdminInfoItem,
   AdminPagination,
+  AdminSelectField,
   AdminSortableHeader,
+  AdminTableCard,
   type PageState,
   type SortState,
   adminCellClassName,
   adminRowClassName,
   adminTableClassName,
   adminTheadClassName,
+  compareText,
+  containsText as contains,
+  displayValue as display,
+  enabledStatusLabel,
   statusTone,
 } from "@/pages/admin/adminUi";
 import {
@@ -37,11 +42,7 @@ const blankAssignment = {
   sensitiveReason: "",
 };
 
-const contains = (value: string | number | boolean | null | undefined, keyword: string) =>
-  String(value ?? "").toLowerCase().includes(keyword.trim().toLowerCase());
-const compareText = (left?: string | null, right?: string | null) => String(left ?? "").localeCompare(String(right ?? ""));
-const display = (value?: string | number | null) => (value === null || value === undefined || value === "" ? "-" : String(value));
-const statusLabel = (enabled: boolean) => (enabled ? "활성" : "비활성");
+const statusLabel = (enabled: boolean) => enabledStatusLabel(enabled, "활성", "비활성");
 
 export default function GroupPermissionAssignmentPage() {
   const user = useAuth((state) => state.user);
@@ -181,8 +182,7 @@ export default function GroupPermissionAssignmentPage() {
         }}
       />
 
-      <Card className="rounded-lg">
-        <CardContent className="overflow-x-auto p-0">
+      <AdminTableCard>
           <table className={adminTableClassName}>
             <thead className={adminTheadClassName}>
               <tr>
@@ -231,14 +231,13 @@ export default function GroupPermissionAssignmentPage() {
             </tbody>
           </table>
           <AdminPagination pageState={listPageState} onPageChange={(page) => setPageState((current) => ({ ...current, page }))} />
-        </CardContent>
-      </Card>
+      </AdminTableCard>
 
       <AdminCrudModal
         open={detail !== null}
         title={detail ? `${detail.group.name} 역할 관리` : "그룹 역할 관리"}
         description="그룹에 부여된 역할은 소속 사용자에게 공통 권한 기준으로 사용됩니다."
-        contentClassName="sm:max-w-[820px]"
+        contentClassName="sm:max-w-[720px]"
         onOpenChange={(open) => {
           if (!open) setDetail(null);
         }}
@@ -246,38 +245,38 @@ export default function GroupPermissionAssignmentPage() {
         {detail ? (
           <div className="space-y-4">
             <div className="grid gap-3 rounded-lg border p-3 text-sm md:grid-cols-4">
-              <Info label="그룹명" value={detail.group.name} />
-              <Info label="유형" value={detail.group.type} />
-              <Info label="구성원" value={`${detail.group.userCount}명`} />
-              <Info label="역할" value={`${detail.group.roleCount}개`} />
+              <AdminInfoItem label="그룹명" value={detail.group.name} />
+              <AdminInfoItem label="유형" value={detail.group.type} />
+              <AdminInfoItem label="구성원" value={`${detail.group.userCount}명`} />
+              <AdminInfoItem label="역할" value={`${detail.group.roleCount}개`} />
             </div>
 
-            <div className="grid gap-3 md:grid-cols-[1fr_1fr_1fr_auto]">
-              <SelectField
+            <div className="grid gap-3 md:grid-cols-2">
+              <AdminSelectField
                 label="역할"
                 value={assignmentForm.roleName}
                 options={roleOptions}
                 onChange={(value) => setAssignmentForm((current) => ({ ...current, roleName: value }))}
               />
-              <Field label="부여 사유" value={assignmentForm.reason} onChange={(value) => setAssignmentForm((current) => ({ ...current, reason: value }))} />
-              <Field
+              <AdminFormField label="부여 사유" value={assignmentForm.reason} onChange={(value) => setAssignmentForm((current) => ({ ...current, reason: value }))} />
+              <AdminFormField
                 label="민감 권한 사유"
                 value={assignmentForm.sensitiveReason}
                 disabled={!selectedRole?.sensitive}
                 onChange={(value) => setAssignmentForm((current) => ({ ...current, sensitiveReason: value }))}
               />
-              <div className="flex items-end">
+              <div className="flex items-end md:col-span-2">
                 <Button type="button" className="w-full" onClick={() => void saveAssignment()}>부여</Button>
               </div>
             </div>
 
-            <div className="overflow-x-auto rounded-lg border">
-              <table className={adminTableClassName}>
+            <div className="rounded-lg border">
+              <table className="w-full table-fixed text-sm">
                 <thead className={adminTheadClassName}>
                   <tr>
                     <th className={adminCellClassName}>역할명</th>
-                    <th className={adminCellClassName}>민감</th>
-                    <th className={adminCellClassName}>작업</th>
+                    <th className="w-24 px-5 py-3 text-center align-middle">민감</th>
+                    <th className="w-24 px-5 py-3 text-center align-middle">작업</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -327,62 +326,5 @@ export default function GroupPermissionAssignmentPage() {
         }}
       />
     </AdminPageShell>
-  );
-}
-
-function Info({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="mt-1 font-medium">{value}</p>
-    </div>
-  );
-}
-
-function Field({
-  label,
-  value,
-  onChange,
-  disabled = false,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  disabled?: boolean;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <Label className="text-xs text-muted-foreground">{label}</Label>
-      <Input value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)} />
-    </div>
-  );
-}
-
-function SelectField({
-  label,
-  value,
-  options,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  options: Array<{ label: string; value: string }>;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <Label className="text-xs text-muted-foreground">{label}</Label>
-      <select
-        className="h-9 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-      >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </div>
   );
 }

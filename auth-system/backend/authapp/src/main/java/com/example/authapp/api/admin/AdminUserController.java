@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.authapp.domain.admin.AdminConsoleService;
+import com.example.authapp.domain.admin.dto.AdminDuplicateCheckResponse;
 import com.example.authapp.domain.admin.dto.AdminPasswordResetResponse;
 import com.example.authapp.domain.admin.dto.AdminUserCreateRequest;
 import com.example.authapp.domain.admin.dto.AdminUserDetailResponse;
@@ -38,9 +39,9 @@ public class AdminUserController {
             @RequestParam(name = "keyword", required = false) String keyword,
             @RequestParam(name = "status", required = false) String status,
             @RequestParam(name = "role", required = false) String role,
-            @RequestParam(name = "departmentId", required = false) Long departmentId,
-            @RequestParam(name = "employmentType", required = false) String employmentType,
-            @RequestParam(name = "expiresBefore", required = false) String expiresBefore,
+            @RequestParam(name = "departmentCode", required = false) String departmentCode,
+            @RequestParam(name = "directOnly", required = false) Boolean directOnly,
+            @RequestParam(name = "authMethod", required = false) String authMethod,
             @RequestParam(name = "mfaEnabled", required = false) Boolean mfaEnabled,
             @RequestParam(name = "sort", required = false) String sort,
             @RequestParam(name = "direction", defaultValue = "DESC") String direction
@@ -53,9 +54,9 @@ public class AdminUserController {
                 role,
                 sort,
                 direction,
-                departmentId,
-                employmentType,
-                expiresBefore,
+                departmentCode,
+                directOnly,
+                authMethod,
                 mfaEnabled
         ));
     }
@@ -65,69 +66,74 @@ public class AdminUserController {
         return adminConsoleService.createUser(request);
     }
 
+    @GetMapping({"/duplicate-check", "/exists"})
+    public AdminDuplicateCheckResponse exists(@RequestParam(name = "username") String username) {
+        return new AdminDuplicateCheckResponse("username", username, adminConsoleService.usernameExists(username));
+    }
+
     // 사용자 상세 화면에 필요한 최근 활동 정보를 함께 반환
     @GetMapping("/{username}")
-    public AdminUserDetailResponse userDetail(@PathVariable String username) {
+    public AdminUserDetailResponse userDetail(@PathVariable(name = "username") String username) {
         return adminConsoleService.userDetail(username);
     }
 
     @PatchMapping("/{username}")
-    public AdminUserResponse update(@PathVariable String username, @RequestBody AdminUserUpdateRequest request) {
+    public AdminUserResponse update(@PathVariable(name = "username") String username, @RequestBody AdminUserUpdateRequest request) {
         return adminConsoleService.updateUser(username, request);
     }
 
     @PostMapping("/{username}/delete")
     public void delete(
-            @PathVariable String username,
+            @PathVariable(name = "username") String username,
             @RequestParam(name = "reason", required = false) String reason
     ) {
         adminConsoleService.deleteUser(username, reason);
     }
 
     @PostMapping("/{username}/lock")
-    public void lock(@PathVariable String username) {
+    public void lock(@PathVariable(name = "username") String username) {
         adminConsoleService.lockUser(username);
     }
 
     @PostMapping("/{username}/unlock")
-    public void unlock(@PathVariable String username) {
+    public void unlock(@PathVariable(name = "username") String username) {
         adminConsoleService.unlockUser(username);
     }
 
     @PostMapping("/{username}/disable")
-    public void disable(@PathVariable String username) {
+    public void disable(@PathVariable(name = "username") String username) {
         adminConsoleService.disableUser(username);
     }
 
     @PostMapping("/{username}/enable")
-    public void enable(@PathVariable String username) {
+    public void enable(@PathVariable(name = "username") String username) {
         adminConsoleService.enableUser(username);
     }
 
     @PostMapping("/{username}/tokens/revoke")
-    public void revokeTokens(@PathVariable String username) {
+    public void revokeTokens(@PathVariable(name = "username") String username) {
         adminConsoleService.revokeUserTokens(username);
     }
 
     @PostMapping("/{username}/password/reset")
-    public AdminPasswordResetResponse resetPassword(@PathVariable String username) {
+    public AdminPasswordResetResponse resetPassword(@PathVariable(name = "username") String username) {
         return adminConsoleService.resetPassword(username);
     }
 
     @PostMapping("/{username}/mfa/reset")
-    public void resetMfa(@PathVariable String username) {
+    public void resetMfa(@PathVariable(name = "username") String username) {
         adminConsoleService.resetMfa(username);
     }
 
     @PostMapping("/{username}/roles")
-    public void assignRole(@PathVariable String username, @RequestBody AdminRoleAssignmentRequest request) {
+    public void assignRole(@PathVariable(name = "username") String username, @RequestBody AdminRoleAssignmentRequest request) {
         roleAssignmentService.assignUserRole(username, request);
     }
 
     @DeleteMapping("/{username}/roles/{roleId}")
     public void removeRole(
-            @PathVariable String username,
-            @PathVariable Long roleId,
+            @PathVariable(name = "username") String username,
+            @PathVariable(name = "roleId") Long roleId,
             @RequestParam(name = "reason", required = false) String reason
     ) {
         roleAssignmentService.revokeUserRole(username, roleId, reason);

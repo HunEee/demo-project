@@ -4,10 +4,7 @@ import type {
   AdminApiPermissionRuleRequest,
   AdminAuditLog,
   AdminDashboardSummary,
-  AdminDepartment,
-  AdminDepartmentRequest,
-  AdminDepartmentUser,
-  AdminDepartmentUserRequest,
+  AdminDuplicateCheckResponse,
   AdminFilterOptions,
   AdminGroup,
   AdminGroupDetail,
@@ -33,6 +30,8 @@ import type {
   AdminUserCreateRequest,
   AdminUserDetail,
   AdminUserUpdateRequest,
+  HrUserMaster,
+  HrUserMasterRequest,
   PageResponse,
 } from "@/models/AdminModels";
 
@@ -68,6 +67,13 @@ export const getAdminUserDetail = async (username: string) => {
 
 export const createAdminUser = async (data: AdminUserCreateRequest) => {
   const response = await apiClient.post<AdminUser>("/admin/users", data);
+  return response.data;
+};
+
+export const checkAdminUsernameExists = async (username: string) => {
+  const response = await apiClient.get<AdminDuplicateCheckResponse>("/admin/users/duplicate-check", {
+    params: cleanAdminParams({ username }),
+  });
   return response.data;
 };
 
@@ -120,44 +126,35 @@ export const removeAdminUserRole = async (username: string, roleId: number, reas
 };
 
 // 조직/부서 관리 API
-export const getAdminDepartments = async () => {
-  const response = await apiClient.get<AdminDepartment[]>("/admin/departments");
+export const getHrUserMasters = async (params?: AdminParams) => {
+  const response = await apiClient.get<HrUserMaster[]>("/admin/hr-users", { params: cleanAdminParams(params) });
   return response.data;
 };
 
-export const createAdminDepartment = async (data: AdminDepartmentRequest) => {
-  const response = await apiClient.post<AdminDepartment>("/admin/departments", data);
+export const getHrUserAccountCandidates = async () => {
+  const response = await apiClient.get<HrUserMaster[]>("/admin/hr-users/candidates");
   return response.data;
 };
 
-export const updateAdminDepartment = async (id: number, data: AdminDepartmentRequest) => {
-  const response = await apiClient.patch<AdminDepartment>(`/admin/departments/${id}`, data);
+export const createHrUserMaster = async (data: HrUserMasterRequest) => {
+  const response = await apiClient.post<HrUserMaster>("/admin/hr-users", data);
   return response.data;
 };
 
-export const disableAdminDepartment = async (id: number, reason?: string) => {
-  await apiClient.post(`/admin/departments/${id}/disable`, undefined, { params: cleanAdminParams({ reason }) });
-};
-
-export const getAdminDepartmentUsers = async (id: number) => {
-  const response = await apiClient.get<AdminDepartmentUser[]>(`/admin/departments/${id}/users`);
+export const updateHrUserMaster = async (id: number, data: HrUserMasterRequest) => {
+  const response = await apiClient.patch<HrUserMaster>(`/admin/hr-users/${id}`, data);
   return response.data;
 };
 
-export const addAdminDepartmentUser = async (id: number, data: AdminDepartmentUserRequest) => {
-  const response = await apiClient.post<AdminDepartmentUser>(`/admin/departments/${id}/users`, data);
-  return response.data;
+export const deleteHrUserMaster = async (id: number) => {
+  await apiClient.delete(`/admin/hr-users/${id}`);
 };
 
-export const updateAdminDepartmentUser = async (id: number, username: string, data: AdminDepartmentUserRequest) => {
-  const response = await apiClient.patch<AdminDepartmentUser>(`/admin/departments/${id}/users/${username}`, data);
-  return response.data;
-};
-
-export const removeAdminDepartmentUser = async (id: number, username: string, reason?: string) => {
-  await apiClient.delete(`/admin/departments/${id}/users/${username}`, {
-    params: cleanAdminParams({ reason }),
+export const checkHrUserMasterExists = async (field: string, value: string) => {
+  const response = await apiClient.get<AdminDuplicateCheckResponse>("/admin/hr-users/duplicate-check", {
+    params: cleanAdminParams({ field, value }),
   });
+  return response.data;
 };
 
 // 그룹 관리 API
@@ -232,6 +229,10 @@ export const updateAdminRole = async (id: number, data: AdminRoleRequest) => {
 
 export const disableAdminRole = async (id: number) => {
   await apiClient.post(`/admin/roles/${id}/disable`);
+};
+
+export const deleteAdminRole = async (id: number) => {
+  await apiClient.delete(`/admin/roles/${id}`);
 };
 
 export const assignAdminRolePermission = async (id: number, data: AdminRolePermissionRequest) => {

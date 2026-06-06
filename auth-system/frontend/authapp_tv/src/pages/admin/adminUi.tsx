@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { ArrowDown, ArrowUp, ChevronsUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -9,6 +10,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
 const toneClassNames = {
@@ -39,6 +42,99 @@ export function AdminEmptyRow({ colSpan, message = "표시할 데이터가 없�
         {message}
       </td>
     </tr>
+  );
+}
+
+export function AdminTableCard({ children }: { children: ReactNode }) {
+  return (
+    <Card className="rounded-lg">
+      <CardContent className="overflow-x-auto p-0">{children}</CardContent>
+    </Card>
+  );
+}
+
+export function AdminBulkActionBar({
+  selectedLabel,
+  children,
+}: {
+  selectedLabel: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-2 rounded-lg border bg-muted/20 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+      <span className="text-muted-foreground">{selectedLabel}</span>
+      <div className="flex flex-wrap gap-2">{children}</div>
+    </div>
+  );
+}
+
+export function AdminInfoItem({ label, value }: { label: string; value?: ReactNode }) {
+  return (
+    <div>
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="mt-1 font-medium">{value ?? "-"}</p>
+    </div>
+  );
+}
+
+export function AdminFormField({
+  label,
+  value,
+  onChange,
+  type = "text",
+  disabled = false,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  type?: string;
+  disabled?: boolean;
+  placeholder?: string;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-xs text-muted-foreground">{label}</Label>
+      <Input
+        type={type}
+        value={value}
+        disabled={disabled}
+        placeholder={placeholder}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    </div>
+  );
+}
+
+export function AdminSelectField({
+  label,
+  value,
+  options,
+  onChange,
+  disabled = false,
+}: {
+  label: string;
+  value: string;
+  options: Array<{ label: string; value: string }>;
+  onChange: (value: string) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-xs text-muted-foreground">{label}</Label>
+      <select
+        className="h-9 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
+        value={value}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.value)}
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </div>
   );
 }
 
@@ -200,3 +296,15 @@ export const statusTone = (value?: string | boolean | null): Tone => {
   if (["HIGH", "CRITICAL", "FAILED", "FAIL", "LOCKED", "REVOKED", "DELETED", "잠금", "폐기", "탈퇴"].includes(text)) return "danger";
   return "default";
 };
+
+export const displayValue = (value?: string | number | null) =>
+  value === null || value === undefined || value === "" ? "-" : String(value);
+
+export const containsText = (value: string | number | boolean | null | undefined, keyword: string) =>
+  String(value ?? "").toLowerCase().includes(keyword.trim().toLowerCase());
+
+export const compareText = (left?: string | null, right?: string | null) =>
+  String(left ?? "").localeCompare(String(right ?? ""));
+
+export const enabledStatusLabel = (enabled: boolean, activeLabel = "사용", inactiveLabel = "비활성") =>
+  enabled ? activeLabel : inactiveLabel;

@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router";
 import useAuth from "@/auth/store";
-import { Card, CardContent } from "@/components/ui/card";
 import { formatSecurityDateTime } from "@/lib/dateTime";
 import AdminFilters from "@/pages/admin/AdminFilters";
 import AdminPageShell from "@/pages/admin/AdminPageShell";
@@ -10,6 +9,7 @@ import {
   AdminEmptyRow,
   AdminPagination,
   AdminSortableHeader,
+  AdminTableCard,
   type PageState,
   type SortState,
   adminCellClassName,
@@ -91,8 +91,7 @@ export default function AdminLoginHistoryPage() {
         onReset={() => void resetFilters()}
       />
 
-      <Card className="rounded-lg">
-        <CardContent className="overflow-x-auto p-0">
+      <AdminTableCard>
           <table className={adminTableClassName}>
             <thead className={adminTheadClassName}>
               <tr>
@@ -131,8 +130,7 @@ export default function AdminLoginHistoryPage() {
             </tbody>
           </table>
           <AdminPagination pageState={pageState} onPageChange={(page) => void load(page)} />
-        </CardContent>
-      </Card>
+      </AdminTableCard>
     </AdminPageShell>
   );
 }

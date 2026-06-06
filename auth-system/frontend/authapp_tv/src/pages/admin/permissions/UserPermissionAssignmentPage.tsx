@@ -2,25 +2,27 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate } from "react-router";
 import useAuth from "@/auth/store";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import type { AdminRole, AdminUser } from "@/models/AdminModels";
 import AdminFilters from "@/pages/admin/AdminFilters";
 import AdminPageShell from "@/pages/admin/AdminPageShell";
 import {
   AdminBadge,
+  AdminBulkActionBar,
   AdminConfirmDialog,
   AdminCrudModal,
   AdminEmptyRow,
+  AdminFormField,
   AdminPagination,
+  AdminSelectField,
   AdminSortableHeader,
+  AdminTableCard,
   type PageState,
   type SortState,
   adminCellClassName,
   adminRowClassName,
   adminTableClassName,
   adminTheadClassName,
+  displayValue as display,
   statusTone,
 } from "@/pages/admin/adminUi";
 import {
@@ -36,7 +38,6 @@ const blankAssignment = {
   sensitiveReason: "",
 };
 
-const display = (value?: string | number | null) => (value === null || value === undefined || value === "" ? "-" : String(value));
 const accountStatusLabel = (status?: string | null) => {
   switch (status) {
     case "LOCKED":
@@ -61,7 +62,8 @@ export default function UserPermissionAssignmentPage() {
   const [sortState, setSortState] = useState<SortState>({ sort: "username", direction: "ASC" });
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [assignmentForm, setAssignmentForm] = useState(blankAssignment);
-  const [revokeTarget, setRevokeTarget] = useState<{ username: string; role: AdminRole } | null>(null);
+  const [selectedRevokes, setSelectedRevokes] = useState<Array<{ username: string; roleId: number; roleName: string }>>([]);
+  const [bulkRevokeOpen, setBulkRevokeOpen] = useState(false);
 
   const roleOptions = useMemo(
     () => [{ label: "역할 선택", value: "" }, ...roles.filter((role) => role.enabled).map((role) => ({ label: `${role.name} ${role.displayName ? `(${role.displayName})` : ""}`, value: role.name }))],
@@ -84,6 +86,7 @@ export default function UserPermissionAssignmentPage() {
     ]);
     setRoles(roleList);
     setUsers(page.content);
+    setSelectedRevokes([]);
     setPageState((current) => ({
       ...current,
       page: page.page,
@@ -110,6 +113,7 @@ export default function UserPermissionAssignmentPage() {
     setFilters({ keyword: "", status: "", role: "" });
     const page = await getAdminUsers({ page: 0, size: pageState.size, sort: sortState.sort, direction: sortState.direction });
     setUsers(page.content);
+    setSelectedRevokes([]);
     setPageState((current) => ({ ...current, page: page.page, size: page.size, totalPages: page.totalPages, totalElements: page.totalElements }));
   };
 
@@ -128,6 +132,46 @@ export default function UserPermissionAssignmentPage() {
     setSelectedUser(null);
     setAssignmentForm(blankAssignment);
     await load(pageState.page);
+  };
+
+  const revokeKey = (username: string, roleId: number) => `${username}:${roleId}`;
+  const isRevokeSelected = (username: string, roleId: number) =>
+    selectedRevokes.some((item) => item.username === username && item.roleId === roleId);
+
+  const runBulkRevoke = async () => {
+    if (selectedRevokes.length === 0) return;
+    await Promise.all(selectedRevokes.map((target) => removeAdminUserRole(target.username, target.roleId, "사용자 역할 선택 회수")));
+    setSelectedRevokes([]);
+    setBulkRevokeOpen(false);
+    await load(pageState.page);
+  };
+
+  const getUserRevokes = (target: AdminUser) =>
+    (target.roles?.length ? target.roles : ["ROLE_USER"])
+      .map((roleName) => roles.find((candidate) => candidate.name === roleName))
+      .filter((role): role is AdminRole => Boolean(role))
+      .map((role) => ({ username: target.username, roleId: role.id, roleName: role.name }));
+  const selectableUsers = users.filter((item) => getUserRevokes(item).length > 0);
+  const selectedUsernames = new Set(selectedRevokes.map((item) => item.username));
+  const allPageSelected =
+    selectableUsers.length > 0 && selectableUsers.every((item) => getUserRevokes(item).every((target) => isRevokeSelected(target.username, target.roleId)));
+
+  const toggleUserRevokes = (target: AdminUser, checked: boolean) => {
+    const targets = getUserRevokes(target);
+    setSelectedRevokes((current) => {
+      const targetKeys = new Set(targets.map((item) => revokeKey(item.username, item.roleId)));
+      const next = current.filter((item) => !targetKeys.has(revokeKey(item.username, item.roleId)));
+      return checked ? [...next, ...targets] : next;
+    });
+  };
+
+  const togglePageRevokes = (checked: boolean) => {
+    const targets = selectableUsers.flatMap((item) => getUserRevokes(item));
+    setSelectedRevokes((current) => {
+      const targetKeys = new Set(targets.map((item) => revokeKey(item.username, item.roleId)));
+      const next = current.filter((item) => !targetKeys.has(revokeKey(item.username, item.roleId)));
+      return checked ? [...next, ...targets] : next;
+    });
   };
 
   if (!isAdmin) return <Navigate to="/dashboard" replace />;
@@ -159,11 +203,24 @@ export default function UserPermissionAssignmentPage() {
         onReset={() => void resetFilters()}
       />
 
-      <Card className="rounded-lg">
-        <CardContent className="overflow-x-auto p-0">
+      <AdminBulkActionBar selectedLabel={`선택 사용자 ${selectedUsernames.size}명 / 회수 역할 ${selectedRevokes.length}건`}>
+        <Button type="button" variant="destructive" disabled={selectedRevokes.length === 0} onClick={() => setBulkRevokeOpen(true)}>
+          선택 회수
+        </Button>
+      </AdminBulkActionBar>
+
+      <AdminTableCard>
           <table className={adminTableClassName}>
             <thead className={adminTheadClassName}>
               <tr>
+                <th className={adminCellClassName}>
+                  <input
+                    type="checkbox"
+                    aria-label="현재 페이지 사용자 역할 전체 선택"
+                    checked={allPageSelected}
+                    onChange={(event) => togglePageRevokes(event.target.checked)}
+                  />
+                </th>
                 <th className={adminCellClassName}>
                   <AdminSortableHeader label="사용자 ID" column="username" sortState={sortState} onSort={handleSort} />
                 </th>
@@ -176,9 +233,18 @@ export default function UserPermissionAssignmentPage() {
               </tr>
             </thead>
             <tbody>
-              {users.length === 0 ? <AdminEmptyRow colSpan={7} /> : null}
+              {users.length === 0 ? <AdminEmptyRow colSpan={8} /> : null}
               {users.map((item) => (
                 <tr key={item.username} className={adminRowClassName}>
+                  <td className={adminCellClassName}>
+                    <input
+                      type="checkbox"
+                      aria-label={`${item.username} 사용자 역할 선택`}
+                      disabled={getUserRevokes(item).length === 0}
+                      checked={getUserRevokes(item).length > 0 && getUserRevokes(item).every((target) => isRevokeSelected(target.username, target.roleId))}
+                      onChange={(event) => toggleUserRevokes(item, event.target.checked)}
+                    />
+                  </td>
                   <td className={adminCellClassName}>
                     <Link className="font-medium text-primary hover:underline" to={`/admin/account/users/${item.username}`}>
                       {item.username}
@@ -197,11 +263,6 @@ export default function UserPermissionAssignmentPage() {
                         return (
                           <span key={roleName} className="inline-flex items-center gap-1">
                             <AdminBadge tone={role?.sensitive ? "warning" : "default"}>{roleName}</AdminBadge>
-                            {role ? (
-                              <Button size="xs" variant="ghost" onClick={() => setRevokeTarget({ username: item.username, role })}>
-                                회수
-                              </Button>
-                            ) : null}
                           </span>
                         );
                       })}
@@ -215,8 +276,7 @@ export default function UserPermissionAssignmentPage() {
             </tbody>
           </table>
           <AdminPagination pageState={pageState} onPageChange={(page) => void load(page)} />
-        </CardContent>
-      </Card>
+      </AdminTableCard>
 
       <AdminCrudModal
         open={selectedUser !== null}
@@ -232,15 +292,15 @@ export default function UserPermissionAssignmentPage() {
           </>
         }
       >
-        <SelectField
+        <AdminSelectField
           label="역할"
           value={assignmentForm.roleName}
           options={roleOptions}
           onChange={(value) => setAssignmentForm((current) => ({ ...current, roleName: value }))}
         />
-        <Field label="부여 사유" value={assignmentForm.reason} onChange={(value) => setAssignmentForm((current) => ({ ...current, reason: value }))} />
+        <AdminFormField label="부여 사유" value={assignmentForm.reason} onChange={(value) => setAssignmentForm((current) => ({ ...current, reason: value }))} />
         {selectedRole?.sensitive ? (
-          <Field
+          <AdminFormField
             label="민감 권한 부여 사유"
             value={assignmentForm.sensitiveReason}
             onChange={(value) => setAssignmentForm((current) => ({ ...current, sensitiveReason: value }))}
@@ -249,57 +309,16 @@ export default function UserPermissionAssignmentPage() {
       </AdminCrudModal>
 
       <AdminConfirmDialog
-        open={revokeTarget !== null}
-        title="사용자 역할 회수"
-        description={`${revokeTarget?.username ?? ""} 사용자에게서 ${revokeTarget?.role.name ?? ""} 역할을 회수합니다.`}
+        open={bulkRevokeOpen}
+        title="사용자 역할 선택 회수"
+        description={`${selectedRevokes.length}건의 사용자 역할을 회수합니다.`}
         confirmLabel="회수"
         destructive
-        onOpenChange={(open) => {
-          if (!open) setRevokeTarget(null);
-        }}
+        onOpenChange={setBulkRevokeOpen}
         onConfirm={() => {
-          if (!revokeTarget) return;
-          void removeAdminUserRole(revokeTarget.username, revokeTarget.role.id, "사용자 역할 회수").then(() => load(pageState.page));
+          void runBulkRevoke().catch(() => undefined);
         }}
       />
     </AdminPageShell>
-  );
-}
-
-function Field({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
-  return (
-    <div className="space-y-1.5">
-      <Label className="text-xs text-muted-foreground">{label}</Label>
-      <Input value={value} onChange={(event) => onChange(event.target.value)} />
-    </div>
-  );
-}
-
-function SelectField({
-  label,
-  value,
-  options,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  options: Array<{ label: string; value: string }>;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <Label className="text-xs text-muted-foreground">{label}</Label>
-      <select
-        className="h-9 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-      >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </div>
   );
 }

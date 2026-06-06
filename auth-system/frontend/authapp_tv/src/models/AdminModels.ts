@@ -16,11 +16,12 @@ export type AdminUser = {
   email?: string;
   nickname?: string;
   employeeNo?: string;
-  departmentId?: number;
+  departmentCode?: string;
   department?: string;
   position?: string;
   employmentType?: string;
-  expiresAt?: string;
+  joinedAt?: string;
+  leftAt?: string;
   status?: string;
   userType?: string;
   authMethod?: string;
@@ -35,29 +36,24 @@ export type AdminUser = {
 };
 
 export type AdminUserCreateRequest = {
+  employeeNo: string;
   username: string;
   password: string;
-  email: string;
-  name: string;
-  employeeNo?: string;
-  departmentId?: number | null;
-  position?: string;
-  employmentType?: string;
-  status?: string;
-  expiresAt?: string;
   roleName?: string;
   reason?: string;
+};
+
+export type AdminDuplicateCheckResponse = {
+  field: string;
+  value: string;
+  exists: boolean;
 };
 
 export type AdminUserUpdateRequest = {
   email?: string;
   name?: string;
-  employeeNo?: string;
-  departmentId?: number | null;
-  position?: string;
-  employmentType?: string;
-  status?: string;
-  expiresAt?: string;
+  locked?: boolean;
+  enabled?: boolean;
   reason?: string;
 };
 
@@ -86,7 +82,6 @@ export type AdminFilterOptions = {
   incidentSeverities: AdminFilterOption[];
   sessionStatuses: AdminFilterOption[];
   riskLevels: AdminFilterOption[];
-  employmentTypes?: AdminFilterOption[];
 };
 
 export type AdminAuditLog = {
@@ -176,49 +171,37 @@ export type AdminSettings = {
   forceLogoutOnCriticalRisk: boolean;
 };
 
-export type AdminDepartment = {
+export type HrUserMaster = {
   id: number;
+  employeeNo: string;
   name: string;
-  code: string;
-  parentId?: number | null;
-  parentName?: string | null;
-  managerUsername?: string | null;
-  enabled: boolean;
-  displayOrder: number;
-  userCount: number;
+  email: string;
+  phone?: string | null;
+  departmentCode?: string | null;
+  departmentName?: string | null;
+  position?: string | null;
+  employmentType: string;
+  hrStatus: string;
+  accountStatus: string;
+  accountUsername?: string | null;
+  joinedAt?: string | null;
+  leftAt?: string | null;
   createdAt?: string;
   updatedAt?: string;
 };
 
-export type AdminDepartmentRequest = {
+export type HrUserMasterRequest = {
+  employeeNo: string;
   name: string;
-  code: string;
-  parentId?: number | null;
-  managerUsername?: string | null;
-  enabled?: boolean;
-  displayOrder?: number;
-  reason?: string;
-};
-
-export type AdminDepartmentUserRequest = {
-  username?: string;
-  employeeNo?: string;
-  position?: string;
-  employmentType?: string;
-  status?: string;
-  expiresAt?: string;
-  reason?: string;
-};
-
-export type AdminDepartmentUser = {
-  username: string;
-  name?: string;
   email?: string;
-  employeeNo?: string;
+  phone?: string;
+  departmentCode?: string;
+  departmentName?: string;
   position?: string;
-  status?: string;
   employmentType?: string;
-  expiresAt?: string;
+  hrStatus?: string;
+  joinedAt?: string;
+  leftAt?: string;
 };
 
 export type AdminGroup = {

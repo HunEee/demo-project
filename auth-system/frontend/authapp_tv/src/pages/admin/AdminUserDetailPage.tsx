@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatSecurityDateTime } from "@/lib/dateTime";
 import type { AdminUserDetail } from "@/models/AdminModels";
 import AdminPageShell from "@/pages/admin/AdminPageShell";
-import { AdminBadge, statusTone } from "@/pages/admin/adminUi";
+import { AdminBadge, AdminInfoItem, displayValue as display, statusTone } from "@/pages/admin/adminUi";
 import {
   getAdminUserDetail,
   resetAdminUserMfa,
@@ -26,8 +26,6 @@ const tabs: Array<{ id: DetailTab; label: string }> = [
   { id: "audit", label: "감사 로그" },
   { id: "risk", label: "위험 정보" },
 ];
-
-const display = (value?: string | null) => value || "-";
 
 export default function AdminUserDetailPage() {
   const { username = "" } = useParams();
@@ -118,13 +116,13 @@ export default function AdminUserDetailPage() {
                 <CardTitle>기본 정보</CardTitle>
               </CardHeader>
               <CardContent className="grid gap-4 text-sm md:grid-cols-2 lg:grid-cols-3">
-                <Info label="이름" value={detail.user.name ?? detail.user.nickname} />
-                <Info label="이메일" value={detail.user.email} />
-                <Info label="사번" value={detail.user.employeeNo} />
-                <Info label="부서" value={detail.user.department} />
-                <Info label="직급" value={detail.user.position} />
-                <Info label="고용형태" value={detail.user.employmentType} />
-                <Info label="마지막 로그인" value={detail.user.lastLoginAt ? formatSecurityDateTime(detail.user.lastLoginAt) : undefined} />
+                <AdminInfoItem label="이름" value={display(detail.user.name ?? detail.user.nickname)} />
+                <AdminInfoItem label="이메일" value={display(detail.user.email)} />
+                <AdminInfoItem label="사번" value={display(detail.user.employeeNo)} />
+                <AdminInfoItem label="부서" value={display(detail.user.department)} />
+                <AdminInfoItem label="직급" value={display(detail.user.position)} />
+                <AdminInfoItem label="고용형태" value={display(detail.user.employmentType)} />
+                <AdminInfoItem label="마지막 로그인" value={detail.user.lastLoginAt ? formatSecurityDateTime(detail.user.lastLoginAt) : "-"} />
               </CardContent>
             </Card>
           ) : null}
@@ -208,14 +206,6 @@ export default function AdminUserDetailPage() {
   );
 }
 
-function Info({ label, value }: { label: string; value?: string | null }) {
-  return (
-    <div>
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="mt-1 font-medium">{display(value)}</p>
-    </div>
-  );
-}
 
 function ListCard({ title, children }: { title: string; children: ReactNode }) {
   return (

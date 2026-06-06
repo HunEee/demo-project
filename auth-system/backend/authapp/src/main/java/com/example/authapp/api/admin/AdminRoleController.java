@@ -33,7 +33,7 @@ public class AdminRoleController {
     }
 
     @GetMapping("/{id}")
-    public AdminRoleDetailResponse detail(@PathVariable Long id) {
+    public AdminRoleDetailResponse detail(@PathVariable(name = "id") Long id) {
         return adminRoleService.detail(id);
     }
 
@@ -43,24 +43,29 @@ public class AdminRoleController {
     }
 
     @PatchMapping("/{id}")
-    public AdminRoleResponse update(@PathVariable Long id, @RequestBody AdminRoleRequest request) {
+    public AdminRoleResponse update(@PathVariable(name = "id") Long id, @RequestBody AdminRoleRequest request) {
         return adminRoleService.update(id, request);
     }
 
     @PostMapping("/{id}/disable")
-    public void disable(@PathVariable Long id) {
+    public void disable(@PathVariable(name = "id") Long id) {
         adminRoleService.disable(id);
     }
 
+    @DeleteMapping("/{id}")
+    public void delete(@PathVariable(name = "id") Long id) {
+        adminRoleService.delete(id);
+    }
+
     @PostMapping("/{id}/permissions")
-    public AdminRoleDetailResponse assignPermission(@PathVariable Long id, @RequestBody AdminRolePermissionRequest request) {
+    public AdminRoleDetailResponse assignPermission(@PathVariable(name = "id") Long id, @RequestBody AdminRolePermissionRequest request) {
         return adminRoleService.assignPermission(id, request);
     }
 
     @DeleteMapping("/{id}/permissions/{permissionId}")
     public AdminRoleDetailResponse removePermission(
-            @PathVariable Long id,
-            @PathVariable Long permissionId,
+            @PathVariable(name = "id") Long id,
+            @PathVariable(name = "permissionId") Long permissionId,
             @RequestParam(name = "reason", required = false) String reason
     ) {
         return adminRoleService.removePermission(id, permissionId);

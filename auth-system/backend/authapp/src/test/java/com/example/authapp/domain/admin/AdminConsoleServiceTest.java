@@ -4,32 +4,31 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.example.authapp.domain.audit.repository.AuthEventLogRepository;
 import com.example.authapp.domain.audit.repository.LoginHistoryRepository;
 import com.example.authapp.domain.audit.repository.SecurityIncidentRepository;
+import com.example.authapp.domain.authorization.entity.RoleEntity;
+import com.example.authapp.domain.authorization.repository.RoleRepository;
+import com.example.authapp.domain.hr.entity.EmploymentType;
+import com.example.authapp.domain.hr.entity.HrUserMasterEntity;
+import com.example.authapp.domain.hr.entity.HrUserStatus;
+import com.example.authapp.domain.hr.repository.HrUserMasterRepository;
 import com.example.authapp.domain.jwt.repository.RefreshTokenRepository;
 import com.example.authapp.domain.mfa.repository.MfaMethodRepository;
-import com.example.authapp.domain.organization.entity.DepartmentEntity;
-import com.example.authapp.domain.organization.repository.DepartmentRepository;
 import com.example.authapp.domain.organization.repository.GroupUserRepository;
-import com.example.authapp.domain.profile.entity.EmploymentType;
-import com.example.authapp.domain.profile.entity.UserProfileEntity;
-import com.example.authapp.domain.profile.entity.UserProfileStatus;
-import com.example.authapp.domain.profile.repository.UserProfileRepository;
 import com.example.authapp.domain.risk.repository.RiskRepository;
 import com.example.authapp.domain.user.entity.UserEntity;
 import com.example.authapp.domain.user.entity.UserRoleType;
-import com.example.authapp.domain.authorization.repository.RoleRepository;
 import com.example.authapp.domain.user.repository.UserRepository;
-import org.springframework.security.crypto.password.PasswordEncoder;
 
 @ExtendWith(MockitoExtension.class)
 class AdminConsoleServiceTest {
@@ -53,10 +52,7 @@ class AdminConsoleServiceTest {
     private RiskRepository riskRepository;
 
     @Mock
-    private RoleRepository roleRepository;
-
-    @Mock
-    private UserProfileRepository userProfileRepository;
+    private HrUserMasterRepository hrUserMasterRepository;
 
     @Mock
     private MfaMethodRepository mfaMethodRepository;
@@ -65,7 +61,7 @@ class AdminConsoleServiceTest {
     private GroupUserRepository groupUserRepository;
 
     @Mock
-    private DepartmentRepository departmentRepository;
+    private RoleRepository roleRepository;
 
     @Mock
     private com.example.authapp.domain.audit.repository.AdminActionLogRepository adminActionLogRepository;
@@ -73,25 +69,26 @@ class AdminConsoleServiceTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
-    @Test
-    void filterOptionsBuildsRoleOptionsFromEnumWithoutQueryingRolesTable() {
-        AdminConsoleService service = new AdminConsoleService(
+    private AdminConsoleService service() {
+        return new AdminConsoleService(
                 userRepository,
                 loginHistoryRepository,
                 authEventLogRepository,
                 securityIncidentRepository,
                 refreshTokenRepository,
                 riskRepository,
-                userProfileRepository,
+                hrUserMasterRepository,
                 mfaMethodRepository,
                 groupUserRepository,
                 roleRepository,
-                departmentRepository,
                 adminActionLogRepository,
                 passwordEncoder
         );
+    }
 
-        var options = service.filterOptions();
+    @Test
+    void filterOptionsBuildsRoleOptionsFromEnumWithoutQueryingRolesTable() {
+        var options = service().filterOptions();
 
         assertThat(options.roles())
                 .extracting("value")
@@ -100,22 +97,8 @@ class AdminConsoleServiceTest {
     }
 
     @Test
-    void usersCanBeFilteredByProfileAndMfaFieldsForExternalUserManagement() {
-        AdminConsoleService service = new AdminConsoleService(
-                userRepository,
-                loginHistoryRepository,
-                authEventLogRepository,
-                securityIncidentRepository,
-                refreshTokenRepository,
-                riskRepository,
-                userProfileRepository,
-                mfaMethodRepository,
-                groupUserRepository,
-                roleRepository,
-                departmentRepository,
-                adminActionLogRepository,
-                passwordEncoder
-        );
+    void usersCanBeFilteredByHrMasterAndDirectSignupFields() {
+        AdminConsoleService service = service();
         UserEntity partner = UserEntity.builder()
                 .id(1L)
                 .username("partner1")
@@ -125,24 +108,20 @@ class AdminConsoleServiceTest {
                 .locked(false)
                 .social(false)
                 .build();
-        DepartmentEntity department = DepartmentEntity.builder()
-                .id(7L)
-                .name("Partners")
-                .code("PARTNER")
-                .enabled(true)
-                .build();
-        UserProfileEntity profile = UserProfileEntity.builder()
-                .username("partner1")
+        HrUserMasterEntity hrUser = HrUserMasterEntity.builder()
                 .employeeNo("EXT-100")
-                .department(department)
+                .name("Partner One")
+                .email("partner@example.com")
+                .departmentCode("PARTNER")
+                .departmentName("Partners")
                 .position("Consultant")
                 .employmentType(EmploymentType.EXTERNAL)
-                .status(UserProfileStatus.ACTIVE)
-                .expiresAt(LocalDateTime.of(2026, 7, 1, 0, 0))
+                .hrStatus(HrUserStatus.ACTIVE)
+                .accountUsername("partner1")
                 .build();
 
         when(userRepository.findAll()).thenReturn(List.of(partner));
-        when(userProfileRepository.findByUsername("partner1")).thenReturn(java.util.Optional.of(profile));
+        when(hrUserMasterRepository.findByAccountUsername("partner1")).thenReturn(Optional.of(hrUser));
         when(mfaMethodRepository.existsByUsernameAndEnabledTrue("partner1")).thenReturn(true);
 
         var matching = service.users(
@@ -153,12 +132,12 @@ class AdminConsoleServiceTest {
                 "",
                 "username",
                 "ASC",
+                "PARTNER",
                 null,
-                "EXTERNAL",
-                "2026-07-02",
+                null,
                 true
         );
-        var hiddenFromEmployeeFilter = service.users(
+        var hiddenFromDirectSignupFilter = service.users(
                 0,
                 10,
                 "",
@@ -167,12 +146,59 @@ class AdminConsoleServiceTest {
                 "username",
                 "ASC",
                 null,
-                "EMPLOYEE",
+                true,
                 null,
                 null
         );
 
         assertThat(matching.getContent()).extracting("username").containsExactly("partner1");
-        assertThat(hiddenFromEmployeeFilter.getContent()).isEmpty();
+        assertThat(hiddenFromDirectSignupFilter.getContent()).isEmpty();
+    }
+
+    @Test
+    void createsAccountFromHrUserMasterAndMarksCandidateCreated() {
+        AdminConsoleService service = service();
+        HrUserMasterEntity hrUser = HrUserMasterEntity.builder()
+                .employeeNo("E1001")
+                .name("Lee User")
+                .email("lee@example.com")
+                .departmentCode("AUTH")
+                .departmentName("Authentication Team")
+                .position("Engineer")
+                .employmentType(EmploymentType.EMPLOYEE)
+                .hrStatus(HrUserStatus.ACTIVE)
+                .build();
+        RoleEntity role = RoleEntity.builder()
+                .name("ROLE_USER")
+                .enabled(true)
+                .build();
+
+        when(hrUserMasterRepository.findByEmployeeNo("E1001")).thenReturn(Optional.of(hrUser));
+        when(userRepository.existsByUsername("lee.user")).thenReturn(false);
+        when(userRepository.existsByEmail("lee@example.com")).thenReturn(false);
+        when(roleRepository.findByName("ROLE_USER")).thenReturn(Optional.of(role));
+        when(passwordEncoder.encode("secret")).thenReturn("encoded-secret");
+        when(userRepository.save(org.mockito.ArgumentMatchers.any(UserEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var response = service.createUser(new com.example.authapp.domain.admin.dto.AdminUserCreateRequest(
+                "E1001",
+                "lee.user",
+                "secret",
+                "ROLE_USER",
+                "HR onboarding"
+        ));
+
+        assertThat(response.username()).isEqualTo("lee.user");
+        assertThat(response.name()).isEqualTo("Lee User");
+        assertThat(response.employeeNo()).isEqualTo("E1001");
+        assertThat(response.department()).isEqualTo("Authentication Team");
+        assertThat(hrUser.getAccountUsername()).isEqualTo("lee.user");
+    }
+
+    @Test
+    void checksUsernameDuplicateForAccountCreationForm() {
+        when(userRepository.existsByUsername("lee.user")).thenReturn(true);
+
+        assertThat(service().usernameExists("lee.user")).isTrue();
     }
 }

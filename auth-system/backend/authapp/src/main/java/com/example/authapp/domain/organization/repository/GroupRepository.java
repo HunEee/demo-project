@@ -9,5 +9,7 @@ public interface GroupRepository extends JpaRepository<GroupEntity, Long> {
     boolean existsByName(String name);
 
     java.util.Optional<GroupEntity> findByName(String name);
+
+    boolean existsByRoles_Id(Long roleId);
 	
 }

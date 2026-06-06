@@ -1,4 +1,4 @@
-package com.example.authapp.domain.profile.entity;
+package com.example.authapp.domain.hr.entity;
 
 public enum EmploymentType {
     EMPLOYEE("정규직"),
@@ -15,5 +15,4 @@ public enum EmploymentType {
     public String getLabel() {
         return label;
     }
-    
 }

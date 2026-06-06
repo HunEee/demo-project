@@ -5,7 +5,6 @@ import { NavLink, useLocation, useNavigate } from "react-router";
 import type { NavLinkProps } from "react-router";
 import {
   Bell,
-  Building2,
   ChevronDown,
   ChevronRight,
   CircleAlert,
@@ -63,8 +62,7 @@ const adminGroups: MenuGroup[] = [
     icon: Users,
     items: [
       { label: "사용자 관리", path: "/admin/account/users", icon: Users },
-      { label: "조직 / 부서 관리", path: "/admin/account/organization", icon: Building2 },
-      { label: "그룹 관리", path: "/admin/account/groups", icon: Users },
+      { label: "HR 기준정보 관리", path: "/admin/account/hr-users", icon: UserPlus },
       { label: "외부 사용자 관리", path: "/admin/account/external-users", icon: UserPlus },
     ],
   },

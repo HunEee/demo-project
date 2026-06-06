@@ -2,26 +2,31 @@ import { useEffect, useMemo, useState } from "react";
 import { Navigate } from "react-router";
 import useAuth from "@/auth/store";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { formatSecurityDateTime } from "@/lib/dateTime";
 import type { AdminApiPermissionRule, AdminApiPermissionRuleRequest, AdminPermission } from "@/models/AdminModels";
 import AdminFilters from "@/pages/admin/AdminFilters";
 import AdminPageShell from "@/pages/admin/AdminPageShell";
 import {
   AdminBadge,
+  AdminBulkActionBar,
   AdminConfirmDialog,
   AdminCrudModal,
   AdminEmptyRow,
+  AdminFormField,
   AdminPagination,
+  AdminSelectField,
   AdminSortableHeader,
+  AdminTableCard,
   type PageState,
   type SortState,
   adminCellClassName,
   adminRowClassName,
   adminTableClassName,
   adminTheadClassName,
+  compareText,
+  containsText as contains,
+  displayValue as display,
+  enabledStatusLabel as statusLabel,
   statusTone,
 } from "@/pages/admin/adminUi";
 import {
@@ -47,12 +52,6 @@ const methodOptions = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD
   value: method,
 }));
 
-const statusLabel = (enabled: boolean) => (enabled ? "사용" : "비활성");
-const contains = (value: string | number | boolean | null | undefined, keyword: string) =>
-  String(value ?? "").toLowerCase().includes(keyword.trim().toLowerCase());
-const compareText = (left?: string | null, right?: string | null) => String(left ?? "").localeCompare(String(right ?? ""));
-const display = (value?: string | number | null) => (value === null || value === undefined || value === "" ? "-" : String(value));
-
 export default function AdminPermissionManagementPage() {
   const user = useAuth((state) => state.user);
   const isAdmin = user?.roles?.includes("ROLE_ADMIN");
@@ -64,12 +63,14 @@ export default function AdminPermissionManagementPage() {
   const [modalMode, setModalMode] = useState<"create" | "edit" | null>(null);
   const [editRule, setEditRule] = useState<AdminApiPermissionRule | null>(null);
   const [ruleForm, setRuleForm] = useState(blankRuleForm);
-  const [deleteTarget, setDeleteTarget] = useState<AdminApiPermissionRule | null>(null);
+  const [selectedRuleIds, setSelectedRuleIds] = useState<number[]>([]);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
   const load = async () => {
     const [nextRules, nextPermissions] = await Promise.all([getAdminApiPermissionRules(), getAdminPermissions()]);
     setRules(nextRules);
     setPermissions(nextPermissions);
+    setSelectedRuleIds([]);
     setEditRule((current) => (current ? nextRules.find((rule) => rule.id === current.id) ?? current : current));
   };
 
@@ -129,6 +130,8 @@ export default function AdminPermissionManagementPage() {
     totalPages: Math.max(Math.ceil(filteredRules.length / pageState.size), 1),
   };
   const pagedRules = filteredRules.slice(pageState.page * pageState.size, pageState.page * pageState.size + pageState.size);
+  const selectedRules = rules.filter((rule) => selectedRuleIds.includes(rule.id));
+  const allPageSelected = pagedRules.length > 0 && pagedRules.every((rule) => selectedRuleIds.includes(rule.id));
 
   const handleSort = (column: string) => {
     setSortState((current) => ({
@@ -178,6 +181,21 @@ export default function AdminPermissionManagementPage() {
     await load();
   };
 
+  const toggleRule = (id: number, checked: boolean) => {
+    setSelectedRuleIds((current) => checked ? Array.from(new Set([...current, id])) : current.filter((item) => item !== id));
+  };
+
+  const togglePage = (checked: boolean) => {
+    setSelectedRuleIds(checked ? pagedRules.map((rule) => rule.id) : []);
+  };
+
+  const runBulkDelete = async () => {
+    await Promise.all(selectedRules.map((rule) => deleteAdminApiPermissionRule(rule.id)));
+    setSelectedRuleIds([]);
+    setBulkDeleteOpen(false);
+    await load();
+  };
+
   if (!isAdmin) return <Navigate to="/dashboard" replace />;
 
   return (
@@ -214,11 +232,17 @@ export default function AdminPermissionManagementPage() {
         }}
       />
 
-      <Card className="rounded-lg">
-        <CardContent className="overflow-x-auto p-0">
+      <AdminBulkActionBar selectedLabel={`선택 ${selectedRuleIds.length}건`}>
+        <Button type="button" variant="destructive" disabled={selectedRuleIds.length === 0} onClick={() => setBulkDeleteOpen(true)}>선택 삭제</Button>
+      </AdminBulkActionBar>
+
+      <AdminTableCard>
           <table className={adminTableClassName}>
             <thead className={adminTheadClassName}>
               <tr>
+                <th className={adminCellClassName}>
+                  <input type="checkbox" aria-label="현재 페이지 API 권한 규칙 전체 선택" checked={allPageSelected} onChange={(event) => togglePage(event.target.checked)} />
+                </th>
                 <th className={adminCellClassName}>
                   <AdminSortableHeader label="정렬 순서" column="sortOrder" sortState={sortState} onSort={handleSort} />
                 </th>
@@ -240,9 +264,17 @@ export default function AdminPermissionManagementPage() {
               </tr>
             </thead>
             <tbody>
-              {pagedRules.length === 0 ? <AdminEmptyRow colSpan={8} message="등록된 API 권한 규칙이 없습니다." /> : null}
+              {pagedRules.length === 0 ? <AdminEmptyRow colSpan={9} message="등록된 API 권한 규칙이 없습니다." /> : null}
               {pagedRules.map((rule) => (
                 <tr key={rule.id} className={adminRowClassName}>
+                  <td className={adminCellClassName}>
+                    <input
+                      type="checkbox"
+                      aria-label={`${rule.httpMethod} ${rule.pathPattern} 선택`}
+                      checked={selectedRuleIds.includes(rule.id)}
+                      onChange={(event) => toggleRule(rule.id, event.target.checked)}
+                    />
+                  </td>
                   <td className={adminCellClassName}>{rule.sortOrder}</td>
                   <td className={adminCellClassName}>
                     <AdminBadge tone="info">{rule.httpMethod}</AdminBadge>
@@ -259,7 +291,6 @@ export default function AdminPermissionManagementPage() {
                   <td className={adminCellClassName}>
                     <div className="flex justify-center gap-2">
                       <Button size="sm" variant="outline" onClick={() => openRuleModal("edit", rule)}>수정</Button>
-                      <Button size="sm" variant="destructive" onClick={() => setDeleteTarget(rule)}>삭제</Button>
                     </div>
                   </td>
                 </tr>
@@ -267,8 +298,7 @@ export default function AdminPermissionManagementPage() {
             </tbody>
           </table>
           <AdminPagination pageState={listPageState} onPageChange={(page) => setPageState((current) => ({ ...current, page }))} />
-        </CardContent>
-      </Card>
+      </AdminTableCard>
 
       <AdminCrudModal
         open={modalMode !== null}
@@ -284,101 +314,48 @@ export default function AdminPermissionManagementPage() {
           </>
         }
       >
-        <SelectField
+        <AdminSelectField
           label="HTTP 요청 방식"
           value={ruleForm.httpMethod}
           options={methodOptions}
           onChange={(value) => setRuleForm((current) => ({ ...current, httpMethod: value }))}
         />
-        <Field
+        <AdminFormField
           label="경로 패턴"
           value={ruleForm.pathPattern}
           placeholder="/api/v1/admin/users/{username}"
           onChange={(value) => setRuleForm((current) => ({ ...current, pathPattern: value }))}
         />
-        <SelectField
+        <AdminSelectField
           label="권한 코드"
           value={ruleForm.permissionCode}
           options={permissionOptions}
           onChange={(value) => setRuleForm((current) => ({ ...current, permissionCode: value }))}
         />
-        <Field label="설명" value={ruleForm.description} onChange={(value) => setRuleForm((current) => ({ ...current, description: value }))} />
-        <SelectField
+        <AdminFormField label="설명" value={ruleForm.description} onChange={(value) => setRuleForm((current) => ({ ...current, description: value }))} />
+        <AdminSelectField
           label="상태"
           value={ruleForm.enabled}
           options={[{ label: "사용", value: "true" }, { label: "비활성", value: "false" }]}
           onChange={(value) => setRuleForm((current) => ({ ...current, enabled: value }))}
         />
-        <Field label="정렬 순서" type="number" value={ruleForm.sortOrder} onChange={(value) => setRuleForm((current) => ({ ...current, sortOrder: value }))} />
-        <Field label="사유" value={ruleForm.reason} onChange={(value) => setRuleForm((current) => ({ ...current, reason: value }))} />
+        <AdminFormField label="정렬 순서" type="number" value={ruleForm.sortOrder} onChange={(value) => setRuleForm((current) => ({ ...current, sortOrder: value }))} />
+        <AdminFormField label="사유" value={ruleForm.reason} onChange={(value) => setRuleForm((current) => ({ ...current, reason: value }))} />
       </AdminCrudModal>
 
       <AdminConfirmDialog
-        open={deleteTarget !== null}
+        open={bulkDeleteOpen}
         title="API 권한 규칙 삭제"
-        description={`${deleteTarget?.httpMethod ?? ""} ${deleteTarget?.pathPattern ?? ""} 규칙을 삭제합니다. 다른 규칙이 같은 요청을 처리하지 않으면 RBAC가 해당 요청을 거부할 수 있습니다.`}
+        description={`${selectedRuleIds.length}개 API 권한 규칙을 삭제합니다. 다른 규칙이 같은 요청을 처리하지 않으면 RBAC가 해당 요청을 거부할 수 있습니다.`}
         confirmLabel="삭제"
         destructive
         onOpenChange={(open) => {
-          if (!open) setDeleteTarget(null);
+          setBulkDeleteOpen(open);
         }}
         onConfirm={() => {
-          if (!deleteTarget) return;
-          void deleteAdminApiPermissionRule(deleteTarget.id).then(load);
+          void runBulkDelete().catch(() => undefined);
         }}
       />
     </AdminPageShell>
-  );
-}
-
-function Field({
-  label,
-  value,
-  onChange,
-  disabled = false,
-  placeholder,
-  type = "text",
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  disabled?: boolean;
-  placeholder?: string;
-  type?: string;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <Label className="text-xs text-muted-foreground">{label}</Label>
-      <Input type={type} value={value} disabled={disabled} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} />
-    </div>
-  );
-}
-
-function SelectField({
-  label,
-  value,
-  options,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  options: Array<{ label: string; value: string }>;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <Label className="text-xs text-muted-foreground">{label}</Label>
-      <select
-        className="h-9 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-      >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </div>
   );
 }

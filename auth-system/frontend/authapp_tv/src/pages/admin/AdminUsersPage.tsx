@@ -1,80 +1,101 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate } from "react-router";
+import { Plus, SearchCheck } from "lucide-react";
 import useAuth from "@/auth/store";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatSecurityDateTime } from "@/lib/dateTime";
-import type { AdminFilterOptions, AdminUser } from "@/models/AdminModels";
+import type { AdminFilterOption, AdminFilterOptions, AdminUser, HrUserMaster } from "@/models/AdminModels";
 import AdminFilters from "@/pages/admin/AdminFilters";
 import AdminPageShell from "@/pages/admin/AdminPageShell";
 import {
   AdminBadge,
+  AdminBulkActionBar,
   AdminConfirmDialog,
   AdminCrudModal,
   AdminEmptyRow,
+  AdminFormField,
+  AdminInfoItem,
   AdminPagination,
+  AdminSelectField,
   AdminSortableHeader,
+  AdminTableCard,
   type PageState,
   type SortState,
   adminCellClassName,
   adminRowClassName,
   adminTableClassName,
   adminTheadClassName,
+  displayValue as display,
   statusTone,
 } from "@/pages/admin/adminUi";
 import {
+  checkAdminUsernameExists,
   createAdminUser,
   deleteAdminUser,
   disableAdminUser,
-  enableAdminUser,
   getAdminFilterOptions,
   getAdminUsers,
+  getHrUserAccountCandidates,
   lockAdminUser,
-  unlockAdminUser,
   updateAdminUser,
 } from "@/services/AdminService";
 
-const display = (value?: string | null) => value || "-";
 const blankUserForm = {
+  employeeNo: "",
   username: "",
   password: "",
-  email: "",
-  name: "",
-  employeeNo: "",
-  departmentId: "",
-  position: "",
-  employmentType: "EMPLOYEE",
-  status: "ACTIVE",
-  expiresAt: "",
   roleName: "ROLE_USER",
   reason: "",
+  email: "",
+  name: "",
+  locked: "false",
+  enabled: "true",
 };
+
 const accountStatus = (item: AdminUser) => {
   if (item.deleted) return "DELETED";
   return item.status || "ACTIVE";
 };
 
+const passwordRules = [
+  { label: "8자 이상", test: (value: string) => value.length >= 8 },
+  { label: "영문 포함", test: (value: string) => /[A-Za-z]/.test(value) },
+  { label: "숫자 포함", test: (value: string) => /\d/.test(value) },
+  { label: "특수문자 포함", test: (value: string) => /[^A-Za-z0-9]/.test(value) },
+];
+
 export default function AdminUsersPage() {
   const user = useAuth((state) => state.user);
   const [users, setUsers] = useState<AdminUser[]>([]);
-  const [filters, setFilters] = useState({ keyword: "", status: "", role: "", employmentType: "", mfaEnabled: "" });
+  const [candidates, setCandidates] = useState<HrUserMaster[]>([]);
+  const [filters, setFilters] = useState({ keyword: "", status: "", role: "", mfaEnabled: "" });
   const [filterOptions, setFilterOptions] = useState<AdminFilterOptions | null>(null);
   const [pageState, setPageState] = useState<PageState>({ page: 0, size: 10, totalPages: 1, totalElements: 0 });
   const [sortState, setSortState] = useState<SortState>({ sort: "createdAt", direction: "DESC" });
-  const [drawerMode, setDrawerMode] = useState<"create" | "edit" | null>(null);
+  const [modalMode, setModalMode] = useState<"create" | "edit" | null>(null);
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [userForm, setUserForm] = useState(blankUserForm);
-  const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
+  const [usernameCheck, setUsernameCheck] = useState<"idle" | "checking" | "available" | "duplicate">("idle");
+  const [formError, setFormError] = useState("");
+  const [selectedUsernames, setSelectedUsernames] = useState<string[]>([]);
+  const [bulkAction, setBulkAction] = useState<"lock" | "disable" | "delete" | null>(null);
   const isAdmin = user?.roles?.includes("ROLE_ADMIN");
+
+  const roleOptions: AdminFilterOption[] = useMemo(
+    () => [{ label: "초기역할 선택", value: "" }, ...(filterOptions?.roles ?? [])],
+    [filterOptions],
+  );
+
+  const selectedCandidate = candidates.find((candidate) => candidate.employeeNo === userForm.employeeNo);
+  const passwordValid = passwordRules.every((rule) => rule.test(userForm.password));
 
   const load = async (nextPage = pageState.page, nextSort = sortState) => {
     const page = await getAdminUsers({
       keyword: filters.keyword,
       status: filters.status,
       role: filters.role,
-      employmentType: filters.employmentType,
       mfaEnabled: filters.mfaEnabled,
       page: nextPage,
       size: pageState.size,
@@ -82,7 +103,41 @@ export default function AdminUsersPage() {
       direction: nextSort.direction,
     });
     setUsers(page.content);
+    setSelectedUsernames([]);
     setPageState((prev) => ({ ...prev, page: page.page, size: page.size, totalPages: page.totalPages, totalElements: page.totalElements }));
+  };
+
+  useEffect(() => {
+    if (isAdmin) {
+      void getAdminFilterOptions().then(setFilterOptions).catch(() => undefined);
+    }
+  }, [isAdmin]);
+
+  useEffect(() => {
+    if (isAdmin) void load(0).catch(() => undefined);
+  }, [isAdmin, filters.keyword, filters.status, filters.role, filters.mfaEnabled]);
+
+  const openCreate = async () => {
+    setSelectedUser(null);
+    setUserForm(blankUserForm);
+    setUsernameCheck("idle");
+    setFormError("");
+    setCandidates(await getHrUserAccountCandidates());
+    setModalMode("create");
+  };
+
+  const openEdit = (item: AdminUser) => {
+    setSelectedUser(item);
+                          setUserForm({
+                            ...blankUserForm,
+                            username: item.username,
+                            email: item.email || "",
+                            name: item.name || item.nickname || "",
+                            locked: String(item.locked),
+                            enabled: String(item.enabled),
+                          });
+    setFormError("");
+    setModalMode("edit");
   };
 
   const handleSort = (column: string) => {
@@ -95,37 +150,96 @@ export default function AdminUsersPage() {
   };
 
   const resetFilters = async () => {
-    setFilters({ keyword: "", status: "", role: "", employmentType: "", mfaEnabled: "" });
+    setFilters({ keyword: "", status: "", role: "", mfaEnabled: "" });
     const page = await getAdminUsers({ page: 0, size: pageState.size, sort: sortState.sort, direction: sortState.direction });
     setUsers(page.content);
+    setSelectedUsernames([]);
     setPageState((prev) => ({ ...prev, page: page.page, size: page.size, totalPages: page.totalPages, totalElements: page.totalElements }));
   };
 
-  useEffect(() => {
-    if (isAdmin) {
-      void load().catch(() => undefined);
-      void getAdminFilterOptions().then(setFilterOptions).catch(() => undefined);
+  const checkUsername = async () => {
+    const username = userForm.username.trim();
+    if (!username) {
+      setFormError("사용자 ID를 입력한 뒤 중복확인하세요.");
+      return;
     }
-  }, [isAdmin]);
+    setUsernameCheck("checking");
+    const result = await checkAdminUsernameExists(username);
+    setUsernameCheck(result.exists ? "duplicate" : "available");
+  };
+
+  const validateCreate = () => {
+    if (!userForm.employeeNo) return "HR 직원을 선택하세요.";
+    if (!userForm.username.trim()) return "사용자 ID를 입력하세요.";
+    if (usernameCheck !== "available") return "사용자 ID 중복확인을 완료하세요.";
+    if (!passwordValid) return "초기 비밀번호 규칙을 확인하세요.";
+    if (!userForm.roleName) return "초기역할을 선택하세요.";
+    return "";
+  };
+
+  const save = async () => {
+    if (modalMode === "create") {
+      const message = validateCreate();
+      if (message) {
+        setFormError(message);
+        return;
+      }
+      await createAdminUser({
+        employeeNo: userForm.employeeNo,
+        username: userForm.username.trim(),
+        password: userForm.password,
+        roleName: userForm.roleName,
+        reason: userForm.reason,
+      });
+    } else if (selectedUser) {
+      await updateAdminUser(selectedUser.username, {
+        email: userForm.email,
+        name: userForm.name,
+        locked: userForm.locked === "true",
+        enabled: userForm.enabled === "true",
+        reason: userForm.reason,
+      });
+    }
+    setModalMode(null);
+    await load(0);
+  };
+
+  const selectableUsers = users.filter((item) => item.username !== "admin" && !item.deleted);
+  const selectedUsers = users.filter((item) => selectedUsernames.includes(item.username));
+  const allPageSelected = selectableUsers.length > 0 && selectableUsers.every((item) => selectedUsernames.includes(item.username));
+
+  const toggleUser = (username: string, checked: boolean) => {
+    setSelectedUsernames((current) => checked ? Array.from(new Set([...current, username])) : current.filter((item) => item !== username));
+  };
+
+  const togglePage = (checked: boolean) => {
+    setSelectedUsernames(checked ? selectableUsers.map((item) => item.username) : []);
+  };
+
+  const runBulkAction = async () => {
+    const targets = selectedUsers.filter((item) => item.username !== "admin" && !item.deleted);
+    if (targets.length === 0 || !bulkAction) return;
+    if (bulkAction === "lock") {
+      await Promise.all(targets.map((item) => lockAdminUser(item.username)));
+    }
+    if (bulkAction === "disable") {
+      await Promise.all(targets.map((item) => disableAdminUser(item.username)));
+    }
+    if (bulkAction === "delete") {
+      await Promise.all(targets.map((item) => deleteAdminUser(item.username, "관리자 선택 일괄 삭제")));
+    }
+    setBulkAction(null);
+    setSelectedUsernames([]);
+    await load();
+  };
 
   if (!isAdmin) return <Navigate to="/dashboard" replace />;
 
   return (
     <AdminPageShell
       title="사용자 관리"
-      description="계정 상태, 인증 방식, 조직 정보를 조회하고 관리자 조치를 수행합니다."
-      actions={
-        <Button
-          type="button"
-          onClick={() => {
-            setSelectedUser(null);
-            setUserForm(blankUserForm);
-            setDrawerMode("create");
-          }}
-        >
-          사용자 추가
-        </Button>
-      }
+      description="HR 기준정보에 등록된 직원을 선택해 인증 계정을 생성하고 계정 상태를 운영합니다."
+      actions={<Button type="button" onClick={() => void openCreate().catch(() => undefined)}><Plus className="h-4 w-4" />계정 생성</Button>}
     >
       <AdminFilters
         fields={[
@@ -143,12 +257,6 @@ export default function AdminUsersPage() {
             options: [{ label: "전체", value: "" }, ...(filterOptions?.roles ?? [])],
           },
           {
-            name: "employmentType",
-            label: "고용 형태",
-            type: "select",
-            options: [{ label: "전체", value: "" }, ...(filterOptions?.employmentTypes ?? [])],
-          },
-          {
             name: "mfaEnabled",
             label: "MFA",
             type: "select",
@@ -162,22 +270,25 @@ export default function AdminUsersPage() {
         values={filters}
         onChange={(name, value) => setFilters((prev) => ({ ...prev, [name]: value }))}
         onSubmit={() => void load(0).catch(() => undefined)}
-        onReset={() => void resetFilters()}
+        onReset={() => void resetFilters().catch(() => undefined)}
       />
 
-      <Card className="rounded-lg">
-        <CardContent className="overflow-x-auto p-0">
+      <AdminBulkActionBar selectedLabel={`선택 ${selectedUsernames.length}건`}>
+          <Button type="button" variant="outline" disabled={selectedUsernames.length === 0} onClick={() => setBulkAction("lock")}>선택 잠금</Button>
+          <Button type="button" variant="outline" disabled={selectedUsernames.length === 0} onClick={() => setBulkAction("disable")}>선택 비활성화</Button>
+          <Button type="button" variant="destructive" disabled={selectedUsernames.length === 0} onClick={() => setBulkAction("delete")}>선택 삭제</Button>
+      </AdminBulkActionBar>
+
+      <AdminTableCard>
           <table className={adminTableClassName}>
             <thead className={adminTheadClassName}>
               <tr>
                 <th className={adminCellClassName}>
-                  <AdminSortableHeader label="사용자 ID" column="username" sortState={sortState} onSort={handleSort} />
+                  <input type="checkbox" aria-label="현재 페이지 사용자 전체 선택" checked={allPageSelected} onChange={(event) => togglePage(event.target.checked)} />
                 </th>
+                <th className={adminCellClassName}><AdminSortableHeader label="사용자 ID" column="username" sortState={sortState} onSort={handleSort} /></th>
                 <th className={adminCellClassName}>이름</th>
                 <th className={adminCellClassName}>이메일</th>
-                <th className={adminCellClassName}>사번</th>
-                <th className={adminCellClassName}>부서</th>
-                <th className={adminCellClassName}>직급</th>
                 <th className={adminCellClassName}>상태</th>
                 <th className={adminCellClassName}>유형</th>
                 <th className={adminCellClassName}>인증</th>
@@ -187,9 +298,18 @@ export default function AdminUsersPage() {
               </tr>
             </thead>
             <tbody>
-              {users.length === 0 ? <AdminEmptyRow colSpan={12} /> : null}
+              {users.length === 0 ? <AdminEmptyRow colSpan={10} /> : null}
               {users.map((item) => (
                 <tr key={item.username} className={adminRowClassName}>
+                  <td className={adminCellClassName}>
+                    <input
+                      type="checkbox"
+                      aria-label={`${item.username} 선택`}
+                      disabled={item.username === "admin" || item.deleted}
+                      checked={selectedUsernames.includes(item.username)}
+                      onChange={(event) => toggleUser(item.username, event.target.checked)}
+                    />
+                  </td>
                   <td className={adminCellClassName}>
                     <Link className="font-medium text-primary hover:underline" to={`/admin/account/users/${item.username}`}>
                       {item.username}
@@ -198,159 +318,125 @@ export default function AdminUsersPage() {
                   </td>
                   <td className={adminCellClassName}>{display(item.name ?? item.nickname)}</td>
                   <td className={adminCellClassName}>{display(item.email)}</td>
-                  <td className={adminCellClassName}>{display(item.employeeNo)}</td>
-                  <td className={adminCellClassName}>{display(item.department)}</td>
-                  <td className={adminCellClassName}>{display(item.position)}</td>
-                  <td className={adminCellClassName}>
-                    <AdminBadge tone={statusTone(accountStatus(item))}>{accountStatus(item)}</AdminBadge>
-                  </td>
+                  <td className={adminCellClassName}><AdminBadge tone={statusTone(accountStatus(item))}>{accountStatus(item)}</AdminBadge></td>
                   <td className={adminCellClassName}>{item.userType || (item.social ? "SOCIAL" : "INTERNAL")}</td>
                   <td className={adminCellClassName}>{item.authMethod || "PASSWORD"}</td>
                   <td className={adminCellClassName}>{item.mfaEnabled ? "ON" : "OFF"}</td>
                   <td className={adminCellClassName}>{item.lastLoginAt ? formatSecurityDateTime(item.lastLoginAt) : "-"}</td>
                   <td className={adminCellClassName}>
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setSelectedUser(item);
-                          setUserForm({
-                            username: item.username,
-                            password: "",
-                            email: item.email || "",
-                            name: item.name || item.nickname || "",
-                            employeeNo: item.employeeNo || "",
-                            departmentId: item.departmentId ? String(item.departmentId) : "",
-                            position: item.position || "",
-                            employmentType: item.employmentType || "EMPLOYEE",
-                            status: item.status || "ACTIVE",
-                            expiresAt: item.expiresAt ? item.expiresAt.slice(0, 10) : "",
-                            roleName: item.roles?.[0] || "ROLE_USER",
-                            reason: "",
-                          });
-                          setDrawerMode("edit");
-                        }}
-                      >
-                        수정
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant={item.locked ? "outline" : "destructive"}
-                        disabled={item.username === "admin"}
-                        onClick={async () => {
-                          item.locked ? await unlockAdminUser(item.username) : await lockAdminUser(item.username);
-                          await load();
-                        }}
-                      >
-                        {item.locked ? "잠금 해제" : "잠금"}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant={item.enabled ? "destructive" : "outline"}
-                        disabled={item.username === "admin"}
-                        onClick={async () => {
-                          item.enabled ? await disableAdminUser(item.username) : await enableAdminUser(item.username);
-                          await load();
-                        }}
-                      >
-                        {item.enabled ? "비활성화" : "활성화"}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        disabled={item.username === "admin" || item.deleted}
-                        onClick={() => setDeleteTarget(item)}
-                      >
-                        삭제
-                      </Button>
+                    <div className="flex flex-wrap justify-center gap-2">
+                      <Button size="sm" variant="outline" onClick={() => openEdit(item)}>수정</Button>
                     </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-          <AdminPagination pageState={pageState} onPageChange={(page) => void load(page)} />
-        </CardContent>
-      </Card>
+          <AdminPagination pageState={pageState} onPageChange={(page) => void load(page).catch(() => undefined)} />
+      </AdminTableCard>
 
       <AdminCrudModal
-        open={drawerMode !== null}
-        title={drawerMode === "create" ? "사용자 추가" : "사용자 수정"}
-        description="기본 계정 정보와 조직 프로필을 입력합니다."
+        open={modalMode !== null}
+        title={modalMode === "create" ? "HR 직원 계정 생성" : "사용자 수정"}
+        description={modalMode === "create" ? "HR 기준정보에 등록된 계정 미생성 직원을 선택합니다." : "인증 계정의 표시 이름과 이메일을 수정합니다."}
         onOpenChange={(open) => {
-          if (!open) setDrawerMode(null);
+          if (!open) setModalMode(null);
         }}
         footer={
           <>
-            <Button type="button" variant="outline" onClick={() => setDrawerMode(null)}>
-              취소
-            </Button>
-            <Button
-              type="button"
-              onClick={async () => {
-                const payload = {
-                  email: userForm.email,
-                  name: userForm.name,
-                  employeeNo: userForm.employeeNo,
-                  departmentId: userForm.departmentId ? Number(userForm.departmentId) : null,
-                  position: userForm.position,
-                  employmentType: userForm.employmentType,
-                  status: userForm.status,
-                  expiresAt: userForm.expiresAt,
-                  reason: userForm.reason,
-                };
-                if (drawerMode === "create") {
-                  await createAdminUser({ ...payload, username: userForm.username, password: userForm.password, roleName: userForm.roleName });
-                } else if (selectedUser) {
-                  await updateAdminUser(selectedUser.username, payload);
-                }
-                setDrawerMode(null);
-                await load(0);
-              }}
-            >
-              저장
-            </Button>
+            <Button type="button" variant="outline" onClick={() => setModalMode(null)}>취소</Button>
+            <Button type="button" onClick={() => void save().catch((error) => setFormError(error?.response?.data?.message ?? "저장에 실패했습니다."))}>저장</Button>
           </>
         }
       >
-        {drawerMode === "create" ? <Field label="사용자 ID" value={userForm.username} onChange={(value) => setUserForm((prev) => ({ ...prev, username: value }))} /> : null}
-        {drawerMode === "create" ? <Field label="초기 비밀번호" type="password" value={userForm.password} onChange={(value) => setUserForm((prev) => ({ ...prev, password: value }))} /> : null}
-        <Field label="이름" value={userForm.name} onChange={(value) => setUserForm((prev) => ({ ...prev, name: value }))} />
-        <Field label="이메일" type="email" value={userForm.email} onChange={(value) => setUserForm((prev) => ({ ...prev, email: value }))} />
-        <Field label="사번" value={userForm.employeeNo} onChange={(value) => setUserForm((prev) => ({ ...prev, employeeNo: value }))} />
-        <Field label="부서 ID" type="number" value={userForm.departmentId} onChange={(value) => setUserForm((prev) => ({ ...prev, departmentId: value }))} />
-        <Field label="직급" value={userForm.position} onChange={(value) => setUserForm((prev) => ({ ...prev, position: value }))} />
-        <Field label="고용 형태" value={userForm.employmentType} onChange={(value) => setUserForm((prev) => ({ ...prev, employmentType: value }))} />
-        <Field label="상태" value={userForm.status} onChange={(value) => setUserForm((prev) => ({ ...prev, status: value }))} />
-        <Field label="만료일" type="date" value={userForm.expiresAt} onChange={(value) => setUserForm((prev) => ({ ...prev, expiresAt: value }))} />
-        {drawerMode === "create" ? <Field label="초기 역할" value={userForm.roleName} onChange={(value) => setUserForm((prev) => ({ ...prev, roleName: value }))} /> : null}
-        <Field label="사유" value={userForm.reason} onChange={(value) => setUserForm((prev) => ({ ...prev, reason: value }))} />
+        {formError ? <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{formError}</p> : null}
+        {modalMode === "create" ? (
+          <>
+            <AdminSelectField
+              label="HR 직원"
+              value={userForm.employeeNo}
+              options={[
+                { label: "직원 선택", value: "" },
+                ...candidates.map((candidate) => ({
+                  label: `${candidate.employeeNo} / ${candidate.name} / ${candidate.departmentName || "-"}`,
+                  value: candidate.employeeNo,
+                })),
+              ]}
+              onChange={(value) => setUserForm((prev) => ({ ...prev, employeeNo: value }))}
+            />
+            {selectedCandidate ? (
+              <div className="grid gap-2 rounded-lg border p-3 text-sm sm:grid-cols-2">
+                <AdminInfoItem label="이름" value={selectedCandidate.name} />
+                <AdminInfoItem label="이메일" value={selectedCandidate.email} />
+                <AdminInfoItem label="부서" value={display(selectedCandidate.departmentName)} />
+                <AdminInfoItem label="직책" value={display(selectedCandidate.position)} />
+              </div>
+            ) : null}
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">사용자 ID</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={userForm.username}
+                  onChange={(event) => {
+                    setUserForm((prev) => ({ ...prev, username: event.target.value }));
+                    setUsernameCheck("idle");
+                  }}
+                />
+                <Button type="button" variant="outline" disabled={usernameCheck === "checking"} onClick={() => void checkUsername().catch(() => setFormError("중복확인에 실패했습니다."))}>
+                  <SearchCheck className="h-4 w-4" />확인
+                </Button>
+              </div>
+              <p className={usernameCheck === "duplicate" ? "text-xs text-destructive" : "text-xs text-muted-foreground"}>
+                {usernameCheck === "available" ? "사용 가능" : usernameCheck === "duplicate" ? "이미 사용 중" : usernameCheck === "checking" ? "확인 중" : "중복확인 필요"}
+              </p>
+            </div>
+            <AdminFormField label="초기 비밀번호" type="password" value={userForm.password} onChange={(value) => setUserForm((prev) => ({ ...prev, password: value }))} />
+            <div className="grid gap-1 text-xs text-muted-foreground sm:grid-cols-2">
+              {passwordRules.map((rule) => (
+                <span key={rule.label} className={rule.test(userForm.password) ? "text-emerald-600" : ""}>{rule.test(userForm.password) ? "✓" : "•"} {rule.label}</span>
+              ))}
+            </div>
+            <AdminSelectField
+              label="초기역할"
+              value={userForm.roleName}
+              options={roleOptions}
+              onChange={(value) => setUserForm((prev) => ({ ...prev, roleName: value }))}
+            />
+          </>
+        ) : (
+          <>
+            <AdminFormField label="이름" value={userForm.name} onChange={(value) => setUserForm((prev) => ({ ...prev, name: value }))} />
+            <AdminFormField label="이메일" type="email" value={userForm.email} onChange={(value) => setUserForm((prev) => ({ ...prev, email: value }))} />
+            <AdminSelectField
+              label="잠금 상태"
+              value={userForm.locked}
+              options={[{ label: "정상", value: "false" }, { label: "잠금", value: "true" }]}
+              onChange={(value) => setUserForm((prev) => ({ ...prev, locked: value }))}
+            />
+            <AdminSelectField
+              label="활성 상태"
+              value={userForm.enabled}
+              options={[{ label: "활성", value: "true" }, { label: "비활성", value: "false" }]}
+              onChange={(value) => setUserForm((prev) => ({ ...prev, enabled: value }))}
+            />
+          </>
+        )}
+        <AdminFormField label="사유" value={userForm.reason} onChange={(value) => setUserForm((prev) => ({ ...prev, reason: value }))} />
       </AdminCrudModal>
 
       <AdminConfirmDialog
-        open={deleteTarget !== null}
-        title="사용자 삭제"
-        description={`${deleteTarget?.username ?? ""} 계정을 삭제 처리합니다. 삭제된 계정은 로그인할 수 없습니다.`}
-        confirmLabel="삭제"
+        open={bulkAction !== null}
+        title="선택 사용자 일괄 작업"
+        description={`${selectedUsernames.length}개 계정에 ${bulkAction === "lock" ? "잠금" : bulkAction === "disable" ? "비활성화" : "삭제"} 작업을 실행합니다.`}
+        confirmLabel={bulkAction === "delete" ? "삭제" : "실행"}
         destructive
         onOpenChange={(open) => {
-          if (!open) setDeleteTarget(null);
+          if (!open) setBulkAction(null);
         }}
         onConfirm={() => {
-          if (!deleteTarget) return;
-          void deleteAdminUser(deleteTarget.username, "관리자 사용자 삭제").then(() => load());
+          void runBulkAction().catch(() => undefined);
         }}
       />
     </AdminPageShell>
-  );
-}
-
-function Field({ label, value, onChange, type = "text" }: { label: string; value: string; onChange: (value: string) => void; type?: string }) {
-  return (
-    <div className="space-y-1.5">
-      <Label className="text-xs text-muted-foreground">{label}</Label>
-      <Input type={type} value={value} onChange={(event) => onChange(event.target.value)} />
-    </div>
   );
 }

@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Navigate } from "react-router";
 import useAuth from "@/auth/store";
-import { Card, CardContent } from "@/components/ui/card";
 import { formatSecurityDateTime } from "@/lib/dateTime";
 import AdminFilters from "@/pages/admin/AdminFilters";
 import AdminPageShell from "@/pages/admin/AdminPageShell";
@@ -10,56 +9,29 @@ import {
   AdminEmptyRow,
   AdminPagination,
   AdminSortableHeader,
-  type PageState,
-  type SortState,
+  AdminTableCard,
   adminCellClassName,
   adminRowClassName,
   adminTableClassName,
   adminTheadClassName,
 } from "@/pages/admin/adminUi";
+import { useAdminServerList } from "@/pages/admin/useAdminList";
 import type { AdminAuditLog, AdminFilterOptions } from "@/models/AdminModels";
 import { getAdminAuditLogs, getAdminFilterOptions } from "@/services/AdminService";
 
+const initialFilters = { username: "", type: "", from: "", to: "" };
+
 export default function AdminAuditLogsPage() {
   const user = useAuth((state) => state.user);
-  const [items, setItems] = useState<AdminAuditLog[]>([]);
-  const [filters, setFilters] = useState({ username: "", type: "", from: "", to: "" });
   const [filterOptions, setFilterOptions] = useState<AdminFilterOptions | null>(null);
-  const [pageState, setPageState] = useState<PageState>({ page: 0, size: 10, totalPages: 1, totalElements: 0 });
-  const [sortState, setSortState] = useState<SortState>({ sort: "createdAt", direction: "DESC" });
   const isAdmin = user?.roles?.includes("ROLE_ADMIN");
 
-  const load = async (nextPage = pageState.page, nextSort = sortState) => {
-    const page = await getAdminAuditLogs({
-          username: filters.username,
-          type: filters.type,
-          from: filters.from,
-          to: filters.to,
-          page: nextPage,
-          size: pageState.size,
-          sort: nextSort.sort,
-          direction: nextSort.direction,
-        });
-    setItems(page.content);
-    setPageState((prev) => ({ ...prev, page: page.page, size: page.size, totalPages: page.totalPages, totalElements: page.totalElements }));
-  };
-
-  const handleSort = (column: string) => {
-    const nextSort: SortState = {
-      sort: column,
-      direction: sortState.sort === column && sortState.direction === "DESC" ? "ASC" : "DESC",
-    };
-    setSortState(nextSort);
-    void load(0, nextSort).catch(() => undefined);
-  };
-
-  const resetFilters = async () => {
-    const nextFilters = { username: "", type: "", from: "", to: "" };
-    setFilters(nextFilters);
-    const page = await getAdminAuditLogs({ username: nextFilters.username, type: nextFilters.type, from: nextFilters.from, to: nextFilters.to, page: 0, size: pageState.size, sort: sortState.sort, direction: sortState.direction });
-    setItems(page.content);
-    setPageState((prev) => ({ ...prev, page: page.page, size: page.size, totalPages: page.totalPages, totalElements: page.totalElements }));
-  };
+  const fetchPage = useCallback((params: typeof initialFilters & { page: number; size: number; sort: string; direction: "ASC" | "DESC" }) => getAdminAuditLogs(params), []);
+  const { items, filters, pageState, sortState, load, handleFilterChange, handleSort, resetFilters } = useAdminServerList<AdminAuditLog, typeof initialFilters>({
+    initialFilters,
+    initialSort: { sort: "createdAt", direction: "DESC" },
+    fetchPage,
+  });
 
   useEffect(() => {
     if (isAdmin) {
@@ -80,13 +52,12 @@ export default function AdminAuditLogsPage() {
           { name: "to", label: "종료일", type: "date" },
         ]}
         values={filters}
-        onChange={(name, value) => setFilters((prev) => ({ ...prev, [name]: value }))}
+        onChange={handleFilterChange}
         onSubmit={() => void load(0)}
         onReset={() => void resetFilters()}
       />
 
-      <Card className="rounded-lg">
-        <CardContent className="overflow-x-auto p-0">
+      <AdminTableCard>
           <table className={adminTableClassName}>
             <thead className={adminTheadClassName}>
               <tr>
@@ -123,8 +94,7 @@ export default function AdminAuditLogsPage() {
             </tbody>
           </table>
           <AdminPagination pageState={pageState} onPageChange={(page) => void load(page)} />
-        </CardContent>
-      </Card>
+      </AdminTableCard>
     </AdminPageShell>
   );
 }

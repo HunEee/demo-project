@@ -18,8 +18,7 @@ import OAuth2CookieCallback from './pages/OAuth2CookieCallback.tsx';
 import DashboardPage from './pages/admin/status/DashboardPage.tsx';
 import UserManagementPage from './pages/admin/account/UserManagementPage.tsx';
 import UserDetailPage from './pages/admin/account/UserDetailPage.tsx';
-import OrganizationPage from './pages/admin/account/OrganizationPage.tsx';
-import GroupManagementPage from './pages/admin/account/GroupManagementPage.tsx';
+import HrUserMasterPage from './pages/admin/account/HrUserMasterPage.tsx';
 import ExternalUsersPage from './pages/admin/account/ExternalUsersPage.tsx';
 import RoleManagementPage from './pages/admin/permissions/RoleManagementPage.tsx';
 import PermissionManagementPage from './pages/admin/permissions/PermissionManagementPage.tsx';
@@ -83,8 +82,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="status/dashboard" element={<DashboardPage />} />
           <Route path="account/users" element={<UserManagementPage />} />
           <Route path="account/users/:username" element={<UserDetailPage />} />
-          <Route path="account/organization" element={<OrganizationPage />} />
-          <Route path="account/groups" element={<GroupManagementPage />} />
+          <Route path="account/hr-users" element={<HrUserMasterPage />} />
           <Route path="account/external-users" element={<ExternalUsersPage />} />
           <Route path="permissions/roles" element={<RoleManagementPage />} />
           <Route path="permissions/permissions" element={<PermissionManagementPage />} />

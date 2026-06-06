@@ -34,7 +34,7 @@ public class AdminGroupController {
     }
 
     @GetMapping("/{id}")
-    public AdminGroupDetailResponse detail(@PathVariable Long id) {
+    public AdminGroupDetailResponse detail(@PathVariable(name = "id") Long id) {
         return adminGroupService.detail(id);
     }
 
@@ -44,41 +44,41 @@ public class AdminGroupController {
     }
 
     @PatchMapping("/{id}")
-    public AdminGroupResponse update(@PathVariable Long id, @RequestBody AdminGroupRequest request) {
+    public AdminGroupResponse update(@PathVariable(name = "id") Long id, @RequestBody AdminGroupRequest request) {
         return adminGroupService.update(id, request);
     }
 
     @PostMapping("/{id}/disable")
     public void disable(
-            @PathVariable Long id,
+            @PathVariable(name = "id") Long id,
             @RequestParam(name = "reason", required = false) String reason
     ) {
         adminGroupService.disable(id, reason);
     }
 
     @PostMapping("/{id}/members")
-    public AdminGroupDetailResponse addMember(@PathVariable Long id, @RequestBody AdminGroupMemberRequest request) {
+    public AdminGroupDetailResponse addMember(@PathVariable(name = "id") Long id, @RequestBody AdminGroupMemberRequest request) {
         return adminGroupService.addMember(id, request);
     }
 
     @DeleteMapping("/{id}/members/{username}")
     public AdminGroupDetailResponse removeMember(
-            @PathVariable Long id,
-            @PathVariable String username,
+            @PathVariable(name = "id") Long id,
+            @PathVariable(name = "username") String username,
             @RequestParam(name = "reason", required = false) String reason
     ) {
         return adminGroupService.removeMember(id, username, reason);
     }
 
     @PostMapping("/{id}/roles")
-    public AdminGroupDetailResponse assignRole(@PathVariable Long id, @RequestBody AdminGroupRoleRequest request) {
+    public AdminGroupDetailResponse assignRole(@PathVariable(name = "id") Long id, @RequestBody AdminGroupRoleRequest request) {
         return adminGroupService.assignRole(id, request);
     }
 
     @DeleteMapping("/{id}/roles/{roleId}")
     public AdminGroupDetailResponse removeRole(
-            @PathVariable Long id,
-            @PathVariable Long roleId,
+            @PathVariable(name = "id") Long id,
+            @PathVariable(name = "roleId") Long roleId,
             @RequestParam(name = "reason", required = false) String reason
     ) {
         return adminGroupService.removeRole(id, roleId, reason);

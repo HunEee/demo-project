@@ -2,31 +2,38 @@ import { useEffect, useMemo, useState } from "react";
 import { Navigate } from "react-router";
 import useAuth from "@/auth/store";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { formatSecurityDateTime } from "@/lib/dateTime";
 import type { AdminPermission, AdminRole, AdminRoleDetail, AdminRoleRequest } from "@/models/AdminModels";
 import AdminFilters from "@/pages/admin/AdminFilters";
 import AdminPageShell from "@/pages/admin/AdminPageShell";
 import {
   AdminBadge,
+  AdminBulkActionBar,
   AdminConfirmDialog,
   AdminCrudModal,
   AdminEmptyRow,
+  AdminFormField,
+  AdminInfoItem,
   AdminPagination,
+  AdminSelectField,
   AdminSortableHeader,
+  AdminTableCard,
   type PageState,
   type SortState,
   adminCellClassName,
   adminRowClassName,
   adminTableClassName,
   adminTheadClassName,
+  compareText,
+  containsText as contains,
+  displayValue as display,
+  enabledStatusLabel as statusLabel,
   statusTone,
 } from "@/pages/admin/adminUi";
 import {
   assignAdminRolePermission,
   createAdminRole,
+  deleteAdminRole,
   disableAdminRole,
   getAdminPermissions,
   getAdminRoleDetail,
@@ -49,12 +56,6 @@ const blankPermissionForm = {
   reason: "",
 };
 
-const contains = (value: string | number | boolean | null | undefined, keyword: string) =>
-  String(value ?? "").toLowerCase().includes(keyword.trim().toLowerCase());
-const compareText = (left?: string | null, right?: string | null) => String(left ?? "").localeCompare(String(right ?? ""));
-const display = (value?: string | number | null) => (value === null || value === undefined || value === "" ? "-" : String(value));
-const statusLabel = (enabled: boolean) => (enabled ? "사용" : "비활성");
-
 export default function RoleManagementPage() {
   const user = useAuth((state) => state.user);
   const isAdmin = user?.roles?.includes("ROLE_ADMIN");
@@ -66,7 +67,9 @@ export default function RoleManagementPage() {
   const [modalMode, setModalMode] = useState<"create" | "edit" | null>(null);
   const [roleForm, setRoleForm] = useState(blankRoleForm);
   const [editRole, setEditRole] = useState<AdminRole | null>(null);
-  const [disableTarget, setDisableTarget] = useState<AdminRole | null>(null);
+  const [selectedRoleIds, setSelectedRoleIds] = useState<number[]>([]);
+  const [bulkDisableOpen, setBulkDisableOpen] = useState(false);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [detail, setDetail] = useState<AdminRoleDetail | null>(null);
   const [permissionForm, setPermissionForm] = useState(blankPermissionForm);
 
@@ -74,6 +77,7 @@ export default function RoleManagementPage() {
     const [nextRoles, nextPermissions] = await Promise.all([getAdminRoles(), getAdminPermissions()]);
     setRoles(nextRoles);
     setPermissions(nextPermissions);
+    setSelectedRoleIds([]);
     setEditRole((current) => (current ? nextRoles.find((role) => role.id === current.id) ?? current : current));
     if (detail) {
       const stillExists = nextRoles.some((role) => role.id === detail.role.id);
@@ -121,6 +125,10 @@ export default function RoleManagementPage() {
     totalPages: Math.max(Math.ceil(filteredRoles.length / pageState.size), 1),
   };
   const pagedRoles = filteredRoles.slice(pageState.page * pageState.size, pageState.page * pageState.size + pageState.size);
+  const selectableRoles = pagedRoles.filter((role) => !role.systemRole);
+  const selectedRoles = roles.filter((role) => selectedRoleIds.includes(role.id));
+  const allPageSelected = selectableRoles.length > 0 && selectableRoles.every((role) => selectedRoleIds.includes(role.id));
+  const selectedEnabledRoleCount = selectedRoles.filter((role) => role.enabled).length;
   const assignedPermissionIds = new Set(detail?.permissions.map((permission) => permission.id) ?? []);
   const assignablePermissions = permissions.filter((permission) => permission.enabled && !assignedPermissionIds.has(permission.id));
 
@@ -184,6 +192,30 @@ export default function RoleManagementPage() {
     await load();
   };
 
+  const toggleRole = (id: number, checked: boolean) => {
+    setSelectedRoleIds((current) => checked ? Array.from(new Set([...current, id])) : current.filter((item) => item !== id));
+  };
+
+  const togglePage = (checked: boolean) => {
+    setSelectedRoleIds(checked ? selectableRoles.map((role) => role.id) : []);
+  };
+
+  const runBulkDisable = async () => {
+    const targets = selectedRoles.filter((role) => !role.systemRole && role.enabled);
+    await Promise.all(targets.map((role) => disableAdminRole(role.id)));
+    setSelectedRoleIds([]);
+    setBulkDisableOpen(false);
+    await load();
+  };
+
+  const runBulkDelete = async () => {
+    const targets = selectedRoles.filter((role) => !role.systemRole);
+    await Promise.all(targets.map((role) => deleteAdminRole(role.id)));
+    setSelectedRoleIds([]);
+    setBulkDeleteOpen(false);
+    await load();
+  };
+
   if (!isAdmin) return <Navigate to="/dashboard" replace />;
 
   return (
@@ -228,11 +260,18 @@ export default function RoleManagementPage() {
         }}
       />
 
-      <Card className="rounded-lg">
-        <CardContent className="overflow-x-auto p-0">
+      <AdminBulkActionBar selectedLabel={`선택 ${selectedRoleIds.length}건`}>
+          <Button type="button" variant="outline" disabled={selectedEnabledRoleCount === 0} onClick={() => setBulkDisableOpen(true)}>선택 비활성화</Button>
+          <Button type="button" variant="destructive" disabled={selectedRoleIds.length === 0} onClick={() => setBulkDeleteOpen(true)}>선택 삭제</Button>
+      </AdminBulkActionBar>
+
+      <AdminTableCard>
           <table className={adminTableClassName}>
             <thead className={adminTheadClassName}>
               <tr>
+                <th className={adminCellClassName}>
+                  <input type="checkbox" aria-label="현재 페이지 역할 전체 선택" checked={allPageSelected} onChange={(event) => togglePage(event.target.checked)} />
+                </th>
                 <th className={adminCellClassName}>
                   <AdminSortableHeader label="역할명" column="name" sortState={sortState} onSort={handleSort} />
                 </th>
@@ -253,9 +292,18 @@ export default function RoleManagementPage() {
               </tr>
             </thead>
             <tbody>
-              {pagedRoles.length === 0 ? <AdminEmptyRow colSpan={7} /> : null}
+              {pagedRoles.length === 0 ? <AdminEmptyRow colSpan={8} /> : null}
               {pagedRoles.map((role) => (
                 <tr key={role.id} className={adminRowClassName}>
+                  <td className={adminCellClassName}>
+                    <input
+                      type="checkbox"
+                      aria-label={`${role.name} 선택`}
+                      disabled={role.systemRole}
+                      checked={selectedRoleIds.includes(role.id)}
+                      onChange={(event) => toggleRole(role.id, event.target.checked)}
+                    />
+                  </td>
                   <td className={adminCellClassName}>
                     <button type="button" className="font-medium text-primary hover:underline" onClick={() => void openRoleDetail(role)}>
                       {role.name}
@@ -273,9 +321,6 @@ export default function RoleManagementPage() {
                   <td className={adminCellClassName}>
                     <div className="flex justify-center gap-2">
                       <Button size="sm" variant="outline" onClick={() => openRoleModal("edit", role)}>수정</Button>
-                      <Button size="sm" variant="destructive" disabled={role.systemRole || !role.enabled} onClick={() => setDisableTarget(role)}>
-                        비활성화
-                      </Button>
                     </div>
                   </td>
                 </tr>
@@ -283,8 +328,7 @@ export default function RoleManagementPage() {
             </tbody>
           </table>
           <AdminPagination pageState={listPageState} onPageChange={(page) => setPageState((current) => ({ ...current, page }))} />
-        </CardContent>
-      </Card>
+      </AdminTableCard>
 
       <AdminCrudModal
         open={modalMode !== null}
@@ -300,22 +344,22 @@ export default function RoleManagementPage() {
           </>
         }
       >
-        <Field label="역할명" value={roleForm.name} disabled={modalMode === "edit"} onChange={(value) => setRoleForm((current) => ({ ...current, name: value }))} />
-        <Field label="표시명" value={roleForm.displayName} onChange={(value) => setRoleForm((current) => ({ ...current, displayName: value }))} />
-        <Field label="설명" value={roleForm.description} onChange={(value) => setRoleForm((current) => ({ ...current, description: value }))} />
-        <SelectField
+        <AdminFormField label="역할명" value={roleForm.name} disabled={modalMode === "edit"} onChange={(value) => setRoleForm((current) => ({ ...current, name: value }))} />
+        <AdminFormField label="표시명" value={roleForm.displayName} onChange={(value) => setRoleForm((current) => ({ ...current, displayName: value }))} />
+        <AdminFormField label="설명" value={roleForm.description} onChange={(value) => setRoleForm((current) => ({ ...current, description: value }))} />
+        <AdminSelectField
           label="사용 여부"
           value={roleForm.enabled}
           options={[{ label: "사용", value: "true" }, { label: "비활성", value: "false" }]}
           onChange={(value) => setRoleForm((current) => ({ ...current, enabled: value }))}
         />
-        <SelectField
+        <AdminSelectField
           label="시스템 역할"
           value={roleForm.systemRole}
           options={[{ label: "아니오", value: "false" }, { label: "예", value: "true" }]}
           onChange={(value) => setRoleForm((current) => ({ ...current, systemRole: value }))}
         />
-        <Field label="사유" value={roleForm.reason} onChange={(value) => setRoleForm((current) => ({ ...current, reason: value }))} />
+        <AdminFormField label="사유" value={roleForm.reason} onChange={(value) => setRoleForm((current) => ({ ...current, reason: value }))} />
       </AdminCrudModal>
 
       <AdminCrudModal
@@ -330,14 +374,14 @@ export default function RoleManagementPage() {
         {detail ? (
           <div className="space-y-4">
             <div className="grid gap-3 rounded-lg border p-3 text-sm md:grid-cols-4">
-              <Info label="표시명" value={detail.role.displayName || "-"} />
-              <Info label="상태" value={statusLabel(detail.role.enabled)} />
-              <Info label="민감 권한" value={detail.role.sensitive ? "포함" : "미포함"} />
-              <Info label="수정일" value={detail.role.updatedAt ? formatSecurityDateTime(detail.role.updatedAt) : "-"} />
+              <AdminInfoItem label="표시명" value={detail.role.displayName || "-"} />
+              <AdminInfoItem label="상태" value={statusLabel(detail.role.enabled)} />
+              <AdminInfoItem label="민감 권한" value={detail.role.sensitive ? "포함" : "미포함"} />
+              <AdminInfoItem label="수정일" value={detail.role.updatedAt ? formatSecurityDateTime(detail.role.updatedAt) : "-"} />
             </div>
 
             <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto]">
-              <SelectField
+              <AdminSelectField
                 label="추가할 권한"
                 value={permissionForm.permissionId}
                 options={[
@@ -349,7 +393,7 @@ export default function RoleManagementPage() {
                 ]}
                 onChange={(value) => setPermissionForm((current) => ({ ...current, permissionId: value }))}
               />
-              <Field label="추가 사유" value={permissionForm.reason} onChange={(value) => setPermissionForm((current) => ({ ...current, reason: value }))} />
+              <AdminFormField label="추가 사유" value={permissionForm.reason} onChange={(value) => setPermissionForm((current) => ({ ...current, reason: value }))} />
               <div className="flex items-end">
                 <Button type="button" className="w-full" onClick={() => void assignPermission()}>권한 추가</Button>
               </div>
@@ -398,76 +442,31 @@ export default function RoleManagementPage() {
       </AdminCrudModal>
 
       <AdminConfirmDialog
-        open={disableTarget !== null}
+        open={bulkDisableOpen}
         title="역할 비활성화"
-        description={`${disableTarget?.name ?? ""} 역할을 비활성화합니다. 이미 부여된 권한 영향 범위를 확인해 주세요.`}
+        description={`${selectedRoleIds.length}개 역할을 비활성화합니다. 시스템 역할과 이미 비활성화된 역할은 선택할 수 없습니다.`}
         confirmLabel="비활성화"
         destructive
         onOpenChange={(open) => {
-          if (!open) setDisableTarget(null);
+          setBulkDisableOpen(open);
         }}
         onConfirm={() => {
-          if (!disableTarget) return;
-          void disableAdminRole(disableTarget.id).then(load);
+          void runBulkDisable().catch(() => undefined);
+        }}
+      />
+      <AdminConfirmDialog
+        open={bulkDeleteOpen}
+        title="역할 삭제"
+        description={`${selectedRoleIds.length}개 역할을 삭제합니다. 사용자, 그룹, 권한 매핑이 남아 있는 역할은 삭제되지 않습니다. 운영 중인 역할은 삭제보다 비활성화를 사용하세요.`}
+        confirmLabel="삭제"
+        destructive
+        onOpenChange={(open) => {
+          setBulkDeleteOpen(open);
+        }}
+        onConfirm={() => {
+          void runBulkDelete().catch(() => undefined);
         }}
       />
     </AdminPageShell>
-  );
-}
-
-function Info({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="mt-1 font-medium">{value}</p>
-    </div>
-  );
-}
-
-function Field({
-  label,
-  value,
-  onChange,
-  disabled = false,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  disabled?: boolean;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <Label className="text-xs text-muted-foreground">{label}</Label>
-      <Input value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)} />
-    </div>
-  );
-}
-
-function SelectField({
-  label,
-  value,
-  options,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  options: Array<{ label: string; value: string }>;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <Label className="text-xs text-muted-foreground">{label}</Label>
-      <select
-        className="h-9 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-      >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </div>
   );
 }

@@ -2,26 +2,31 @@ import { useEffect, useMemo, useState } from "react";
 import { Navigate } from "react-router";
 import useAuth from "@/auth/store";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { formatSecurityDateTime } from "@/lib/dateTime";
 import type { AdminPermission, AdminPermissionRequest } from "@/models/AdminModels";
 import AdminFilters from "@/pages/admin/AdminFilters";
 import AdminPageShell from "@/pages/admin/AdminPageShell";
 import {
   AdminBadge,
+  AdminBulkActionBar,
   AdminConfirmDialog,
   AdminCrudModal,
   AdminEmptyRow,
+  AdminFormField,
   AdminPagination,
+  AdminSelectField,
   AdminSortableHeader,
+  AdminTableCard,
   type PageState,
   type SortState,
   adminCellClassName,
   adminRowClassName,
   adminTableClassName,
   adminTheadClassName,
+  compareText,
+  containsText as contains,
+  displayValue as display,
+  enabledStatusLabel as statusLabel,
   statusTone,
 } from "@/pages/admin/adminUi";
 import {
@@ -41,12 +46,6 @@ const blankPermissionForm = {
   reason: "",
 };
 
-const contains = (value: string | number | boolean | null | undefined, keyword: string) =>
-  String(value ?? "").toLowerCase().includes(keyword.trim().toLowerCase());
-const compareText = (left?: string | null, right?: string | null) => String(left ?? "").localeCompare(String(right ?? ""));
-const display = (value?: string | number | null) => (value === null || value === undefined || value === "" ? "-" : String(value));
-const statusLabel = (enabled: boolean) => (enabled ? "사용" : "비활성");
-
 export default function PermissionManagementPage() {
   const user = useAuth((state) => state.user);
   const isAdmin = user?.roles?.includes("ROLE_ADMIN");
@@ -57,11 +56,13 @@ export default function PermissionManagementPage() {
   const [modalMode, setModalMode] = useState<"create" | "edit" | null>(null);
   const [editPermission, setEditPermission] = useState<AdminPermission | null>(null);
   const [permissionForm, setPermissionForm] = useState(blankPermissionForm);
-  const [deleteTarget, setDeleteTarget] = useState<AdminPermission | null>(null);
+  const [selectedPermissionIds, setSelectedPermissionIds] = useState<number[]>([]);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
   const load = async () => {
     const next = await getAdminPermissions();
     setPermissions(next);
+    setSelectedPermissionIds([]);
     setEditPermission((current) => (current ? next.find((permission) => permission.id === current.id) ?? current : current));
   };
 
@@ -111,6 +112,8 @@ export default function PermissionManagementPage() {
     totalPages: Math.max(Math.ceil(filteredPermissions.length / pageState.size), 1),
   };
   const pagedPermissions = filteredPermissions.slice(pageState.page * pageState.size, pageState.page * pageState.size + pageState.size);
+  const allPageSelected = pagedPermissions.length > 0 && pagedPermissions.every((permission) => selectedPermissionIds.includes(permission.id));
+  const selectedPermissions = permissions.filter((permission) => selectedPermissionIds.includes(permission.id));
 
   const handleSort = (column: string) => {
     setSortState((current) => ({
@@ -159,6 +162,21 @@ export default function PermissionManagementPage() {
     await load();
   };
 
+  const togglePermission = (id: number, checked: boolean) => {
+    setSelectedPermissionIds((current) => checked ? Array.from(new Set([...current, id])) : current.filter((item) => item !== id));
+  };
+
+  const togglePage = (checked: boolean) => {
+    setSelectedPermissionIds(checked ? pagedPermissions.map((permission) => permission.id) : []);
+  };
+
+  const runBulkDelete = async () => {
+    await Promise.all(selectedPermissions.map((permission) => deleteAdminPermission(permission.id)));
+    setSelectedPermissionIds([]);
+    setBulkDeleteOpen(false);
+    await load();
+  };
+
   if (!isAdmin) return <Navigate to="/dashboard" replace />;
 
   return (
@@ -204,11 +222,17 @@ export default function PermissionManagementPage() {
         }}
       />
 
-      <Card className="rounded-lg">
-        <CardContent className="overflow-x-auto p-0">
+      <AdminBulkActionBar selectedLabel={`선택 ${selectedPermissionIds.length}건`}>
+        <Button type="button" variant="destructive" disabled={selectedPermissionIds.length === 0} onClick={() => setBulkDeleteOpen(true)}>선택 삭제</Button>
+      </AdminBulkActionBar>
+
+      <AdminTableCard>
           <table className={adminTableClassName}>
             <thead className={adminTheadClassName}>
               <tr>
+                <th className={adminCellClassName}>
+                  <input type="checkbox" aria-label="현재 페이지 권한 전체 선택" checked={allPageSelected} onChange={(event) => togglePage(event.target.checked)} />
+                </th>
                 <th className={adminCellClassName}>
                   <AdminSortableHeader label="권한 코드" column="code" sortState={sortState} onSort={handleSort} />
                 </th>
@@ -230,9 +254,17 @@ export default function PermissionManagementPage() {
               </tr>
             </thead>
             <tbody>
-              {pagedPermissions.length === 0 ? <AdminEmptyRow colSpan={8} /> : null}
+              {pagedPermissions.length === 0 ? <AdminEmptyRow colSpan={9} /> : null}
               {pagedPermissions.map((permission) => (
                 <tr key={permission.id} className={adminRowClassName}>
+                  <td className={adminCellClassName}>
+                    <input
+                      type="checkbox"
+                      aria-label={`${permission.code} 선택`}
+                      checked={selectedPermissionIds.includes(permission.id)}
+                      onChange={(event) => togglePermission(permission.id, event.target.checked)}
+                    />
+                  </td>
                   <td className={adminCellClassName}>{permission.code}</td>
                   <td className={adminCellClassName}>{permission.name}</td>
                   <td className={adminCellClassName}>{display(permission.category)}</td>
@@ -247,7 +279,6 @@ export default function PermissionManagementPage() {
                   <td className={adminCellClassName}>
                     <div className="flex justify-center gap-2">
                       <Button size="sm" variant="outline" onClick={() => openPermissionModal("edit", permission)}>수정</Button>
-                      <Button size="sm" variant="destructive" onClick={() => setDeleteTarget(permission)}>삭제</Button>
                     </div>
                   </td>
                 </tr>
@@ -255,8 +286,7 @@ export default function PermissionManagementPage() {
             </tbody>
           </table>
           <AdminPagination pageState={listPageState} onPageChange={(page) => setPageState((current) => ({ ...current, page }))} />
-        </CardContent>
-      </Card>
+      </AdminTableCard>
 
       <AdminCrudModal
         open={modalMode !== null}
@@ -272,87 +302,38 @@ export default function PermissionManagementPage() {
           </>
         }
       >
-        <Field label="권한 코드" value={permissionForm.code} disabled={modalMode === "edit"} onChange={(value) => setPermissionForm((current) => ({ ...current, code: value }))} />
-        <Field label="권한명" value={permissionForm.name} onChange={(value) => setPermissionForm((current) => ({ ...current, name: value }))} />
-        <Field label="카테고리" value={permissionForm.category} onChange={(value) => setPermissionForm((current) => ({ ...current, category: value }))} />
-        <Field label="설명" value={permissionForm.description} onChange={(value) => setPermissionForm((current) => ({ ...current, description: value }))} />
-        <SelectField
+        <AdminFormField label="권한 코드" value={permissionForm.code} disabled={modalMode === "edit"} onChange={(value) => setPermissionForm((current) => ({ ...current, code: value }))} />
+        <AdminFormField label="권한명" value={permissionForm.name} onChange={(value) => setPermissionForm((current) => ({ ...current, name: value }))} />
+        <AdminFormField label="카테고리" value={permissionForm.category} onChange={(value) => setPermissionForm((current) => ({ ...current, category: value }))} />
+        <AdminFormField label="설명" value={permissionForm.description} onChange={(value) => setPermissionForm((current) => ({ ...current, description: value }))} />
+        <AdminSelectField
           label="민감 권한"
           value={permissionForm.sensitive}
           options={[{ label: "일반", value: "false" }, { label: "민감", value: "true" }]}
           onChange={(value) => setPermissionForm((current) => ({ ...current, sensitive: value }))}
         />
-        <SelectField
+        <AdminSelectField
           label="사용 여부"
           value={permissionForm.enabled}
           options={[{ label: "사용", value: "true" }, { label: "비활성", value: "false" }]}
           onChange={(value) => setPermissionForm((current) => ({ ...current, enabled: value }))}
         />
-        <Field label="사유" value={permissionForm.reason} onChange={(value) => setPermissionForm((current) => ({ ...current, reason: value }))} />
+        <AdminFormField label="사유" value={permissionForm.reason} onChange={(value) => setPermissionForm((current) => ({ ...current, reason: value }))} />
       </AdminCrudModal>
 
       <AdminConfirmDialog
-        open={deleteTarget !== null}
+        open={bulkDeleteOpen}
         title="권한 삭제"
-        description={`${deleteTarget?.code ?? ""} 권한을 삭제합니다. 역할에 연결된 권한이면 먼저 매핑을 회수해 주세요.`}
+        description={`${selectedPermissionIds.length}개 권한을 삭제합니다. 역할에 연결된 권한이면 먼저 매핑을 회수해 주세요.`}
         confirmLabel="삭제"
         destructive
         onOpenChange={(open) => {
-          if (!open) setDeleteTarget(null);
+          setBulkDeleteOpen(open);
         }}
         onConfirm={() => {
-          if (!deleteTarget) return;
-          void deleteAdminPermission(deleteTarget.id).then(load);
+          void runBulkDelete().catch(() => undefined);
         }}
       />
     </AdminPageShell>
-  );
-}
-
-function Field({
-  label,
-  value,
-  onChange,
-  disabled = false,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  disabled?: boolean;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <Label className="text-xs text-muted-foreground">{label}</Label>
-      <Input value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)} />
-    </div>
-  );
-}
-
-function SelectField({
-  label,
-  value,
-  options,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  options: Array<{ label: string; value: string }>;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <Label className="text-xs text-muted-foreground">{label}</Label>
-      <select
-        className="h-9 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-      >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </div>
   );
 }

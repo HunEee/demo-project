@@ -106,8 +106,7 @@ for (const childRoute of [
   '<Route path="status/dashboard" element={<DashboardPage />} />',
   '<Route path="account/users" element={<UserManagementPage />} />',
   '<Route path="account/users/:username" element={<UserDetailPage />} />',
-  '<Route path="account/organization" element={<OrganizationPage />} />',
-  '<Route path="account/groups" element={<GroupManagementPage />} />',
+  '<Route path="account/hr-users" element={<HrUserMasterPage />} />',
   '<Route path="account/external-users" element={<ExternalUsersPage />} />',
   '<Route path="audit/logs" element={<AuditLogsPage />} />',
   '<Route path="audit/login-history" element={<AdminLoginHistoryPage />} />',
@@ -327,8 +326,7 @@ assert.match(adminUsersPage, /employmentType: filters\.employmentType/, "AdminUs
 assert.match(adminUsersPage, /mfaEnabled: filters\.mfaEnabled/, "AdminUsersPage must send MFA filter to the server");
 
 for (const [page, forbidden] of [
-  ["account/OrganizationPage.tsx", /AdminPlaceholderPage/],
-  ["account/GroupManagementPage.tsx", /AdminPlaceholderPage/],
+  ["account/HrUserMasterPage.tsx", /AdminPlaceholderPage/],
   ["account/ExternalUsersPage.tsx", /AdminPlaceholderPage/],
 ]) {
   assert.doesNotMatch(
@@ -341,10 +339,8 @@ for (const [page, forbidden] of [
 for (const modelType of [
   "AdminUserCreateRequest",
   "AdminUserUpdateRequest",
-  "AdminDepartment",
-  "AdminDepartmentRequest",
-  "AdminDepartmentUserRequest",
-  "AdminDepartmentUser",
+  "HrUserMaster",
+  "HrUserMasterRequest",
   "AdminGroup",
   "AdminGroupDetail",
   "AdminGroupRequest",
@@ -355,16 +351,15 @@ for (const modelType of [
 
 for (const serviceMethod of [
   "createAdminUser",
+  "checkAdminUsernameExists",
   "updateAdminUser",
   "deleteAdminUser",
-  "getAdminDepartments",
-  "createAdminDepartment",
-  "updateAdminDepartment",
-  "disableAdminDepartment",
-  "getAdminDepartmentUsers",
-  "addAdminDepartmentUser",
-  "updateAdminDepartmentUser",
-  "removeAdminDepartmentUser",
+  "getHrUserMasters",
+  "getHrUserAccountCandidates",
+  "createHrUserMaster",
+  "updateHrUserMaster",
+  "deleteHrUserMaster",
+  "checkHrUserMasterExists",
   "getAdminGroups",
   "getAdminGroupDetail",
   "createAdminGroup",
@@ -385,30 +380,31 @@ assert.match(
 
 for (const page of [
   "AdminUsersPage.tsx",
-  "account/OrganizationPage.tsx",
-  "account/GroupManagementPage.tsx",
-  "account/ExternalUsersPage.tsx",
+  "account/HrUserMasterPage.tsx",
 ]) {
   const source = read(`src/pages/admin/${page}`);
   assert.match(source, /AdminCrudModal/, `${page} must use a centered modal for add/edit workflows`);
   assert.doesNotMatch(source, /AdminCrudDrawer/, `${page} must not use the side drawer for add/edit workflows`);
-  assert.match(source, /AdminConfirmDialog/, `${page} must confirm destructive delete/disable workflows`);
 }
 
-for (const page of ["account/OrganizationPage.tsx", "account/GroupManagementPage.tsx"]) {
+for (const page of ["account/HrUserMasterPage.tsx"]) {
   const source = read(`src/pages/admin/${page}`);
   assert.match(source, /AdminFilters/, `${page} must start with the same filter pattern as the user management list`);
   assert.match(source, /AdminPagination/, `${page} must paginate the initial list view like user management`);
   assert.match(source, /AdminSortableHeader/, `${page} must support sortable list columns like user management`);
 }
 
-const organizationPage = read("src/pages/admin/account/OrganizationPage.tsx");
-assert.match(organizationPage, /detailDepartment/, "OrganizationPage must open department detail in a modal state");
-assert.match(organizationPage, /departmentUserFilters/, "Department detail modal must provide user search filters");
-assert.match(organizationPage, /getAdminUsers/, "OrganizationPage must validate department additions against existing users");
-assert.match(organizationPage, /addAdminDepartmentUser/, "OrganizationPage must add existing users to a department");
-assert.match(organizationPage, /updateAdminDepartmentUser/, "OrganizationPage must edit department user profile data");
-assert.match(organizationPage, /removeAdminDepartmentUser/, "OrganizationPage must remove users from a department");
+const hrUserMasterPage = read("src/pages/admin/account/HrUserMasterPage.tsx");
+assert.match(hrUserMasterPage, /getHrUserMasters/, "HrUserMasterPage must load HR user master records");
+assert.match(hrUserMasterPage, /createHrUserMaster/, "HrUserMasterPage must create HR user master records");
+assert.match(hrUserMasterPage, /updateHrUserMaster/, "HrUserMasterPage must edit HR user master records");
+assert.match(hrUserMasterPage, /deleteHrUserMaster/, "HrUserMasterPage must delete HR user master records");
+assert.match(hrUserMasterPage, /checkHrUserMasterExists/, "HrUserMasterPage must expose HR duplicate checks");
+
+const externalUsersPage = read("src/pages/admin/account/ExternalUsersPage.tsx");
+assert.match(externalUsersPage, /createHrUserMaster/, "ExternalUsersPage must create EXTERNAL HR master records before account creation");
+assert.match(externalUsersPage, /createAdminUser/, "ExternalUsersPage must create an auth account for the external user");
+assert.match(externalUsersPage, /checkAdminUsernameExists/, "ExternalUsersPage must check username duplicates");
 
 const adminUiCrud = read("src/pages/admin/adminUi.tsx");
 assert.match(adminUiCrud, /export function AdminCrudModal/, "adminUi must expose a reusable centered CRUD modal");
@@ -543,12 +539,67 @@ for (const [path, pattern] of [
   ["src/pages/admin/permissions/PermissionManagementPage.tsx", /getAdminPermissions/],
   ["src/pages/admin/permissions/UserPermissionAssignmentPage.tsx", /assignAdminUserRole/],
   ["src/pages/admin/permissions/GroupPermissionAssignmentPage.tsx", /assignAdminGroupRole/],
-  ["src/pages/admin/account/GroupManagementPage.tsx", /getAdminRoles/],
 ]) {
   const source = read(path);
   assert.doesNotMatch(source, /AdminPlaceholderPage/, `${path} must be connected to the authorization API`);
   assert.match(source, pattern, `${path} must call the authorization API`);
   assert.match(source, /AdminCrudModal/, `${path} must use modal workflows for add/edit/assignment actions`);
+}
+
+const adminPermissionManagementPage = read("src/pages/admin/permissions/AdminPermissionManagementPage.tsx");
+assert.match(
+  adminPermissionManagementPage,
+  /title="관리자 권한 관리"/,
+  "AdminPermissionManagementPage must present the page title in Korean",
+);
+for (const englishCopy of [
+  "API RBAC Rules",
+  "Add Rule",
+  "Search",
+  "Path Pattern",
+  "No API permission rules.",
+  "Add API Rule",
+  "Edit API Rule",
+  "Delete API Rule",
+]) {
+  assert.doesNotMatch(
+    adminPermissionManagementPage,
+    new RegExp(englishCopy.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
+    `AdminPermissionManagementPage must not show English UI copy: ${englishCopy}`,
+  );
+}
+
+for (const page of [
+  "AdminAuditLogsPage.tsx",
+  "AdminIncidentsPage.tsx",
+  "AdminLoginHistoryPage.tsx",
+  "AdminRiskPage.tsx",
+  "AdminSecurityEventsPage.tsx",
+  "AdminSessionsPage.tsx",
+  "AdminSettingsPage.tsx",
+  "AdminUserDetailPage.tsx",
+  "AdminUsersPage.tsx",
+  "account/ExternalUsersPage.tsx",
+  "account/HrUserMasterPage.tsx",
+  "permissions/AdminPermissionManagementPage.tsx",
+  "permissions/GroupPermissionAssignmentPage.tsx",
+  "permissions/PermissionManagementPage.tsx",
+  "permissions/RoleManagementPage.tsx",
+  "permissions/UserPermissionAssignmentPage.tsx",
+]) {
+  const source = read(`src/pages/admin/${page}`);
+  assert.doesNotMatch(
+    source,
+    /void\s+load[A-Za-z]*\([^)]*\);/,
+    `${page} must not fire initial admin API loading without handling rejected promises`,
+  );
+  for (const match of source.matchAll(/void\s+getAdmin[A-Za-z]+\([^)]*\)\.then\([^;]*;/g)) {
+    assert.match(
+      match[0],
+      /\.catch\(/,
+      `${page} must not fire initial admin API helper promises without catch handling`,
+    );
+  }
 }
 
 assert.match(
@@ -566,6 +617,49 @@ assert.match(
   /apiClient\.get<AdminPermission\[\]>\(["'`]\/admin\/permissions["'`]\)/,
   "AdminService must load permissions from GET /admin/permissions",
 );
+
+const normalizeTemplatePath = (path) => `/api/v1${path.replace(/\$\{[^}]+\}/g, "*")}`;
+const adminServiceEndpointPattern = /apiClient\.(get|post|patch|delete)(?:<[^(\n]+>)?\(\s*([`"'])([^`"']+)\2/g;
+const adminServiceEndpoints = [...adminService.matchAll(adminServiceEndpointPattern)]
+  .map((match) => ({
+    method: match[1].toUpperCase(),
+    path: normalizeTemplatePath(match[3]),
+  }))
+  .filter((endpoint) => endpoint.path.startsWith("/api/v1/admin/"));
+
+assert.ok(adminServiceEndpoints.length > 0, "AdminService contract must discover admin API endpoints");
+
+const rbacSeedInitializer = read("../../backend/authapp/src/main/java/com/example/authapp/global/config/RbacSeedInitializer.java");
+const apiRulePattern = /new ApiRuleSeed\("([^"]+)",\s*"([^"]+)",\s*"([^"]+)"/g;
+const seededApiRules = [...rbacSeedInitializer.matchAll(apiRulePattern)].map((match) => ({
+  method: match[1],
+  pattern: match[2],
+  permission: match[3],
+}));
+
+assert.ok(seededApiRules.length > 0, "RbacSeedInitializer contract must discover API permission rules");
+
+const antPatternMatches = (pattern, path) => {
+  const escaped = pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const regex = escaped
+    .replace(/\/\\\*\\\*$/g, "(?:/.*)?")
+    .replace(/\\\*\\\*/g, ".*")
+    .replace(/\\\*/g, "[^/]+");
+  return new RegExp(`^${regex}$`).test(path);
+};
+
+for (const endpoint of adminServiceEndpoints) {
+  const covered = seededApiRules.some(
+    (rule) =>
+      (rule.method === endpoint.method || rule.method === "*") &&
+      antPatternMatches(rule.pattern, endpoint.path),
+  );
+
+  assert.ok(
+    covered,
+    `RBAC seed must cover frontend admin API ${endpoint.method} ${endpoint.path}`,
+  );
+}
 
 /* =========================================================
  * Backend SecurityController 테스트

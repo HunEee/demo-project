@@ -15,6 +15,7 @@ import com.example.authapp.domain.authorization.entity.PermissionEntity;
 import com.example.authapp.domain.authorization.entity.RoleEntity;
 import com.example.authapp.domain.authorization.repository.PermissionRepository;
 import com.example.authapp.domain.authorization.repository.RoleRepository;
+import com.example.authapp.domain.organization.repository.GroupRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -24,6 +25,7 @@ public class AdminRoleService {
 
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
+    private final GroupRepository groupRepository;
 
     @Transactional(readOnly = true)
     public List<AdminRoleResponse> list() {
@@ -81,6 +83,18 @@ public class AdminRoleService {
             throw new IllegalArgumentException("System role cannot be disabled.");
         }
         role.disable();
+    }
+
+    @Transactional
+    public void delete(Long id) {
+        RoleEntity role = roleRepository.findById(id).orElseThrow();
+        if (role.isSystemRole()) {
+            throw new IllegalArgumentException("System role cannot be deleted.");
+        }
+        if (!role.getUsers().isEmpty() || groupRepository.existsByRoles_Id(id) || !role.getPermissions().isEmpty()) {
+            throw new IllegalArgumentException("Role is in use. Disable it or remove users, groups, and permissions first.");
+        }
+        roleRepository.delete(role);
     }
 
     @Transactional
