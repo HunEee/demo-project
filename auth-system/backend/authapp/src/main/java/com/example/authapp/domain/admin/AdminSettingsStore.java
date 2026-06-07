@@ -1,36 +1,45 @@
 package com.example.authapp.domain.admin;
 
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.example.authapp.domain.admin.dto.AdminSettingsResponse;
+import com.example.authapp.domain.mfa.entity.MfaPolicy;
 
-// DB 설정 테이블을 도입하기 전까지 사용하는 간단한 런타임 보안 정책 저장소
+import lombok.RequiredArgsConstructor;
+
 @Component
+@RequiredArgsConstructor
+@Transactional
 public class AdminSettingsStore {
 
-    private int maxLoginFailures = 5;
-    private int highRiskThreshold = 60;
-    private int criticalRiskThreshold = 80;
-    private int sessionExpireDays = 14;
-    private boolean forceLogoutOnCriticalRisk = true;
+    private static final Long SETTINGS_ID = 1L;
+
+    private final AdminSettingsRepository repository;
 
     public AdminSettingsResponse current() {
-        return new AdminSettingsResponse(
-                maxLoginFailures,
-                highRiskThreshold,
-                criticalRiskThreshold,
-                sessionExpireDays,
-                forceLogoutOnCriticalRisk
-        );
+        return currentEntity().toResponse();
     }
 
     public AdminSettingsResponse update(AdminSettingsResponse request) {
-        this.maxLoginFailures = request.maxLoginFailures();
-        this.highRiskThreshold = request.highRiskThreshold();
-        this.criticalRiskThreshold = request.criticalRiskThreshold();
-        this.sessionExpireDays = request.sessionExpireDays();
-        this.forceLogoutOnCriticalRisk = request.forceLogoutOnCriticalRisk();
-        return current();
+        AdminSettingsEntity settings = currentEntity();
+        settings.update(request);
+        return repository.save(settings).toResponse();
     }
-    
+
+    public MfaPolicy mfaPolicy() {
+        MfaPolicy policy = currentEntity().getMfaPolicy();
+        return policy == null ? MfaPolicy.OPTIONAL : policy.normalized();
+    }
+
+    public MfaPolicy updateMfaPolicy(MfaPolicy mfaPolicy) {
+        AdminSettingsEntity settings = currentEntity();
+        settings.updateMfaPolicy(mfaPolicy);
+        return repository.save(settings).getMfaPolicy();
+    }
+
+    private AdminSettingsEntity currentEntity() {
+        return repository.findById(SETTINGS_ID)
+                .orElseGet(() -> repository.save(AdminSettingsEntity.defaults()));
+    }
 }

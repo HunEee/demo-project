@@ -162,6 +162,7 @@ public class SecurityConfig {
                     API_PREFIX + "/users/find-username",
                     API_PREFIX + "/users/password/reset",
                     API_PREFIX + "/verification/**",
+                    API_PREFIX + "/auth/mfa/verify",
                     API_PREFIX + "/login"
                 ).permitAll()
                 // 인증 필요

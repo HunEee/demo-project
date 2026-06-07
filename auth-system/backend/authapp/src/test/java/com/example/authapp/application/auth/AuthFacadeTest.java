@@ -22,6 +22,8 @@ import com.example.authapp.domain.audit.service.AuthEventLogService;
 import com.example.authapp.domain.audit.service.LoginHistoryService;
 import com.example.authapp.domain.jwt.service.CookieService;
 import com.example.authapp.domain.jwt.service.RefreshTokenService;
+import com.example.authapp.domain.mfa.dto.MfaLoginDecision;
+import com.example.authapp.domain.mfa.service.MfaService;
 import com.example.authapp.domain.risk.service.RiskService;
 import com.example.authapp.domain.user.entity.UserEntity;
 import com.example.authapp.domain.user.service.UserQueryService;
@@ -47,6 +49,9 @@ class AuthFacadeTest {
     @Mock
     private AuthEventLogService authEventLogService;
 
+    @Mock
+    private MfaService mfaService;
+
     @Test
     void socialLoginAnalyzesRiskAndRedirectsToConfiguredFrontendCookiePage() throws Exception {
         AuthFacade authFacade = new AuthFacade(
@@ -56,6 +61,7 @@ class AuthFacadeTest {
                 loginHistoryService,
                 riskService,
                 authEventLogService,
+                mfaService,
                 "http://frontend.example"
         );
         UserEntity user = UserEntity.builder()
@@ -80,6 +86,7 @@ class AuthFacadeTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         when(userQueryService.getByUsername("KAKAO_12345")).thenReturn(user);
+        when(mfaService.evaluateLogin(eq("KAKAO_12345"), any())).thenReturn(MfaLoginDecision.notRequired());
         when(loginHistoryService.saveSuccess(eq("KAKAO_12345"), any(), any(), any())).thenReturn(history);
 
         authFacade.socialLoginSuccess(request, response, authentication);

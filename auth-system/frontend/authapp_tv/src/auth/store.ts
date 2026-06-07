@@ -59,6 +59,10 @@ const useAuth = create<AuthState>()(
           const loginResponseData = await loginUser(loginData);
           console.log("로그인 응답:", loginResponseData);
 
+          if (loginResponseData.mfaRequired) {
+            return loginResponseData;
+          }
+
           if (!loginResponseData.accessToken || !loginResponseData.user) {
             throw new Error("로그인 응답에 인증 정보가 없습니다.");
           }

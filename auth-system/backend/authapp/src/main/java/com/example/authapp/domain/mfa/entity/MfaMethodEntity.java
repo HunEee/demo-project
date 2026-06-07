@@ -7,6 +7,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.EnumType;
@@ -52,6 +53,7 @@ public class MfaMethodEntity {
     private boolean enabled;
 
     @Lob
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "secret")
     private String secret;
 
@@ -68,4 +70,13 @@ public class MfaMethodEntity {
     @LastModifiedDate
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    public void confirmRegistration() {
+        this.enabled = true;
+        this.registeredAt = LocalDateTime.now();
+    }
+
+    public void markUsed() {
+        this.lastUsedAt = LocalDateTime.now();
+    }
 }

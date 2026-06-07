@@ -59,6 +59,24 @@ const accountStatus = (item: AdminUser) => {
   return item.status || "ACTIVE";
 };
 
+const splitDateTime = (value?: string | null) => {
+  if (!value) return { date: "-", time: "" };
+  const formatted = formatSecurityDateTime(value);
+  if (!formatted.includes(" ")) return { date: formatted, time: "" };
+  const [date, ...timeParts] = formatted.split(" ");
+  return { date, time: timeParts.join(" ") };
+};
+
+function DateTimeCell({ value }: { value?: string | null }) {
+  const { date, time } = splitDateTime(value);
+  return (
+    <div className="text-center tabular-nums">
+      <div>{date}</div>
+      {time ? <div className="text-xs text-muted-foreground">{time}</div> : null}
+    </div>
+  );
+}
+
 const passwordRules = [
   { label: "8자 이상", test: (value: string) => value.length >= 8 },
   { label: "영문 포함", test: (value: string) => /[A-Za-z]/.test(value) },
@@ -322,7 +340,7 @@ export default function AdminUsersPage() {
                   <td className={adminCellClassName}>{item.userType || (item.social ? "SOCIAL" : "INTERNAL")}</td>
                   <td className={adminCellClassName}>{item.authMethod || "PASSWORD"}</td>
                   <td className={adminCellClassName}>{item.mfaEnabled ? "ON" : "OFF"}</td>
-                  <td className={adminCellClassName}>{item.lastLoginAt ? formatSecurityDateTime(item.lastLoginAt) : "-"}</td>
+                  <td className={adminCellClassName}><DateTimeCell value={item.lastLoginAt} /></td>
                   <td className={adminCellClassName}>
                     <div className="flex flex-wrap justify-center gap-2">
                       <Button size="sm" variant="outline" onClick={() => openEdit(item)}>수정</Button>
