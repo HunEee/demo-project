@@ -1,11 +1,15 @@
 package com.example.authapp.api.admin;
 
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.authapp.domain.admin.AdminConsoleService;
+import com.example.authapp.domain.admin.dto.AdminActionRequest;
 import com.example.authapp.domain.admin.dto.AdminRiskResponse;
 import com.example.authapp.domain.audit.dto.PageResponseDTO;
 
@@ -30,6 +34,21 @@ public class AdminRiskController {
             @RequestParam(name = "direction", defaultValue = "DESC") String direction
     ) {
         return new PageResponseDTO<>(adminConsoleService.risks(page, size, username, level, minScore, sort, direction));
+    }
+
+    @PostMapping("/{username}/lock")
+    public void lockRiskUser(@PathVariable String username, @RequestBody(required = false) AdminActionRequest request) {
+        adminConsoleService.lockRiskUser(username, request != null ? request.normalizedReason() : null);
+    }
+
+    @PostMapping("/{username}/tokens/revoke")
+    public void revokeRiskUserTokens(@PathVariable String username, @RequestBody(required = false) AdminActionRequest request) {
+        adminConsoleService.revokeRiskUserTokens(username, request != null ? request.normalizedReason() : null);
+    }
+
+    @PostMapping("/{username}/mfa/require")
+    public void requireRiskUserMfa(@PathVariable String username, @RequestBody(required = false) AdminActionRequest request) {
+        adminConsoleService.requireRiskUserMfa(username, request != null ? request.normalizedReason() : null);
     }
     
 }

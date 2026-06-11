@@ -27,7 +27,6 @@ import {
   statusTone,
 } from "@/pages/admin/adminUi";
 import {
-  deleteAdminUser,
   disableAdminUser,
   getAdminFilterOptions,
   getAdminUsers,
@@ -62,7 +61,7 @@ export default function ExternalUsersPage() {
   const [pageState, setPageState] = useState<PageState>({ page: 0, size: 10, totalPages: 1, totalElements: 0 });
   const [sortState, setSortState] = useState<SortState>({ sort: "createdAt", direction: "DESC" });
   const [selectedUsernames, setSelectedUsernames] = useState<string[]>([]);
-  const [bulkAction, setBulkAction] = useState<"lock" | "disable" | "delete" | null>(null);
+  const [bulkAction, setBulkAction] = useState<"lock" | "disable" | null>(null);
   const [editUser, setEditUser] = useState<AdminUser | null>(null);
   const [editForm, setEditForm] = useState(blankEditForm);
   const [formError, setFormError] = useState("");
@@ -72,6 +71,7 @@ export default function ExternalUsersPage() {
       keyword: filters.keyword,
       status: filters.status,
       authMethod: filters.authMethod,
+      employmentType: "EXTERNAL",
       directOnly: true,
       page: nextPage,
       size: pageState.size,
@@ -108,6 +108,7 @@ export default function ExternalUsersPage() {
     setFilters({ keyword: "", status: "", authMethod: "" });
     const page = await getAdminUsers({
       directOnly: true,
+      employmentType: "EXTERNAL",
       page: 0,
       size: pageState.size,
       sort: sortState.sort,
@@ -171,9 +172,6 @@ export default function ExternalUsersPage() {
     if (bulkAction === "disable") {
       await Promise.all(targets.map((item) => disableAdminUser(item.username)));
     }
-    if (bulkAction === "delete") {
-      await Promise.all(targets.map((item) => deleteAdminUser(item.username, "가입 사용자 선택 일괄 삭제")));
-    }
     setBulkAction(null);
     setSelectedUsernames([]);
     await load(pageState.page);
@@ -218,7 +216,6 @@ export default function ExternalUsersPage() {
       <AdminBulkActionBar selectedLabel={`선택 ${selectedUsernames.length}건`}>
         <Button type="button" variant="outline" disabled={selectedUsernames.length === 0} onClick={() => setBulkAction("lock")}>선택 잠금</Button>
         <Button type="button" variant="outline" disabled={selectedUsernames.length === 0} onClick={() => setBulkAction("disable")}>선택 비활성화</Button>
-        <Button type="button" variant="destructive" disabled={selectedUsernames.length === 0} onClick={() => setBulkAction("delete")}>선택 삭제</Button>
       </AdminBulkActionBar>
 
       <AdminTableCard>
@@ -320,9 +317,9 @@ export default function ExternalUsersPage() {
       <AdminConfirmDialog
         open={bulkAction !== null}
         title="가입 사용자 일괄 작업"
-        description={`${selectedUsernames.length}개 계정에 ${bulkAction === "lock" ? "잠금" : bulkAction === "disable" ? "비활성화" : "삭제"} 작업을 실행합니다.`}
-        confirmLabel={bulkAction === "delete" ? "삭제" : "실행"}
-        destructive
+        description={`${selectedUsernames.length}개 계정에 ${bulkAction === "lock" ? "잠금" : "비활성화"} 작업을 실행합니다.`}
+        confirmLabel="실행"
+        destructive={bulkAction === "disable"}
         onOpenChange={(open) => {
           if (!open) setBulkAction(null);
         }}

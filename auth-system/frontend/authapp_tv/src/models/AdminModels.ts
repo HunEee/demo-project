@@ -147,12 +147,32 @@ export type AdminActionLog = {
   actorUsername: string;
   targetType?: string;
   targetId?: string;
-  targetUsername: string;
+  targetUsername?: string;
   targetName?: string;
   actionType: string;
   reason?: string;
   beforeValue?: string;
   afterValue?: string;
+  ipAddress?: string;
+  device?: string;
+  userAgent?: string;
+  result?: string;
+  riskLevel?: string;
+  metadata?: string;
+  createdAt?: string;
+};
+
+export type RiskActionLog = {
+  id: number;
+  username: string;
+  riskId?: number;
+  riskEventId?: number;
+  riskLevel: string;
+  action: string;
+  mode: "AUTO" | "MANUAL";
+  status: "SUCCESS" | "FAILED" | "SKIPPED";
+  reason?: string;
+  actorUsername?: string;
   ipAddress?: string;
   device?: string;
   createdAt?: string;

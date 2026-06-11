@@ -67,6 +67,12 @@ class AdminConsoleServiceTest {
     private com.example.authapp.domain.audit.repository.AdminActionLogRepository adminActionLogRepository;
 
     @Mock
+    private com.example.authapp.domain.audit.service.AdminActionLogService adminActionLogService;
+
+    @Mock
+    private com.example.authapp.domain.risk.repository.RiskActionLogRepository riskActionLogRepository;
+
+    @Mock
     private PasswordEncoder passwordEncoder;
 
     private AdminConsoleService service() {
@@ -82,6 +88,8 @@ class AdminConsoleServiceTest {
                 groupUserRepository,
                 roleRepository,
                 adminActionLogRepository,
+                adminActionLogService,
+                riskActionLogRepository,
                 passwordEncoder
         );
     }
@@ -133,6 +141,7 @@ class AdminConsoleServiceTest {
                 "username",
                 "ASC",
                 "PARTNER",
+                "EXTERNAL",
                 null,
                 null,
                 true
@@ -146,6 +155,7 @@ class AdminConsoleServiceTest {
                 "username",
                 "ASC",
                 null,
+                null,
                 true,
                 null,
                 null
@@ -153,6 +163,90 @@ class AdminConsoleServiceTest {
 
         assertThat(matching.getContent()).extracting("username").containsExactly("partner1");
         assertThat(hiddenFromDirectSignupFilter.getContent()).isEmpty();
+    }
+
+    @Test
+    void usersCanBeFilteredBySpecificIdentityAndLoginFields() {
+        AdminConsoleService service = service();
+        UserEntity lee = UserEntity.builder()
+                .id(1L)
+                .username("lee.user")
+                .email("lee@example.com")
+                .nickname("Lee")
+                .enabled(true)
+                .locked(true)
+                .social(false)
+                .build();
+        UserEntity kim = UserEntity.builder()
+                .id(2L)
+                .username("kim.user")
+                .email("kim@example.com")
+                .nickname("Kim")
+                .enabled(true)
+                .locked(false)
+                .social(false)
+                .build();
+        HrUserMasterEntity leeHr = HrUserMasterEntity.builder()
+                .employeeNo("E1001")
+                .name("Lee User")
+                .email("lee@example.com")
+                .departmentCode("AUTH")
+                .departmentName("Authentication Team")
+                .position("Engineer")
+                .employmentType(EmploymentType.EMPLOYEE)
+                .hrStatus(HrUserStatus.ACTIVE)
+                .accountUsername("lee.user")
+                .build();
+        HrUserMasterEntity kimHr = HrUserMasterEntity.builder()
+                .employeeNo("E1002")
+                .name("Kim User")
+                .email("kim@example.com")
+                .departmentCode("OPS")
+                .departmentName("Operations")
+                .position("Manager")
+                .employmentType(EmploymentType.EMPLOYEE)
+                .hrStatus(HrUserStatus.ACTIVE)
+                .accountUsername("kim.user")
+                .build();
+        var leeLogin = com.example.authapp.domain.audit.entity.LoginHistoryEntity.builder()
+                .username("lee.user")
+                .success(true)
+                .loginAt(java.time.LocalDateTime.of(2026, 6, 10, 10, 0))
+                .build();
+        var kimLogin = com.example.authapp.domain.audit.entity.LoginHistoryEntity.builder()
+                .username("kim.user")
+                .success(true)
+                .loginAt(java.time.LocalDateTime.of(2026, 6, 1, 10, 0))
+                .build();
+
+        when(userRepository.findAll()).thenReturn(List.of(lee, kim));
+        when(hrUserMasterRepository.findByAccountUsername("lee.user")).thenReturn(Optional.of(leeHr));
+        when(hrUserMasterRepository.findByAccountUsername("kim.user")).thenReturn(Optional.of(kimHr));
+        when(loginHistoryRepository.findTopByUsernameAndSuccessTrueOrderByLoginAtDesc("lee.user")).thenReturn(leeLogin);
+        when(loginHistoryRepository.findTopByUsernameAndSuccessTrueOrderByLoginAtDesc("kim.user")).thenReturn(kimLogin);
+
+        var result = service.users(
+                0,
+                10,
+                "",
+                "",
+                "",
+                "username",
+                "ASC",
+                "AUTH",
+                "EMPLOYEE",
+                null,
+                null,
+                null,
+                "Lee",
+                "lee@example.com",
+                "Engineer",
+                true,
+                "2026-06-09",
+                "2026-06-11"
+        );
+
+        assertThat(result.getContent()).extracting("username").containsExactly("lee.user");
     }
 
     @Test

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Navigate } from "react-router";
 import useAuth from "@/auth/store";
 import { formatSecurityDateTime } from "@/lib/dateTime";
+import type { AdminAuditLog, AdminFilterOptions } from "@/models/AdminModels";
 import AdminFilters from "@/pages/admin/AdminFilters";
 import AdminPageShell from "@/pages/admin/AdminPageShell";
 import {
@@ -17,7 +18,6 @@ import {
   adminTableClassName,
   adminTheadClassName,
 } from "@/pages/admin/adminUi";
-import type { AdminAuditLog, AdminFilterOptions } from "@/models/AdminModels";
 import { getAdminFilterOptions, getAdminSecurityEvents } from "@/services/AdminService";
 
 export default function AdminSecurityEventsPage() {
@@ -31,15 +31,15 @@ export default function AdminSecurityEventsPage() {
 
   const load = async (nextPage = pageState.page, nextSort = sortState) => {
     const page = await getAdminSecurityEvents({
-          username: filters.username,
-          type: filters.type,
-          from: filters.from,
-          to: filters.to,
-          page: nextPage,
-          size: pageState.size,
-          sort: nextSort.sort,
-          direction: nextSort.direction,
-        });
+      username: filters.username,
+      type: filters.type,
+      from: filters.from,
+      to: filters.to,
+      page: nextPage,
+      size: pageState.size,
+      sort: nextSort.sort,
+      direction: nextSort.direction,
+    });
     setItems(page.content);
     setPageState((prev) => ({ ...prev, page: page.page, size: page.size, totalPages: page.totalPages, totalElements: page.totalElements }));
   };
@@ -56,7 +56,16 @@ export default function AdminSecurityEventsPage() {
   const resetFilters = async () => {
     const nextFilters = { username: "", type: "", from: "", to: "" };
     setFilters(nextFilters);
-    const page = await getAdminSecurityEvents({ username: nextFilters.username, type: nextFilters.type, from: nextFilters.from, to: nextFilters.to, page: 0, size: pageState.size, sort: sortState.sort, direction: sortState.direction });
+    const page = await getAdminSecurityEvents({
+      username: nextFilters.username,
+      type: nextFilters.type,
+      from: nextFilters.from,
+      to: nextFilters.to,
+      page: 0,
+      size: pageState.size,
+      sort: sortState.sort,
+      direction: sortState.direction,
+    });
     setItems(page.content);
     setPageState((prev) => ({ ...prev, page: page.page, size: page.size, totalPages: page.totalPages, totalElements: page.totalElements }));
   };
@@ -71,7 +80,7 @@ export default function AdminSecurityEventsPage() {
   if (!isAdmin) return <Navigate to="/dashboard" replace />;
 
   return (
-    <AdminPageShell title="보안 이벤트" description="토큰, 로그인, 계정 보안과 관련된 이벤트입니다.">
+    <AdminPageShell title="보안 이벤트 이력" description="토큰, 로그인, 계정 보안 흐름에서 발생한 이벤트를 조회합니다.">
       <AdminFilters
         fields={[
           { name: "username", label: "사용자 검색", placeholder: "아이디" },
@@ -86,40 +95,40 @@ export default function AdminSecurityEventsPage() {
       />
 
       <AdminTableCard>
-          <table className={adminTableClassName}>
-            <thead className={adminTheadClassName}>
-              <tr>
-                <th className={adminCellClassName}>
-                  <AdminSortableHeader label="시간" column="createdAt" sortState={sortState} onSort={handleSort} />
-                </th>
-                <th className={adminCellClassName}>
-                  <AdminSortableHeader label="사용자" column="username" sortState={sortState} onSort={handleSort} />
-                </th>
-                <th className={adminCellClassName}>
-                  <AdminSortableHeader label="유형" column="type" sortState={sortState} onSort={handleSort} />
-                </th>
-                <th className={adminCellClassName}>디바이스</th>
-                <th className={adminCellClassName}>설명</th>
+        <table className={adminTableClassName}>
+          <thead className={adminTheadClassName}>
+            <tr>
+              <th className={adminCellClassName}>
+                <AdminSortableHeader label="시간" column="createdAt" sortState={sortState} onSort={handleSort} />
+              </th>
+              <th className={adminCellClassName}>
+                <AdminSortableHeader label="사용자" column="username" sortState={sortState} onSort={handleSort} />
+              </th>
+              <th className={adminCellClassName}>
+                <AdminSortableHeader label="유형" column="type" sortState={sortState} onSort={handleSort} />
+              </th>
+              <th className={adminCellClassName}>디바이스</th>
+              <th className={adminCellClassName}>설명</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.length === 0 ? <AdminEmptyRow colSpan={5} /> : null}
+            {items.map((item) => (
+              <tr key={item.id} className={adminRowClassName}>
+                <td className={`${adminCellClassName} whitespace-nowrap tabular-nums`}>
+                  {formatSecurityDateTime(item.createdAt)}
+                </td>
+                <td className={adminCellClassName}>{item.username}</td>
+                <td className={adminCellClassName}>
+                  <AdminBadge tone="warning">{item.type}</AdminBadge>
+                </td>
+                <td className={adminCellClassName}>{item.device || "-"}</td>
+                <td className={`${adminCellClassName} max-w-96 text-left`}>{item.description || "-"}</td>
               </tr>
-            </thead>
-            <tbody>
-              {items.length === 0 ? <AdminEmptyRow colSpan={5} /> : null}
-              {items.map((item) => (
-                <tr key={item.id} className={adminRowClassName}>
-                  <td className={`${adminCellClassName} whitespace-nowrap tabular-nums`}>
-                    {formatSecurityDateTime(item.createdAt)}
-                  </td>
-                  <td className={adminCellClassName}>{item.username}</td>
-                  <td className={adminCellClassName}>
-                    <AdminBadge tone="warning">{item.type}</AdminBadge>
-                  </td>
-                  <td className={adminCellClassName}>{item.device || "-"}</td>
-                  <td className={adminCellClassName}>{item.description || "-"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <AdminPagination pageState={pageState} onPageChange={(page) => void load(page)} />
+            ))}
+          </tbody>
+        </table>
+        <AdminPagination pageState={pageState} onPageChange={(page) => void load(page)} />
       </AdminTableCard>
     </AdminPageShell>
   );

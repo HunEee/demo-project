@@ -19,6 +19,7 @@ import org.springframework.security.web.authentication.AbstractAuthenticationPro
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.util.StreamUtils;
 
@@ -46,9 +47,17 @@ public class LoginFilter extends AbstractAuthenticationProcessingFilter {
                        AuthenticationSuccessHandler successHandler,
                        AuthenticationFailureHandler failureHandler,
                        String apiPrefix) {
-        super(PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, apiPrefix + "/login"),authenticationManager);
+        super(loginRequestMatcher(apiPrefix), authenticationManager);
         this.authenticationSuccessHandler = successHandler;
         this.authenticationFailureHandler = failureHandler;
+    }
+
+    private static RequestMatcher loginRequestMatcher(String apiPrefix) {
+        var matcherBuilder = PathPatternRequestMatcher.withDefaults();
+        return new OrRequestMatcher(
+                matcherBuilder.matcher(HttpMethod.POST, apiPrefix + "/auth/login"),
+                matcherBuilder.matcher(HttpMethod.POST, apiPrefix + "/login")
+        );
     }
     
 

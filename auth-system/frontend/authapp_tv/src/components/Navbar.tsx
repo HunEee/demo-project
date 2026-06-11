@@ -78,15 +78,32 @@ const adminGroups: MenuGroup[] = [
     ],
   },
   {
-    label: "인증 / 보안",
+    label: "인증 관리",
     icon: ShieldCheck,
     items: [
-      { label: "로그인 / 세션 관리", path: "/admin/security/sessions", icon: LayoutDashboard },
-      { label: "MFA 관리", path: "/admin/security/mfa", icon: ShieldCheck },
-      { label: "비밀번호 정책", path: "/admin/security/password-policy", icon: KeyRound },
-      { label: "인증 정책", path: "/admin/security/auth-policy", icon: SlidersHorizontal },
-      { label: "위험 로그인 탐지", path: "/admin/security/risk-logins", icon: CircleAlert },
+      { label: "로그인 / 세션 관리", path: "/admin/auth/sessions", icon: LayoutDashboard },
+      { label: "MFA 관리", path: "/admin/auth/mfa", icon: ShieldCheck },
+      { label: "인증 정책 관리", path: "/admin/auth/policies", icon: SlidersHorizontal },
+    ],
+  },
+  {
+    label: "보안 관리",
+    icon: CircleAlert,
+    items: [
       { label: "보안 이벤트 관리", path: "/admin/security/events", icon: FileText },
+      { label: "위험 로그인 탐지", path: "/admin/security/risk-logins", icon: CircleAlert },
+      { label: "관리자 IP 제한", path: "/admin/security/admin-ip", icon: ShieldCheck },
+    ],
+  },
+  {
+    label: "감사 / 모니터링",
+    icon: FileText,
+    items: [
+      { label: "감사 로그", path: "/admin/audit/logs", icon: FileText },
+      { label: "관리자 작업 로그", path: "/admin/audit/admin-actions", icon: ClipboardCheck },
+      { label: "로그인 이력", path: "/admin/audit/login-history", icon: ShieldCheck },
+      { label: "정책 변경 이력", path: "/admin/audit/policy-changes", icon: SlidersHorizontal },
+      { label: "리포트 / 다운로드", path: "/admin/audit/reports", icon: FileText },
     ],
   },
   {
@@ -110,17 +127,6 @@ const adminGroups: MenuGroup[] = [
     ],
   },
   {
-    label: "감사 / 모니터링",
-    icon: FileText,
-    items: [
-      { label: "감사 로그", path: "/admin/audit/logs", icon: FileText },
-      { label: "로그인 이력", path: "/admin/audit/login-history", icon: ShieldCheck },
-      { label: "관리자 작업 로그", path: "/admin/audit/admin-actions", icon: ClipboardCheck },
-      { label: "정책 변경 이력", path: "/admin/audit/policy-changes", icon: SlidersHorizontal },
-      { label: "리포트 / 다운로드", path: "/admin/audit/reports", icon: FileText },
-    ],
-  },
-  {
     label: "알림 관리",
     icon: Bell,
     items: [
@@ -134,10 +140,8 @@ const adminGroups: MenuGroup[] = [
     icon: Settings,
     items: [
       { label: "시스템 설정", path: "/admin/system/settings", icon: Settings },
-      { label: "토큰 정책 설정", path: "/admin/system/token-policy", icon: KeyRound },
       { label: "CORS / Redirect URI 설정", path: "/admin/system/cors-redirect", icon: Link2 },
       { label: "로그 보관 정책", path: "/admin/system/log-retention", icon: FileText },
-      { label: "관리자 IP 제한", path: "/admin/system/admin-ip", icon: ShieldCheck },
     ],
   },
 ];

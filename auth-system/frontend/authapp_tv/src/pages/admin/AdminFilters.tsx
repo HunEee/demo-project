@@ -23,7 +23,6 @@ type AdminFiltersProps<T extends AdminFilterValues> = {
   hint?: string;
 };
 
-// 목록 화면의 검색/필터 UI를 한곳에서 관리해 화면별 조작 경험을 맞춥니다.
 export default function AdminFilters<T extends AdminFilterValues>({
   fields,
   values,
@@ -77,7 +76,7 @@ export default function AdminFilters<T extends AdminFilterValues>({
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <span className="inline-flex items-center gap-1">
+            <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
               <Filter className="h-3.5 w-3.5" />
               {hint}
             </span>

@@ -17,8 +17,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 import com.example.authapp.domain.admin.dto.AdminActionLogResponse;
 import com.example.authapp.domain.admin.dto.AdminAuditLogResponse;
@@ -33,6 +31,7 @@ import com.example.authapp.domain.admin.dto.AdminSessionResponse;
 import com.example.authapp.domain.admin.dto.AdminUserCreateRequest;
 import com.example.authapp.domain.admin.dto.AdminUserDetailResponse;
 import com.example.authapp.domain.admin.dto.AdminUserResponse;
+import com.example.authapp.domain.admin.dto.AdminUserStatusRequest;
 import com.example.authapp.domain.admin.dto.AdminUserUpdateRequest;
 import com.example.authapp.domain.admin.type.AdminSessionStatus;
 import com.example.authapp.domain.admin.type.AdminUserStatus;
@@ -49,6 +48,8 @@ import com.example.authapp.domain.audit.repository.AdminActionLogRepository;
 import com.example.authapp.domain.audit.repository.AuthEventLogRepository;
 import com.example.authapp.domain.audit.repository.LoginHistoryRepository;
 import com.example.authapp.domain.audit.repository.SecurityIncidentRepository;
+import com.example.authapp.domain.audit.service.AdminActionLogRequest;
+import com.example.authapp.domain.audit.service.AdminActionLogService;
 import com.example.authapp.domain.authorization.entity.RoleEntity;
 import com.example.authapp.domain.authorization.repository.RoleRepository;
 import com.example.authapp.domain.hr.entity.HrUserMasterEntity;
@@ -60,13 +61,12 @@ import com.example.authapp.domain.organization.dto.AdminGroupResponse;
 import com.example.authapp.domain.organization.repository.GroupUserRepository;
 import com.example.authapp.domain.risk.entity.RiskEntity;
 import com.example.authapp.domain.risk.entity.RiskLevel;
+import com.example.authapp.domain.risk.entity.RiskActionLogEntity;
+import com.example.authapp.domain.risk.repository.RiskActionLogRepository;
 import com.example.authapp.domain.risk.repository.RiskRepository;
 import com.example.authapp.domain.user.entity.UserEntity;
 import com.example.authapp.domain.user.entity.UserRoleType;
 import com.example.authapp.domain.user.repository.UserRepository;
-import com.example.authapp.util.ClientUtil;
-
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -84,6 +84,8 @@ public class AdminConsoleService {
     private final GroupUserRepository groupUserRepository;
     private final RoleRepository roleRepository;
     private final AdminActionLogRepository adminActionLogRepository;
+    private final AdminActionLogService adminActionLogService;
+    private final RiskActionLogRepository riskActionLogRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Transactional(readOnly = true)
@@ -121,7 +123,7 @@ public class AdminConsoleService {
 
     @Transactional(readOnly = true)
     public Page<AdminUserResponse> users(int page, int size, String keyword, String status, String role, String sort, String direction) {
-        return users(page, size, keyword, status, role, sort, direction, null, null, null, null);
+        return users(page, size, keyword, status, role, sort, direction, null, null, null, null, null);
     }
 
     @Transactional(readOnly = true)
@@ -134,20 +136,54 @@ public class AdminConsoleService {
             String sort,
             String direction,
             String departmentCode,
+            String employmentType,
             Boolean directOnly,
             String authMethod,
             Boolean mfaEnabled
     ) {
+        return users(page, size, keyword, status, role, sort, direction, departmentCode, employmentType, directOnly, authMethod, mfaEnabled, null, null, null, null, null, null);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<AdminUserResponse> users(
+            int page,
+            int size,
+            String keyword,
+            String status,
+            String role,
+            String sort,
+            String direction,
+            String departmentCode,
+            String employmentType,
+            Boolean directOnly,
+            String authMethod,
+            Boolean mfaEnabled,
+            String name,
+            String email,
+            String position,
+            Boolean locked,
+            String lastLoginFrom,
+            String lastLoginTo
+    ) {
+        LocalDateTime loginFrom = parseStartOfDay(lastLoginFrom);
+        LocalDateTime loginTo = parseEndOfDay(lastLoginTo);
         List<AdminUserResponse> content = userRepository.findAll().stream()
                 .filter(user -> {
                     HrUserMasterEntity hrUser = findHrUser(user.getUsername());
                     boolean userMfaEnabled = mfaMethodRepository.existsByUsernameAndEnabledTrue(user.getUsername());
+                    LocalDateTime latestLoginAt = latestSuccessfulLoginAt(user.getUsername());
                     return keywordMatches(user, hrUser, keyword)
                             && (status == null || status.isBlank() || statusMatches(user, hrUser, status))
                             && departmentMatches(hrUser, departmentCode)
+                            && employmentTypeMatches(hrUser, employmentType)
                             && directRegistrationMatches(hrUser, directOnly)
                             && authMethodMatches(user, authMethod)
-                            && mfaMatches(userMfaEnabled, mfaEnabled);
+                            && mfaMatches(userMfaEnabled, mfaEnabled)
+                            && nameMatches(user, hrUser, name)
+                            && contains(user.getEmail(), email)
+                            && positionMatches(hrUser, position)
+                            && (locked == null || user.isLocked() == locked)
+                            && loginDateMatches(latestLoginAt, loginFrom, loginTo);
                 })
                 .filter(user -> role == null || role.isBlank() || user.getRoles().stream().anyMatch(item -> item.getName().equals(role)))
                 .sorted(applyDirection(userComparator(sort), direction))
@@ -186,7 +222,7 @@ public class AdminConsoleService {
         user.addRole(role);
         UserEntity saved = userRepository.save(user);
         hrUser.markAccountCreated(saved.getUsername());
-        saveAdminAction(saved.getUsername(), AdminActionType.PROFILE_UPDATE, null, accountState(saved) + hrState(hrUser), defaultText(request.reason(), "Create account from HR master"));
+        saveAdminAction(saved.getUsername(), AdminActionType.CREATE_USER, null, accountState(saved) + hrState(hrUser), defaultText(request.reason(), "Create account from HR master"));
         return AdminUserResponse.from(saved, hrUser, false, null);
     }
 
@@ -217,7 +253,29 @@ public class AdminConsoleService {
             }
         }
         boolean mfaEnabled = mfaMethodRepository.existsByUsernameAndEnabledTrue(username);
-        saveAdminAction(username, AdminActionType.PROFILE_UPDATE, before, accountState(user) + hrState(hrUser), defaultText(request.reason(), "Update user account"));
+        saveAdminAction(username, AdminActionType.UPDATE_USER, before, accountState(user) + hrState(hrUser), defaultText(request.reason(), "Update user account"));
+        return AdminUserResponse.from(user, hrUser, mfaEnabled, latestSuccessfulLoginAt(username));
+    }
+
+    @Transactional
+    public AdminUserResponse updateUserStatus(String username, AdminUserStatusRequest request) {
+        UserEntity user = userRepository.findByUsername(username).orElseThrow();
+        HrUserMasterEntity hrUser = findHrUser(username);
+        String before = accountState(user) + hrState(hrUser);
+        String normalized = request.status() == null ? "" : request.status().trim().toUpperCase(Locale.ROOT);
+
+        switch (normalized) {
+            case "ACTIVE", "ENABLED" -> user.enable();
+            case "DISABLED", "INACTIVE" -> {
+                user.disable();
+                Optional.ofNullable(hrUser).ifPresent(HrUserMasterEntity::markAccountDisabled);
+            }
+            default -> throw new IllegalArgumentException("Unsupported user status: " + request.status());
+        }
+
+        AdminActionType actionType = user.isEnabled() ? AdminActionType.ENABLE_USER : AdminActionType.DISABLE_USER;
+        saveAdminAction(username, actionType, before, accountState(user) + hrState(hrUser), defaultText(request.reason(), "Update user status"));
+        boolean mfaEnabled = mfaMethodRepository.existsByUsernameAndEnabledTrue(username);
         return AdminUserResponse.from(user, hrUser, mfaEnabled, latestSuccessfulLoginAt(username));
     }
 
@@ -227,7 +285,7 @@ public class AdminConsoleService {
         String before = accountState(user);
         user.deactivate();
         Optional.ofNullable(findHrUser(username)).ifPresent(HrUserMasterEntity::markAccountDisabled);
-        saveAdminAction(username, AdminActionType.PROFILE_UPDATE, before, accountState(user), defaultText(reason, "Delete user account"));
+        saveAdminAction(username, AdminActionType.DELETE_USER, before, accountState(user), defaultText(reason, "Delete user account"));
     }
 
     @Transactional(readOnly = true)
@@ -331,6 +389,63 @@ public class AdminConsoleService {
         saveAdminAction(username, AdminActionType.MFA_RESET, null, "{\"mfaReset\":true}", "Reset user MFA");
     }
 
+    @Transactional
+    public void lockRiskUser(String username, String reason) {
+        UserEntity user = userRepository.findByUsername(username).orElseThrow();
+        String before = accountState(user);
+        user.lock();
+        String riskLevel = riskLevel(username);
+        recordRiskAction(username, riskLevel, "LOCK_ACCOUNT", "SUCCESS", defaultText(reason, "Manual high risk account lock"));
+        adminActionLogService.record(AdminActionLogRequest.builder()
+                .targetType("USER")
+                .targetId(username)
+                .targetUsername(username)
+                .targetName(username)
+                .actionType(AdminActionType.RISK_MANUAL_LOCK)
+                .reason(defaultText(reason, "Manual high risk account lock"))
+                .beforeValue(before)
+                .afterValue(accountState(user))
+                .result("SUCCESS")
+                .riskLevel(riskLevel)
+                .build());
+    }
+
+    @Transactional
+    public void revokeRiskUserTokens(String username, String reason) {
+        refreshTokenRepository.findByUsername(username).forEach(RefreshTokenEntity::revoke);
+        String riskLevel = riskLevel(username);
+        recordRiskAction(username, riskLevel, "REVOKE_TOKENS", "SUCCESS", defaultText(reason, "Manual high risk token revoke"));
+        adminActionLogService.record(AdminActionLogRequest.builder()
+                .targetType("USER")
+                .targetId(username)
+                .targetUsername(username)
+                .targetName(username)
+                .actionType(AdminActionType.RISK_TOKEN_REVOKE)
+                .reason(defaultText(reason, "Manual high risk token revoke"))
+                .afterValue("{\"revoked\":true}")
+                .result("SUCCESS")
+                .riskLevel(riskLevel)
+                .build());
+    }
+
+    @Transactional
+    public void requireRiskUserMfa(String username, String reason) {
+        mfaMethodRepository.deleteByUsername(username);
+        String riskLevel = riskLevel(username);
+        recordRiskAction(username, riskLevel, "REQUIRE_MFA_REREGISTRATION", "SUCCESS", defaultText(reason, "Manual high risk MFA re-registration"));
+        adminActionLogService.record(AdminActionLogRequest.builder()
+                .targetType("USER")
+                .targetId(username)
+                .targetUsername(username)
+                .targetName(username)
+                .actionType(AdminActionType.RISK_REQUIRE_MFA)
+                .reason(defaultText(reason, "Manual high risk MFA re-registration"))
+                .afterValue("{\"mfaReregistrationRequired\":true}")
+                .result("SUCCESS")
+                .riskLevel(riskLevel)
+                .build());
+    }
+
     @Transactional(readOnly = true)
     public Page<AdminAuditLogResponse> auditLogs(int page, int size, String username, String type, String from, String to, String sort, String direction) {
         List<AdminAuditLogResponse> content = authEventLogRepository.findAll().stream()
@@ -342,6 +457,42 @@ public class AdminConsoleService {
                 .toList();
 
         return page(content, page, size);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<AdminActionLogResponse> adminActionLogs(
+            int page,
+            int size,
+            String actor,
+            String target,
+            String action,
+            String result,
+            String reason,
+            String riskLevel,
+            String ipAddress,
+            String userAgent,
+            String from,
+            String to,
+            String sort,
+            String direction
+    ) {
+        return adminActionLogService.search(
+                        page,
+                        size,
+                        actor,
+                        target,
+                        action,
+                        result,
+                        reason,
+                        riskLevel,
+                        ipAddress,
+                        userAgent,
+                        parseStartOfDay(from),
+                        parseEndOfDay(to),
+                        sort,
+                        direction
+                )
+                .map(AdminActionLogResponse::from);
     }
 
     @Transactional(readOnly = true)
@@ -379,7 +530,27 @@ public class AdminConsoleService {
 
     @Transactional
     public void resolveIncident(Long id, String adminUsername) {
-        securityIncidentRepository.findById(id).orElseThrow().resolve(adminUsername);
+        resolveIncident(id, adminUsername, "Resolve security incident");
+    }
+
+    @Transactional
+    public void resolveIncident(Long id, String adminUsername, String reason) {
+        SecurityIncidentEntity incident = securityIncidentRepository.findById(id).orElseThrow();
+        boolean wasResolved = incident.isResolved();
+        incident.resolve(adminUsername);
+        adminActionLogService.record(AdminActionLogRequest.builder()
+                .actorUsername(adminUsername)
+                .targetType("SECURITY_INCIDENT")
+                .targetId(String.valueOf(id))
+                .targetUsername(incident.getUsername())
+                .targetName(incident.getType().name())
+                .actionType(AdminActionType.RESOLVE_INCIDENT)
+                .reason(defaultText(reason, "Resolve security incident"))
+                .beforeValue("{\"resolved\":" + wasResolved + "}")
+                .afterValue("{\"resolved\":true,\"resolvedBy\":\"" + adminUsername + "\"}")
+                .result("SUCCESS")
+                .riskLevel(incident.getSeverity().name())
+                .build());
     }
 
     @Transactional(readOnly = true)
@@ -439,6 +610,24 @@ public class AdminConsoleService {
                 || (hrUser != null && contains(hrUser.getPosition(), keyword));
     }
 
+    private boolean nameMatches(UserEntity user, HrUserMasterEntity hrUser, String name) {
+        return contains(user.getNickname(), name)
+                || (hrUser != null && contains(hrUser.getName(), name));
+    }
+
+    private boolean positionMatches(HrUserMasterEntity hrUser, String position) {
+        if (position == null || position.isBlank()) return true;
+        return hrUser != null && contains(hrUser.getPosition(), position);
+    }
+
+    private boolean loginDateMatches(LocalDateTime latestLoginAt, LocalDateTime from, LocalDateTime to) {
+        if (from == null && to == null) return true;
+        if (latestLoginAt == null) return false;
+        if (from != null && latestLoginAt.isBefore(from)) return false;
+        if (to != null && latestLoginAt.isAfter(to)) return false;
+        return true;
+    }
+
     private boolean statusMatches(UserEntity user, HrUserMasterEntity hrUser, String status) {
         return switch (status.toUpperCase(Locale.ROOT)) {
             case "DELETED" -> user.isDeleted();
@@ -456,6 +645,13 @@ public class AdminConsoleService {
     private boolean departmentMatches(HrUserMasterEntity hrUser, String departmentCode) {
         if (departmentCode == null || departmentCode.isBlank()) return true;
         return hrUser != null && contains(hrUser.getDepartmentCode(), departmentCode);
+    }
+
+    private boolean employmentTypeMatches(HrUserMasterEntity hrUser, String employmentType) {
+        if (employmentType == null || employmentType.isBlank()) return true;
+        return hrUser != null
+                && hrUser.getEmploymentType() != null
+                && hrUser.getEmploymentType().name().equalsIgnoreCase(employmentType);
     }
 
     private boolean directRegistrationMatches(HrUserMasterEntity hrUser, Boolean directOnly) {
@@ -614,10 +810,7 @@ public class AdminConsoleService {
             String afterValue,
             String reason
     ) {
-        HttpServletRequest request = currentRequest();
-        String userAgent = request != null ? ClientUtil.getUserAgent(request) : null;
-        adminActionLogRepository.save(AdminActionLogEntity.builder()
-                .actorUsername(currentActor())
+        adminActionLogService.record(AdminActionLogRequest.builder()
                 .targetType("USER")
                 .targetId(targetUsername)
                 .targetUsername(targetUsername)
@@ -626,23 +819,32 @@ public class AdminConsoleService {
                 .reason(reason)
                 .beforeValue(beforeValue)
                 .afterValue(afterValue)
-                .ipAddress(request != null ? ClientUtil.getIp(request) : "UNKNOWN")
-                .device(userAgent != null ? ClientUtil.getDevice(userAgent) : "UNKNOWN")
                 .build());
+    }
+
+    private void recordRiskAction(String username, String riskLevel, String action, String status, String reason) {
+        riskActionLogRepository.save(RiskActionLogEntity.builder()
+                .username(username)
+                .riskLevel(defaultText(riskLevel, "UNKNOWN"))
+                .action(action)
+                .mode("MANUAL")
+                .status(status)
+                .reason(reason)
+                .actorUsername(currentActor())
+                .build());
+    }
+
+    private String riskLevel(String username) {
+        return riskRepository.findByUserUsername(username)
+                .map(RiskEntity::getRiskLevel)
+                .map(Enum::name)
+                .orElse("UNKNOWN");
     }
 
     private String currentActor() {
         var authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || authentication.getName() == null) return "UNKNOWN";
         return authentication.getName();
-    }
-
-    private HttpServletRequest currentRequest() {
-        var attributes = RequestContextHolder.getRequestAttributes();
-        if (attributes instanceof ServletRequestAttributes servletRequestAttributes) {
-            return servletRequestAttributes.getRequest();
-        }
-        return null;
     }
 
     private String accountState(UserEntity user) {

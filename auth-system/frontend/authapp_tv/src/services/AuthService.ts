@@ -17,7 +17,7 @@ const normalizeLoginResponse = (data: LoginResponseData | string): LoginResponse
 // =============================
 export const loginUser = async (loginData: LoginData) => {
   // 로그인 요청 → accessToken + user 정보 반환
-  const response = await authClient.post<LoginResponseData | string>("/login", loginData);
+  const response = await authClient.post<LoginResponseData | string>("/auth/login", loginData);
   return normalizeLoginResponse(response.data);
 };
 
@@ -26,7 +26,7 @@ export const loginUser = async (loginData: LoginData) => {
 // =============================
 export const logoutUser = async () => {
   // 서버에 로그아웃 요청 (쿠키/세션 제거 등)
-  const response = await authClient.post(`/logout`);
+  const response = await authClient.post(`/auth/logout`);
   return response.data;
 };
 

@@ -33,7 +33,6 @@ import {
 import {
   checkAdminUsernameExists,
   createAdminUser,
-  deleteAdminUser,
   disableAdminUser,
   getAdminFilterOptions,
   getAdminUsers,
@@ -88,7 +87,20 @@ export default function AdminUsersPage() {
   const user = useAuth((state) => state.user);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [candidates, setCandidates] = useState<HrUserMaster[]>([]);
-  const [filters, setFilters] = useState({ keyword: "", status: "", role: "", mfaEnabled: "" });
+  const [filters, setFilters] = useState({
+    keyword: "",
+    name: "",
+    email: "",
+    departmentCode: "",
+    position: "",
+    status: "",
+    locked: "",
+    role: "",
+    employmentType: "",
+    mfaEnabled: "",
+    lastLoginFrom: "",
+    lastLoginTo: "",
+  });
   const [filterOptions, setFilterOptions] = useState<AdminFilterOptions | null>(null);
   const [pageState, setPageState] = useState<PageState>({ page: 0, size: 10, totalPages: 1, totalElements: 0 });
   const [sortState, setSortState] = useState<SortState>({ sort: "createdAt", direction: "DESC" });
@@ -98,7 +110,7 @@ export default function AdminUsersPage() {
   const [usernameCheck, setUsernameCheck] = useState<"idle" | "checking" | "available" | "duplicate">("idle");
   const [formError, setFormError] = useState("");
   const [selectedUsernames, setSelectedUsernames] = useState<string[]>([]);
-  const [bulkAction, setBulkAction] = useState<"lock" | "disable" | "delete" | null>(null);
+  const [bulkAction, setBulkAction] = useState<"lock" | "disable" | null>(null);
   const isAdmin = user?.roles?.includes("ROLE_ADMIN");
 
   const roleOptions: AdminFilterOption[] = useMemo(
@@ -112,9 +124,17 @@ export default function AdminUsersPage() {
   const load = async (nextPage = pageState.page, nextSort = sortState) => {
     const page = await getAdminUsers({
       keyword: filters.keyword,
+      name: filters.name,
+      email: filters.email,
+      departmentCode: filters.departmentCode,
+      position: filters.position,
       status: filters.status,
+      locked: filters.locked,
       role: filters.role,
+      employmentType: filters.employmentType,
       mfaEnabled: filters.mfaEnabled,
+      lastLoginFrom: filters.lastLoginFrom,
+      lastLoginTo: filters.lastLoginTo,
       page: nextPage,
       size: pageState.size,
       sort: nextSort.sort,
@@ -133,7 +153,21 @@ export default function AdminUsersPage() {
 
   useEffect(() => {
     if (isAdmin) void load(0).catch(() => undefined);
-  }, [isAdmin, filters.keyword, filters.status, filters.role, filters.mfaEnabled]);
+  }, [
+    isAdmin,
+    filters.keyword,
+    filters.name,
+    filters.email,
+    filters.departmentCode,
+    filters.position,
+    filters.status,
+    filters.locked,
+    filters.role,
+    filters.employmentType,
+    filters.mfaEnabled,
+    filters.lastLoginFrom,
+    filters.lastLoginTo,
+  ]);
 
   const openCreate = async () => {
     setSelectedUser(null);
@@ -168,7 +202,20 @@ export default function AdminUsersPage() {
   };
 
   const resetFilters = async () => {
-    setFilters({ keyword: "", status: "", role: "", mfaEnabled: "" });
+    setFilters({
+      keyword: "",
+      name: "",
+      email: "",
+      departmentCode: "",
+      position: "",
+      status: "",
+      locked: "",
+      role: "",
+      employmentType: "",
+      mfaEnabled: "",
+      lastLoginFrom: "",
+      lastLoginTo: "",
+    });
     const page = await getAdminUsers({ page: 0, size: pageState.size, sort: sortState.sort, direction: sortState.direction });
     setUsers(page.content);
     setSelectedUsernames([]);
@@ -243,9 +290,6 @@ export default function AdminUsersPage() {
     if (bulkAction === "disable") {
       await Promise.all(targets.map((item) => disableAdminUser(item.username)));
     }
-    if (bulkAction === "delete") {
-      await Promise.all(targets.map((item) => deleteAdminUser(item.username, "관리자 선택 일괄 삭제")));
-    }
     setBulkAction(null);
     setSelectedUsernames([]);
     await load();
@@ -262,6 +306,10 @@ export default function AdminUsersPage() {
       <AdminFilters
         fields={[
           { name: "keyword", label: "사용자 검색", placeholder: "아이디, 이메일, 이름" },
+          { name: "name", label: "이름", placeholder: "이름" },
+          { name: "email", label: "이메일", placeholder: "email@example.com" },
+          { name: "departmentCode", label: "부서", placeholder: "부서 코드" },
+          { name: "position", label: "직급", placeholder: "직급" },
           {
             name: "status",
             label: "계정 상태",
@@ -269,10 +317,33 @@ export default function AdminUsersPage() {
             options: [{ label: "전체", value: "" }, ...(filterOptions?.userStatuses ?? [])],
           },
           {
+            name: "locked",
+            label: "잠금 여부",
+            type: "select",
+            options: [
+              { label: "전체", value: "" },
+              { label: "잠금", value: "true" },
+              { label: "정상", value: "false" },
+            ],
+          },
+          { name: "lastLoginFrom", label: "마지막 로그인 시작", type: "date" },
+          { name: "lastLoginTo", label: "마지막 로그인 종료", type: "date" },
+          {
             name: "role",
             label: "권한",
             type: "select",
             options: [{ label: "전체", value: "" }, ...(filterOptions?.roles ?? [])],
+          },
+          {
+            name: "employmentType",
+            label: "고용형태",
+            type: "select",
+            options: [
+              { label: "전체", value: "" },
+              { label: "직원", value: "EMPLOYEE" },
+              { label: "외부", value: "EXTERNAL" },
+              { label: "계약", value: "CONTRACTOR" },
+            ],
           },
           {
             name: "mfaEnabled",
@@ -294,7 +365,6 @@ export default function AdminUsersPage() {
       <AdminBulkActionBar selectedLabel={`선택 ${selectedUsernames.length}건`}>
           <Button type="button" variant="outline" disabled={selectedUsernames.length === 0} onClick={() => setBulkAction("lock")}>선택 잠금</Button>
           <Button type="button" variant="outline" disabled={selectedUsernames.length === 0} onClick={() => setBulkAction("disable")}>선택 비활성화</Button>
-          <Button type="button" variant="destructive" disabled={selectedUsernames.length === 0} onClick={() => setBulkAction("delete")}>선택 삭제</Button>
       </AdminBulkActionBar>
 
       <AdminTableCard>
@@ -445,9 +515,9 @@ export default function AdminUsersPage() {
       <AdminConfirmDialog
         open={bulkAction !== null}
         title="선택 사용자 일괄 작업"
-        description={`${selectedUsernames.length}개 계정에 ${bulkAction === "lock" ? "잠금" : bulkAction === "disable" ? "비활성화" : "삭제"} 작업을 실행합니다.`}
-        confirmLabel={bulkAction === "delete" ? "삭제" : "실행"}
-        destructive
+        description={`${selectedUsernames.length}개 계정에 ${bulkAction === "lock" ? "잠금" : "비활성화"} 작업을 실행합니다.`}
+        confirmLabel="실행"
+        destructive={bulkAction === "disable"}
         onOpenChange={(open) => {
           if (!open) setBulkAction(null);
         }}

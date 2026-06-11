@@ -22,6 +22,8 @@ import org.springframework.security.web.authentication.AuthenticationFailureHand
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.logout.LogoutFilter;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -163,6 +165,7 @@ public class SecurityConfig {
                     API_PREFIX + "/users/password/reset",
                     API_PREFIX + "/verification/**",
                     API_PREFIX + "/auth/mfa/verify",
+                    API_PREFIX + "/auth/login",
                     API_PREFIX + "/login"
                 ).permitAll()
                 // 인증 필요
@@ -178,8 +181,12 @@ public class SecurityConfig {
         );
 
         // 기본 로그아웃 필터 + 커스텀 Refresh 토큰 삭제 핸들러 추가
+        var requestMatcherBuilder = PathPatternRequestMatcher.withDefaults();
         http.logout(logout -> logout
-        		.logoutUrl(API_PREFIX + "/logout")
+        		.logoutRequestMatcher(new OrRequestMatcher(
+                        requestMatcherBuilder.matcher(HttpMethod.POST, API_PREFIX + "/auth/logout"),
+                        requestMatcherBuilder.matcher(HttpMethod.POST, API_PREFIX + "/logout")
+                ))
                 .addLogoutHandler(new RefreshTokenLogoutHandler(refreshTokenService, cookieService, loginHistoryService,securityEventService))
                 .logoutSuccessHandler((request, response, authentication) -> {
                     response.setStatus(HttpServletResponse.SC_OK);

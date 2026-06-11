@@ -4,11 +4,13 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.authapp.domain.admin.AdminConsoleService;
+import com.example.authapp.domain.admin.dto.AdminActionRequest;
 import com.example.authapp.domain.admin.dto.AdminAuditLogResponse;
 import com.example.authapp.domain.admin.dto.AdminIncidentResponse;
 import com.example.authapp.domain.audit.dto.PageResponseDTO;
@@ -58,8 +60,12 @@ public class AdminSecurityController {
 
     // 사고를 해결 처리
     @PostMapping("/incidents/{id}/resolve")
-    public void resolveIncident(@PathVariable Long id, @AuthenticationPrincipal UserPrincipal admin) {
-        adminConsoleService.resolveIncident(id, admin.getUsername());
+    public void resolveIncident(
+            @PathVariable Long id,
+            @RequestBody(required = false) AdminActionRequest request,
+            @AuthenticationPrincipal UserPrincipal admin
+    ) {
+        adminConsoleService.resolveIncident(id, admin.getUsername(), request != null ? request.normalizedReason() : null);
     }
 
 }

@@ -1,5 +1,6 @@
 import apiClient from "@/config/apiClient";
 import type {
+  AdminActionLog,
   AdminApiPermissionRule,
   AdminApiPermissionRuleRequest,
   AdminAuditLog,
@@ -82,37 +83,38 @@ export const updateAdminUser = async (username: string, data: AdminUserUpdateReq
   return response.data;
 };
 
-export const deleteAdminUser = async (username: string, reason?: string) => {
-  await apiClient.post(`/admin/users/${username}/delete`, undefined, { params: cleanAdminParams({ reason }) });
+export const updateAdminUserStatus = async (username: string, status: string, reason?: string) => {
+  const response = await apiClient.patch<AdminUser>(`/admin/users/${username}/status`, { status, reason });
+  return response.data;
 };
 
 export const lockAdminUser = async (id: string | number) => {
-  await apiClient.post(`/admin/users/${id}/lock`);
+  await apiClient.patch(`/admin/users/${id}/lock`);
 };
 
 export const unlockAdminUser = async (id: string | number) => {
-  await apiClient.post(`/admin/users/${id}/unlock`);
+  await apiClient.patch(`/admin/users/${id}/unlock`);
 };
 
 export const disableAdminUser = async (username: string) => {
-  await apiClient.post(`/admin/users/${username}/disable`);
+  await updateAdminUserStatus(username, "DISABLED");
 };
 
 export const enableAdminUser = async (username: string) => {
-  await apiClient.post(`/admin/users/${username}/enable`);
+  await updateAdminUserStatus(username, "ACTIVE");
 };
 
 export const revokeAdminUserTokens = async (username: string) => {
-  await apiClient.post(`/admin/users/${username}/tokens/revoke`);
+  await apiClient.post(`/admin/users/${username}/revoke-tokens`);
 };
 
 export const resetAdminUserPassword = async (username: string) => {
-  const response = await apiClient.post<AdminPasswordResetResponse>(`/admin/users/${username}/password/reset`);
+  const response = await apiClient.post<AdminPasswordResetResponse>(`/admin/users/${username}/reset-password`);
   return response.data;
 };
 
 export const resetAdminUserMfa = async (username: string) => {
-  await apiClient.post(`/admin/users/${username}/mfa/reset`);
+  await apiClient.post(`/admin/users/${username}/reset-mfa`);
 };
 
 export const assignAdminUserRole = async (username: string, data: AdminRoleAssignmentRequest) => {
@@ -295,6 +297,21 @@ export const getAdminAuditLogs = async (params?: AdminParams) => {
   return response.data;
 };
 
+export const getAdminActionLogs = async (params?: AdminParams) => {
+  const response = await apiClient.get<PageResponse<AdminActionLog>>("/admin/action-logs", {
+    params: cleanAdminParams(params),
+  });
+  return response.data;
+};
+
+export const exportAdminActionLogs = async (params?: AdminParams) => {
+  const response = await apiClient.get<Blob>("/admin/action-logs/export", {
+    params: cleanAdminParams(params),
+    responseType: "blob",
+  });
+  return response.data;
+};
+
 export const getAdminLoginHistory = async (params?: AdminParams) => {
   const response = await apiClient.get<PageResponse<AdminLoginHistory>>("/admin/login-history", { params: cleanAdminParams(params) });
   return response.data;
@@ -311,8 +328,20 @@ export const getAdminIncidents = async (params?: AdminParams) => {
   return response.data;
 };
 
-export const resolveAdminIncident = async (id: number) => {
-  await apiClient.post(`/admin/incidents/${id}/resolve`);
+export const resolveAdminIncident = async (id: number, reason?: string) => {
+  await apiClient.post(`/admin/incidents/${id}/resolve`, { reason });
+};
+
+export const lockRiskUser = async (username: string, reason?: string) => {
+  await apiClient.post(`/admin/risks/${username}/lock`, { reason });
+};
+
+export const revokeRiskUserTokens = async (username: string, reason?: string) => {
+  await apiClient.post(`/admin/risks/${username}/tokens/revoke`, { reason });
+};
+
+export const requireRiskUserMfa = async (username: string, reason?: string) => {
+  await apiClient.post(`/admin/risks/${username}/mfa/require`, { reason });
 };
 
 // 세션/위험/설정 운영 API

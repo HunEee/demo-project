@@ -79,6 +79,20 @@ public class AdminActionLogEntity {
     @Column(length = 100)
     private String device;
 
+    @Column(name = "user_agent", length = 500)
+    private String userAgent;
+
+    @Column(nullable = false, length = 30)
+    @Builder.Default
+    private String result = "SUCCESS";
+
+    @Column(name = "risk_level", length = 30)
+    private String riskLevel;
+
+    @Lob
+    @Column(name = "metadata")
+    private String metadata;
+
     @CreatedDate
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

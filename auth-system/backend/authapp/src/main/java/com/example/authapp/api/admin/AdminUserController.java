@@ -16,6 +16,7 @@ import com.example.authapp.domain.admin.dto.AdminPasswordResetResponse;
 import com.example.authapp.domain.admin.dto.AdminUserCreateRequest;
 import com.example.authapp.domain.admin.dto.AdminUserDetailResponse;
 import com.example.authapp.domain.admin.dto.AdminUserResponse;
+import com.example.authapp.domain.admin.dto.AdminUserStatusRequest;
 import com.example.authapp.domain.admin.dto.AdminUserUpdateRequest;
 import com.example.authapp.domain.authorization.dto.AdminRoleAssignmentRequest;
 import com.example.authapp.domain.authorization.service.RoleAssignmentService;
@@ -40,9 +41,16 @@ public class AdminUserController {
             @RequestParam(name = "status", required = false) String status,
             @RequestParam(name = "role", required = false) String role,
             @RequestParam(name = "departmentCode", required = false) String departmentCode,
+            @RequestParam(name = "employmentType", required = false) String employmentType,
             @RequestParam(name = "directOnly", required = false) Boolean directOnly,
             @RequestParam(name = "authMethod", required = false) String authMethod,
             @RequestParam(name = "mfaEnabled", required = false) Boolean mfaEnabled,
+            @RequestParam(name = "name", required = false) String name,
+            @RequestParam(name = "email", required = false) String email,
+            @RequestParam(name = "position", required = false) String position,
+            @RequestParam(name = "locked", required = false) Boolean locked,
+            @RequestParam(name = "lastLoginFrom", required = false) String lastLoginFrom,
+            @RequestParam(name = "lastLoginTo", required = false) String lastLoginTo,
             @RequestParam(name = "sort", required = false) String sort,
             @RequestParam(name = "direction", defaultValue = "DESC") String direction
     ) {
@@ -55,9 +63,16 @@ public class AdminUserController {
                 sort,
                 direction,
                 departmentCode,
+                employmentType,
                 directOnly,
                 authMethod,
-                mfaEnabled
+                mfaEnabled,
+                name,
+                email,
+                position,
+                locked,
+                lastLoginFrom,
+                lastLoginTo
         ));
     }
 
@@ -82,45 +97,35 @@ public class AdminUserController {
         return adminConsoleService.updateUser(username, request);
     }
 
-    @PostMapping("/{username}/delete")
-    public void delete(
+    @PatchMapping("/{username}/status")
+    public AdminUserResponse updateStatus(
             @PathVariable(name = "username") String username,
-            @RequestParam(name = "reason", required = false) String reason
+            @RequestBody AdminUserStatusRequest request
     ) {
-        adminConsoleService.deleteUser(username, reason);
+        return adminConsoleService.updateUserStatus(username, request);
     }
 
-    @PostMapping("/{username}/lock")
+    @PatchMapping("/{username}/lock")
     public void lock(@PathVariable(name = "username") String username) {
         adminConsoleService.lockUser(username);
     }
 
-    @PostMapping("/{username}/unlock")
+    @PatchMapping("/{username}/unlock")
     public void unlock(@PathVariable(name = "username") String username) {
         adminConsoleService.unlockUser(username);
     }
 
-    @PostMapping("/{username}/disable")
-    public void disable(@PathVariable(name = "username") String username) {
-        adminConsoleService.disableUser(username);
-    }
-
-    @PostMapping("/{username}/enable")
-    public void enable(@PathVariable(name = "username") String username) {
-        adminConsoleService.enableUser(username);
-    }
-
-    @PostMapping("/{username}/tokens/revoke")
+    @PostMapping("/{username}/revoke-tokens")
     public void revokeTokens(@PathVariable(name = "username") String username) {
         adminConsoleService.revokeUserTokens(username);
     }
 
-    @PostMapping("/{username}/password/reset")
+    @PostMapping("/{username}/reset-password")
     public AdminPasswordResetResponse resetPassword(@PathVariable(name = "username") String username) {
         return adminConsoleService.resetPassword(username);
     }
 
-    @PostMapping("/{username}/mfa/reset")
+    @PostMapping("/{username}/reset-mfa")
     public void resetMfa(@PathVariable(name = "username") String username) {
         adminConsoleService.resetMfa(username);
     }

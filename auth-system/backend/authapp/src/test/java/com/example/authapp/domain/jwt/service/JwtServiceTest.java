@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -23,6 +24,7 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import com.example.authapp.domain.jwt.entity.RefreshTokenEntity;
 import com.example.authapp.domain.jwt.exception.JwtException;
 import com.example.authapp.domain.risk.service.RiskService;
+import com.example.authapp.domain.authorization.entity.RoleEntity;
 import com.example.authapp.domain.user.entity.SocialProviderType;
 import com.example.authapp.domain.user.entity.UserEntity;
 import com.example.authapp.domain.user.service.UserQueryService;
@@ -153,6 +155,74 @@ class JwtServiceTest {
         assertThat(newToken.getIpAddress()).isEqualTo("203.0.113.10");
         assertThat(newToken.getUserAgent()).isEqualTo("Mozilla/5.0 (Windows NT 10.0) AppleWebKit Chrome/120");
         assertThat(newToken.getDevice()).isEqualTo("Windows / Chrome");
+    }
+
+    @Test
+    void refreshRotateUsesCurrentDatabaseRolesForNewAccessToken() {
+        String oldRefreshToken = JWTUtil.createJWT("user1", Set.of("ROLE_USER"), UUID.randomUUID().toString(), false);
+        RefreshTokenEntity oldEntity = RefreshTokenEntity.builder()
+                .username("user1")
+                .refresh(oldRefreshToken)
+                .jti(JWTUtil.getJti(oldRefreshToken))
+                .expiresAt(LocalDateTime.now().plusDays(7))
+                .revoked(false)
+                .build();
+        RoleEntity adminRole = RoleEntity.builder()
+                .name("ROLE_ADMIN")
+                .enabled(true)
+                .build();
+        UserEntity user = UserEntity.builder()
+                .username("user1")
+                .email("user1@example.com")
+                .nickname("user1")
+                .enabled(true)
+                .locked(false)
+                .social(false)
+                .build();
+        user.addRole(adminRole);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setCookies(new Cookie("refreshToken", oldRefreshToken));
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        when(refreshTokenService.findByRefresh(oldRefreshToken)).thenReturn(oldEntity);
+        when(riskService.analyzeTokenRisk(eq(oldEntity), any(), any(), any())).thenReturn(true);
+        when(userQueryService.getByUsername("user1")).thenReturn(user);
+
+        var result = jwtService.refreshRotate(request, response);
+
+        assertThat(JWTUtil.getRoles(result.accessToken())).containsExactly("ROLE_ADMIN");
+        assertThat(result.user().getRoles()).containsExactly("ROLE_ADMIN");
+    }
+
+    @Test
+    void refreshRotateRejectsDisabledAccountBeforeIssuingNewTokens() {
+        String oldRefreshToken = JWTUtil.createJWT("user1", Set.of("ROLE_USER"), UUID.randomUUID().toString(), false);
+        RefreshTokenEntity oldEntity = RefreshTokenEntity.builder()
+                .username("user1")
+                .refresh(oldRefreshToken)
+                .jti(JWTUtil.getJti(oldRefreshToken))
+                .expiresAt(LocalDateTime.now().plusDays(7))
+                .revoked(false)
+                .build();
+        UserEntity disabledUser = UserEntity.builder()
+                .username("user1")
+                .email("user1@example.com")
+                .nickname("user1")
+                .enabled(false)
+                .locked(false)
+                .social(false)
+                .build();
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setCookies(new Cookie("refreshToken", oldRefreshToken));
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        when(refreshTokenService.findByRefresh(oldRefreshToken)).thenReturn(oldEntity);
+        when(riskService.analyzeTokenRisk(eq(oldEntity), any(), any(), any())).thenReturn(true);
+        when(userQueryService.getByUsername("user1")).thenReturn(disabledUser);
+
+        assertThatThrownBy(() -> jwtService.refreshRotate(request, response))
+                .isInstanceOf(JwtException.class);
+        verify(refreshTokenService, never()).save(any(RefreshTokenEntity.class));
     }
     
     

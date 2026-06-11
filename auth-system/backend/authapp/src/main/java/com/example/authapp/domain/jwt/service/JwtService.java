@@ -3,15 +3,18 @@ package com.example.authapp.domain.jwt.service;
 import java.time.LocalDateTime;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.authapp.domain.audit.service.AuthEventLogService;
+import com.example.authapp.domain.authorization.entity.RoleEntity;
 import com.example.authapp.domain.jwt.dto.JWTResponseDTO;
 import com.example.authapp.domain.jwt.entity.RefreshTokenEntity;
 import com.example.authapp.domain.jwt.exception.JwtException;
 import com.example.authapp.domain.risk.service.RiskService;
+import com.example.authapp.domain.user.entity.UserEntity;
 import com.example.authapp.domain.user.service.UserQueryService;
 import com.example.authapp.security.handler.dto.UserResponseDTO;
 import com.example.authapp.util.ClientUtil;
@@ -58,6 +61,7 @@ public class JwtService {
     @Transactional
     public JWTResponseDTO refreshRotate(HttpServletRequest request, HttpServletResponse response) {
     	String refreshToken = extractRefreshToken(request);
+        validateRefreshToken(refreshToken);
         RefreshTokenEntity oldEntity = refreshTokenService.findByRefresh(refreshToken);
         
         String ip = ClientUtil.getIp(request);
@@ -84,7 +88,12 @@ public class JwtService {
             String device
     ) {
         String username = oldEntity.getUsername();
-        Set<String> roles = JWTUtil.getRoles(refreshToken);
+        UserEntity user = userQueryService.getByUsername(username);
+        validateAccountAvailable(user);
+        Set<String> roles = user.getRoles()
+                .stream()
+                .map(RoleEntity::getName)
+                .collect(Collectors.toSet());
 
         String jti = UUID.randomUUID().toString();
         String newAccessToken = JWTUtil.createJWT(username, roles, jti, true);
@@ -108,8 +117,14 @@ public class JwtService {
         refreshTokenService.save(newEntity);
         cookieService.addRefreshCookie(response, newRefreshToken);
 
-        UserResponseDTO user = UserResponseDTO.from(userQueryService.getByUsername(username), roles);
-        return new JWTResponseDTO(newAccessToken, user, JWTUtil.getAccessTokenExpiresIn());
+        UserResponseDTO userResponse = UserResponseDTO.from(user, roles);
+        return new JWTResponseDTO(newAccessToken, userResponse, JWTUtil.getAccessTokenExpiresIn());
+    }
+
+    private void validateAccountAvailable(UserEntity user) {
+        if (user.isDeleted() || user.isLocked() || !user.isEnabled()) {
+            throw JwtException.revokedRefreshToken();
+        }
     }
 
     private void validateRefreshToken(String refreshToken) {

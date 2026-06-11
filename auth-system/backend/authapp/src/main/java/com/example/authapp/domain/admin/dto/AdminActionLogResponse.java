@@ -17,6 +17,10 @@ public record AdminActionLogResponse(
         String afterValue,
         String ipAddress,
         String device,
+        String userAgent,
+        String result,
+        String riskLevel,
+        String metadata,
         LocalDateTime createdAt
 ) {
     public static AdminActionLogResponse from(AdminActionLogEntity log) {
@@ -33,6 +37,10 @@ public record AdminActionLogResponse(
                 log.getAfterValue(),
                 log.getIpAddress(),
                 log.getDevice(),
+                log.getUserAgent(),
+                log.getResult(),
+                log.getRiskLevel(),
+                log.getMetadata(),
                 log.getCreatedAt()
         );
     }

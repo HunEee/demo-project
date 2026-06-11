@@ -28,7 +28,6 @@ import GroupPermissionAssignmentPage from './pages/admin/permissions/GroupPermis
 import AdminPermissionManagementPage from './pages/admin/permissions/AdminPermissionManagementPage.tsx';
 import LoginSessionManagementPage from './pages/admin/security/LoginSessionManagementPage.tsx';
 import MfaManagementPage from './pages/admin/security/MfaManagementPage.tsx';
-import PasswordPolicyPage from './pages/admin/security/PasswordPolicyPage.tsx';
 import AuthPolicyPage from './pages/admin/security/AuthPolicyPage.tsx';
 import RiskLoginDetectionPage from './pages/admin/security/RiskLoginDetectionPage.tsx';
 import SecurityEventsPage from './pages/admin/security/SecurityEventsPage.tsx';
@@ -49,7 +48,6 @@ import NotificationSettingsPage from './pages/admin/notifications/NotificationSe
 import NotificationTemplatesPage from './pages/admin/notifications/NotificationTemplatesPage.tsx';
 import NotificationHistoryPage from './pages/admin/notifications/NotificationHistoryPage.tsx';
 import SystemSettingsPage from './pages/admin/system/SystemSettingsPage.tsx';
-import TokenPolicySettingsPage from './pages/admin/system/TokenPolicySettingsPage.tsx';
 import CorsRedirectSettingsPage from './pages/admin/system/CorsRedirectSettingsPage.tsx';
 import LogRetentionPolicyPage from './pages/admin/system/LogRetentionPolicyPage.tsx';
 import AdminIpRestrictionPage from './pages/admin/system/AdminIpRestrictionPage.tsx';
@@ -91,12 +89,12 @@ createRoot(document.getElementById('root')!).render(
           <Route path="permissions/user-assignments" element={<UserPermissionAssignmentPage />} />
           <Route path="permissions/group-assignments" element={<GroupPermissionAssignmentPage />} />
           <Route path="permissions/admin-permissions" element={<AdminPermissionManagementPage />} />
-          <Route path="security/sessions" element={<LoginSessionManagementPage />} />
-          <Route path="security/mfa" element={<MfaManagementPage />} />
-          <Route path="security/password-policy" element={<PasswordPolicyPage />} />
-          <Route path="security/auth-policy" element={<AuthPolicyPage />} />
+          <Route path="auth/sessions" element={<LoginSessionManagementPage />} />
+          <Route path="auth/mfa" element={<MfaManagementPage />} />
+          <Route path="auth/policies" element={<AuthPolicyPage />} />
           <Route path="security/risk-logins" element={<RiskLoginDetectionPage />} />
           <Route path="security/events" element={<SecurityEventsPage />} />
+          <Route path="security/admin-ip" element={<AdminIpRestrictionPage />} />
           <Route path="integrations/applications" element={<ApplicationSsoPage />} />
           <Route path="integrations/oidc-clients" element={<OidcClientsPage />} />
           <Route path="integrations/api-clients" element={<ApiClientsPage />} />
@@ -114,10 +112,8 @@ createRoot(document.getElementById('root')!).render(
           <Route path="notifications/templates" element={<NotificationTemplatesPage />} />
           <Route path="notifications/history" element={<NotificationHistoryPage />} />
           <Route path="system/settings" element={<SystemSettingsPage />} />
-          <Route path="system/token-policy" element={<TokenPolicySettingsPage />} />
           <Route path="system/cors-redirect" element={<CorsRedirectSettingsPage />} />
           <Route path="system/log-retention" element={<LogRetentionPolicyPage />} />
-          <Route path="system/admin-ip" element={<AdminIpRestrictionPage />} />
           <Route path="users" element={<UserManagementPage />} />
           <Route path="users/:username" element={<UserDetailPage />} />
           <Route path="audit-logs" element={<AuditLogsPage />} />

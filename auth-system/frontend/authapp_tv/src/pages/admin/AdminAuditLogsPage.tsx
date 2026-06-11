@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Navigate } from "react-router";
 import useAuth from "@/auth/store";
 import { formatSecurityDateTime } from "@/lib/dateTime";
@@ -10,12 +10,13 @@ import {
   AdminPagination,
   AdminSortableHeader,
   AdminTableCard,
+  type PageState,
+  type SortState,
   adminCellClassName,
   adminRowClassName,
   adminTableClassName,
   adminTheadClassName,
 } from "@/pages/admin/adminUi";
-import { useAdminServerList } from "@/pages/admin/useAdminList";
 import type { AdminAuditLog, AdminFilterOptions } from "@/models/AdminModels";
 import { getAdminAuditLogs, getAdminFilterOptions } from "@/services/AdminService";
 
@@ -23,15 +24,56 @@ const initialFilters = { username: "", type: "", from: "", to: "" };
 
 export default function AdminAuditLogsPage() {
   const user = useAuth((state) => state.user);
+  const [items, setItems] = useState<AdminAuditLog[]>([]);
+  const [filters, setFilters] = useState(initialFilters);
   const [filterOptions, setFilterOptions] = useState<AdminFilterOptions | null>(null);
+  const [pageState, setPageState] = useState<PageState>({ page: 0, size: 10, totalPages: 1, totalElements: 0 });
+  const [sortState, setSortState] = useState<SortState>({ sort: "createdAt", direction: "DESC" });
   const isAdmin = user?.roles?.includes("ROLE_ADMIN");
 
-  const fetchPage = useCallback((params: typeof initialFilters & { page: number; size: number; sort: string; direction: "ASC" | "DESC" }) => getAdminAuditLogs(params), []);
-  const { items, filters, pageState, sortState, load, handleFilterChange, handleSort, resetFilters } = useAdminServerList<AdminAuditLog, typeof initialFilters>({
-    initialFilters,
-    initialSort: { sort: "createdAt", direction: "DESC" },
-    fetchPage,
-  });
+  const load = async (nextPage = pageState.page, nextSort = sortState) => {
+    const page = await getAdminAuditLogs({
+      username: filters.username,
+      type: filters.type,
+      from: filters.from,
+      to: filters.to,
+      page: nextPage,
+      size: pageState.size,
+      sort: nextSort.sort,
+      direction: nextSort.direction,
+    });
+    setItems(page.content);
+    setPageState((prev) => ({ ...prev, page: page.page, size: page.size, totalPages: page.totalPages, totalElements: page.totalElements }));
+  };
+
+  const handleFilterChange = (name: string, value: string) => {
+    setFilters((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSort = (column: string) => {
+    const nextSort: SortState = {
+      sort: column,
+      direction: sortState.sort === column && sortState.direction === "DESC" ? "ASC" : "DESC",
+    };
+    setSortState(nextSort);
+    void load(0, nextSort).catch(() => undefined);
+  };
+
+  const resetFilters = async () => {
+    setFilters(initialFilters);
+    const page = await getAdminAuditLogs({
+      username: initialFilters.username,
+      type: initialFilters.type,
+      from: initialFilters.from,
+      to: initialFilters.to,
+      page: 0,
+      size: pageState.size,
+      sort: sortState.sort,
+      direction: sortState.direction,
+    });
+    setItems(page.content);
+    setPageState((prev) => ({ ...prev, page: page.page, size: page.size, totalPages: page.totalPages, totalElements: page.totalElements }));
+  };
 
   useEffect(() => {
     if (isAdmin) {

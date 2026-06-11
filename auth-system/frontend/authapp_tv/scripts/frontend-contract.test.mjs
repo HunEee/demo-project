@@ -108,10 +108,11 @@ for (const childRoute of [
   '<Route path="account/users/:username" element={<UserDetailPage />} />',
   '<Route path="account/hr-users" element={<HrUserMasterPage />} />',
   '<Route path="account/external-users" element={<ExternalUsersPage />} />',
+  '<Route path="auth/policies" element={<AuthPolicyPage />} />',
   '<Route path="audit/logs" element={<AuditLogsPage />} />',
   '<Route path="audit/login-history" element={<AdminLoginHistoryPage />} />',
   '<Route path="security/events" element={<SecurityEventsPage />} />',
-  '<Route path="security/sessions" element={<LoginSessionManagementPage />} />',
+  '<Route path="auth/sessions" element={<LoginSessionManagementPage />} />',
   '<Route path="security/risk-logins" element={<RiskLoginDetectionPage />} />',
   '<Route path="system/settings" element={<SystemSettingsPage />} />',
 ]) {
@@ -126,6 +127,12 @@ for (const childRoute of [
 /* =========================================================
  * AdminService 테스트
  * ========================================================= */
+
+assert.doesNotMatch(
+  main,
+  /<Route path="security\/password-policy"|<Route path="system\/token-policy"/,
+  "Admin routes must not expose separate password-policy or token-policy pages",
+);
 
 const adminService = read("src/services/AdminService.ts");
 const adminModels = read("src/models/AdminModels.ts");
@@ -167,13 +174,13 @@ assert.match(
 );
 assert.match(
   adminService,
-  /apiClient\.post\(`\/admin\/users\/\$\{id\}\/lock`\)/,
-  "AdminService must lock users through POST /admin/users/{id}/lock",
+  /apiClient\.patch\(`\/admin\/users\/\$\{id\}\/lock`\)/,
+  "AdminService must lock users through PATCH /admin/users/{id}/lock",
 );
 assert.match(
   adminService,
-  /apiClient\.post\(`\/admin\/users\/\$\{id\}\/unlock`\)/,
-  "AdminService must unlock users through POST /admin/users/{id}/unlock",
+  /apiClient\.patch\(`\/admin\/users\/\$\{id\}\/unlock`\)/,
+  "AdminService must unlock users through PATCH /admin/users/{id}/unlock",
 );
 
 for (const method of [
@@ -283,6 +290,18 @@ assert.match(
   "AdminSettingsPage settings card must be centered in the admin content area",
 );
 
+const navbar = read("src/components/Navbar.tsx");
+assert.match(
+  navbar,
+  /label: "인증 관리"[\s\S]*path: "\/admin\/auth\/policies"[\s\S]*label: "보안 관리"[\s\S]*path: "\/admin\/security\/events"[\s\S]*label: "감사 \/ 모니터링"/,
+  "Admin navbar must order Authentication Management, Security Management, then Audit / Monitoring",
+);
+assert.doesNotMatch(
+  navbar,
+  /label: "인증 \/ 보안"|label: "비밀번호 정책"|label: "토큰 정책 설정"|path: "\/admin\/security\/password-policy"|path: "\/admin\/system\/token-policy"/,
+  "Admin navbar must remove the combined auth/security group and separate password/token policy menu items",
+);
+
 for (const page of ["AdminUsersPage", "AdminIncidentsPage", "AdminSessionsPage"]) {
   assert.doesNotMatch(
     read(`src/pages/admin/${page}.tsx`),
@@ -353,7 +372,7 @@ for (const serviceMethod of [
   "createAdminUser",
   "checkAdminUsernameExists",
   "updateAdminUser",
-  "deleteAdminUser",
+  "updateAdminUserStatus",
   "getHrUserMasters",
   "getHrUserAccountCandidates",
   "createHrUserMaster",
@@ -501,7 +520,8 @@ for (const backendFile of [
 const adminUserControllerSource = read("../../backend/authapp/src/main/java/com/example/authapp/api/admin/AdminUserController.java");
 assert.match(adminUserControllerSource, /@PostMapping\s*\n\s*public AdminUserResponse create/, "AdminUserController must expose admin user creation");
 assert.match(adminUserControllerSource, /@PatchMapping\("\/\{username\}"\)/, "AdminUserController must expose admin user profile updates");
-assert.match(adminUserControllerSource, /@PostMapping\("\/\{username\}\/delete"\)/, "AdminUserController must expose admin user soft delete");
+assert.match(adminUserControllerSource, /@PatchMapping\("\/\{username\}\/status"\)/, "AdminUserController must expose admin user status updates");
+assert.match(adminUserControllerSource, /@PostMapping\("\/\{username\}\/reset-password"\)/, "AdminUserController must expose admin password reset");
 
 for (const modelType of [
   "AdminRole",
