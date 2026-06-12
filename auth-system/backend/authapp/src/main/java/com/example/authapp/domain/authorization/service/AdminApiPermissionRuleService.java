@@ -12,6 +12,7 @@ import com.example.authapp.domain.authorization.dto.AdminApiPermissionRuleRespon
 import com.example.authapp.domain.authorization.entity.ApiPermissionRuleEntity;
 import com.example.authapp.domain.authorization.repository.ApiPermissionRuleRepository;
 import com.example.authapp.domain.authorization.repository.PermissionRepository;
+import com.example.authapp.security.rbac.RbacAuthorizationService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -23,6 +24,7 @@ public class AdminApiPermissionRuleService {
 
     private final ApiPermissionRuleRepository apiPermissionRuleRepository;
     private final PermissionRepository permissionRepository;
+    private final RbacAuthorizationService rbacAuthorizationService;
 
     @Transactional(readOnly = true)
     public List<AdminApiPermissionRuleResponse> list() {
@@ -54,7 +56,9 @@ public class AdminApiPermissionRuleService {
                 .sortOrder(request.sortOrder() == null ? 100 : request.sortOrder())
                 .build();
 
-        return AdminApiPermissionRuleResponse.from(apiPermissionRuleRepository.save(rule));
+        ApiPermissionRuleEntity saved = apiPermissionRuleRepository.save(rule);
+        rbacAuthorizationService.reloadApiRuleCache();
+        return AdminApiPermissionRuleResponse.from(saved);
     }
 
     @Transactional
@@ -74,12 +78,14 @@ public class AdminApiPermissionRuleService {
                 request.sortOrder() == null ? rule.getSortOrder() : request.sortOrder()
         );
 
+        rbacAuthorizationService.reloadApiRuleCache();
         return AdminApiPermissionRuleResponse.from(rule);
     }
 
     @Transactional
     public void delete(Long id) {
         apiPermissionRuleRepository.deleteById(id);
+        rbacAuthorizationService.reloadApiRuleCache();
     }
 
     private void requirePermission(String permissionCode) {

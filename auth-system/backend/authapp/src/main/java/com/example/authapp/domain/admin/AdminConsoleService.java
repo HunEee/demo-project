@@ -5,9 +5,12 @@ import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -167,7 +170,7 @@ public class AdminConsoleService {
     ) {
         LocalDateTime loginFrom = parseStartOfDay(lastLoginFrom);
         LocalDateTime loginTo = parseEndOfDay(lastLoginTo);
-        List<AdminUserResponse> content = userRepository.findAll().stream()
+        List<UserEntity> filteredUsers = userRepository.findAll().stream()
                 .filter(user -> {
                     HrUserMasterEntity hrUser = findHrUser(user.getUsername());
                     boolean userMfaEnabled = mfaMethodRepository.existsByUsernameAndEnabledTrue(user.getUsername());
@@ -187,7 +190,10 @@ public class AdminConsoleService {
                 })
                 .filter(user -> role == null || role.isBlank() || user.getRoles().stream().anyMatch(item -> item.getName().equals(role)))
                 .sorted(applyDirection(userComparator(sort), direction))
-                .map(this::toAdminUserResponse)
+                .toList();
+        Map<String, Set<String>> groupNamesByUsername = groupNamesByUsername(filteredUsers);
+        List<AdminUserResponse> content = filteredUsers.stream()
+                .map(user -> toAdminUserResponse(user, groupNamesByUsername.getOrDefault(user.getUsername(), Set.of())))
                 .toList();
 
         return page(content, page, size);
@@ -789,9 +795,31 @@ public class AdminConsoleService {
     }
 
     private AdminUserResponse toAdminUserResponse(UserEntity user) {
+        return toAdminUserResponse(user, groupNames(user.getUsername()));
+    }
+
+    private AdminUserResponse toAdminUserResponse(UserEntity user, Set<String> groups) {
         String username = user.getUsername();
         boolean mfaEnabled = mfaMethodRepository.existsByUsernameAndEnabledTrue(username);
-        return AdminUserResponse.from(user, findHrUser(username), mfaEnabled, latestSuccessfulLoginAt(username));
+        return AdminUserResponse.from(user, findHrUser(username), mfaEnabled, latestSuccessfulLoginAt(username), groups);
+    }
+
+    private Map<String, Set<String>> groupNamesByUsername(List<UserEntity> users) {
+        List<String> usernames = users.stream().map(UserEntity::getUsername).toList();
+        if (usernames.isEmpty()) {
+            return Map.of();
+        }
+        return groupUserRepository.findByUsernameIn(usernames).stream()
+                .collect(Collectors.groupingBy(
+                        groupUser -> groupUser.getUsername(),
+                        Collectors.mapping(groupUser -> groupUser.getGroup().getName(), Collectors.toCollection(java.util.LinkedHashSet::new))
+                ));
+    }
+
+    private Set<String> groupNames(String username) {
+        return groupUserRepository.findByUsername(username).stream()
+                .map(groupUser -> groupUser.getGroup().getName())
+                .collect(Collectors.toCollection(java.util.LinkedHashSet::new));
     }
 
     private LocalDateTime latestSuccessfulLoginAt(String username) {

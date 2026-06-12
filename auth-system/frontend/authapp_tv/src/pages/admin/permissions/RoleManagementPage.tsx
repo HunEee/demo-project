@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Navigate } from "react-router";
+import { hasAdminAccess } from "@/auth/permissions";
 import useAuth from "@/auth/store";
 import { Button } from "@/components/ui/button";
 import { formatSecurityDateTime } from "@/lib/dateTime";
@@ -58,7 +59,7 @@ const blankPermissionForm = {
 
 export default function RoleManagementPage() {
   const user = useAuth((state) => state.user);
-  const isAdmin = user?.roles?.includes("ROLE_ADMIN");
+  const isAdmin = hasAdminAccess(user);
   const [roles, setRoles] = useState<AdminRole[]>([]);
   const [permissions, setPermissions] = useState<AdminPermission[]>([]);
   const [filters, setFilters] = useState({ keyword: "", status: "", sensitive: "" });

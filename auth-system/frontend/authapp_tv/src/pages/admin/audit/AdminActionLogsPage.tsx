@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo } from "react";
 import { Download } from "lucide-react";
 import { Navigate } from "react-router";
+import { hasAdminAccess } from "@/auth/permissions";
 import useAuth from "@/auth/store";
 import { Button } from "@/components/ui/button";
 import { formatSecurityDateTime } from "@/lib/dateTime";
@@ -81,7 +82,7 @@ function shortText(value?: string) {
 
 export default function AdminActionLogsPage() {
   const user = useAuth((state) => state.user);
-  const isAdmin = user?.roles?.includes("ROLE_ADMIN");
+  const isAdmin = hasAdminAccess(user);
 
   const fetchPage = useCallback(
     (params: typeof initialFilters & { page: number; size: number; sort: string; direction: "ASC" | "DESC" }) =>

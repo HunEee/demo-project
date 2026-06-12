@@ -17,6 +17,7 @@ import com.example.authapp.domain.risk.service.RiskService;
 import com.example.authapp.domain.user.entity.UserEntity;
 import com.example.authapp.domain.user.service.UserQueryService;
 import com.example.authapp.security.handler.dto.UserResponseDTO;
+import com.example.authapp.security.rbac.RbacAuthorizationService;
 import com.example.authapp.util.ClientUtil;
 import com.example.authapp.util.JWTUtil;
 
@@ -36,6 +37,7 @@ public class JwtService {
     
     private final AuthEventLogService securityEventService;
     private final RiskService riskService;
+    private final RbacAuthorizationService rbacAuthorizationService;
     
     
     // 소셜 로그인 성공 후 쿠키(Refresh) -> 헤더 방식으로 응답
@@ -100,7 +102,7 @@ public class JwtService {
         String newRefreshToken = JWTUtil.createJWT(username, roles, jti, false);
 
         oldEntity.revoke();
-        oldEntity.setReplacedByToken(newRefreshToken);
+        oldEntity.setReplacedByToken(jti);
 
         RefreshTokenEntity newEntity = RefreshTokenEntity.builder()
                 .username(username)
@@ -117,7 +119,8 @@ public class JwtService {
         refreshTokenService.save(newEntity);
         cookieService.addRefreshCookie(response, newRefreshToken);
 
-        UserResponseDTO userResponse = UserResponseDTO.from(user, roles);
+        Set<String> permissions = rbacAuthorizationService.findEffectivePermissions(username);
+        UserResponseDTO userResponse = UserResponseDTO.from(user, roles, permissions);
         return new JWTResponseDTO(newAccessToken, userResponse, JWTUtil.getAccessTokenExpiresIn());
     }
 

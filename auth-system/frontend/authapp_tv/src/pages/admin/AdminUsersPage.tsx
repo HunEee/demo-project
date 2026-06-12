@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate } from "react-router";
 import { Plus, SearchCheck } from "lucide-react";
+import { hasAdminAccess } from "@/auth/permissions";
 import useAuth from "@/auth/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -111,7 +112,7 @@ export default function AdminUsersPage() {
   const [formError, setFormError] = useState("");
   const [selectedUsernames, setSelectedUsernames] = useState<string[]>([]);
   const [bulkAction, setBulkAction] = useState<"lock" | "disable" | null>(null);
-  const isAdmin = user?.roles?.includes("ROLE_ADMIN");
+  const isAdmin = hasAdminAccess(user);
 
   const roleOptions: AdminFilterOption[] = useMemo(
     () => [{ label: "초기역할 선택", value: "" }, ...(filterOptions?.roles ?? [])],

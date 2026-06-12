@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Navigate } from "react-router";
+import { hasAdminAccess } from "@/auth/permissions";
 import useAuth from "@/auth/store";
 import { Button } from "@/components/ui/button";
 import { formatSecurityDateTime } from "@/lib/dateTime";
@@ -25,7 +26,6 @@ import {
   adminTheadClassName,
   compareText,
   containsText as contains,
-  displayValue as display,
   enabledStatusLabel as statusLabel,
   statusTone,
 } from "@/pages/admin/adminUi";
@@ -54,7 +54,7 @@ const methodOptions = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD
 
 export default function AdminPermissionManagementPage() {
   const user = useAuth((state) => state.user);
-  const isAdmin = user?.roles?.includes("ROLE_ADMIN");
+  const isAdmin = hasAdminAccess(user);
   const [rules, setRules] = useState<AdminApiPermissionRule[]>([]);
   const [permissions, setPermissions] = useState<AdminPermission[]>([]);
   const [filters, setFilters] = useState({ keyword: "", method: "", permissionCode: "", status: "" });
@@ -75,7 +75,7 @@ export default function AdminPermissionManagementPage() {
   };
 
   useEffect(() => {
-    if (isAdmin) void load().catch(() => undefined);
+    if (isAdmin) void Promise.resolve().then(load).catch(() => undefined);
   }, [isAdmin]);
 
   const permissionOptions = useMemo(
@@ -97,7 +97,7 @@ export default function AdminPermissionManagementPage() {
     const keyword = filters.keyword.trim();
     const filtered = rules.filter((rule) => {
       const status = rule.enabled ? "ACTIVE" : "DISABLED";
-      return (!keyword || [rule.httpMethod, rule.pathPattern, rule.permissionCode, rule.description].some((value) => contains(value, keyword)))
+      return (!keyword || [rule.httpMethod, rule.pathPattern, rule.permissionCode].some((value) => contains(value, keyword)))
         && (!filters.method || rule.httpMethod === filters.method)
         && (!filters.permissionCode || rule.permissionCode === filters.permissionCode)
         && (!filters.status || status === filters.status);
@@ -200,13 +200,13 @@ export default function AdminPermissionManagementPage() {
 
   return (
     <AdminPageShell
-      title="관리자 권한 관리"
+      title="API 권한 매핑"
       description="API 요청 방식과 경로 패턴을 권한 코드에 연결해 데이터베이스 기반 접근 제어를 관리합니다."
       actions={<Button type="button" onClick={() => openRuleModal("create")}>규칙 추가</Button>}
     >
       <AdminFilters
         fields={[
-          { name: "keyword", label: "검색", placeholder: "방식, 경로, 권한, 설명" },
+          { name: "keyword", label: "검색", placeholder: "방식, 경로, 권한" },
           { name: "method", label: "요청 방식", type: "select", options: [{ label: "전체", value: "" }, ...methodOptions] },
           { name: "permissionCode", label: "권한", type: "select", options: filterPermissionOptions },
           {
@@ -255,7 +255,6 @@ export default function AdminPermissionManagementPage() {
                 <th className={adminCellClassName}>
                   <AdminSortableHeader label="권한" column="permissionCode" sortState={sortState} onSort={handleSort} />
                 </th>
-                <th className={adminCellClassName}>설명</th>
                 <th className={adminCellClassName}>
                   <AdminSortableHeader label="상태" column="enabled" sortState={sortState} onSort={handleSort} />
                 </th>
@@ -264,7 +263,7 @@ export default function AdminPermissionManagementPage() {
               </tr>
             </thead>
             <tbody>
-              {pagedRules.length === 0 ? <AdminEmptyRow colSpan={9} message="등록된 API 권한 규칙이 없습니다." /> : null}
+              {pagedRules.length === 0 ? <AdminEmptyRow colSpan={8} message="등록된 API 권한 규칙이 없습니다." /> : null}
               {pagedRules.map((rule) => (
                 <tr key={rule.id} className={adminRowClassName}>
                   <td className={adminCellClassName}>
@@ -283,7 +282,6 @@ export default function AdminPermissionManagementPage() {
                     <code className="rounded bg-muted px-2 py-1 text-xs">{rule.pathPattern}</code>
                   </td>
                   <td className={adminCellClassName}>{rule.permissionCode}</td>
-                  <td className={adminCellClassName}>{display(rule.description)}</td>
                   <td className={adminCellClassName}>
                     <AdminBadge tone={statusTone(rule.enabled)}>{statusLabel(rule.enabled)}</AdminBadge>
                   </td>

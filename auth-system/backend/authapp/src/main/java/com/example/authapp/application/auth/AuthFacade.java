@@ -22,6 +22,7 @@ import com.example.authapp.domain.mfa.service.MfaService;
 import com.example.authapp.domain.risk.service.RiskService;
 import com.example.authapp.domain.user.entity.UserEntity;
 import com.example.authapp.domain.user.service.UserQueryService;
+import com.example.authapp.security.rbac.RbacAuthorizationService;
 import com.example.authapp.security.handler.dto.UserResponseDTO;
 import com.example.authapp.security.principal.UserPrincipal;
 import com.example.authapp.util.ClientUtil;
@@ -41,6 +42,7 @@ public class AuthFacade {
     private final RiskService riskService;
     private final AuthEventLogService authEventLogService;
     private final MfaService mfaService;
+    private final RbacAuthorizationService rbacAuthorizationService;
     private final String frontendUrl;
 
     public AuthFacade(
@@ -51,6 +53,7 @@ public class AuthFacade {
             RiskService riskService,
             AuthEventLogService authEventLogService,
             MfaService mfaService,
+            RbacAuthorizationService rbacAuthorizationService,
             @Value("${app.frontend-url:http://localhost:5173}") String frontendUrl
     ) {
         this.userQueryService = userQueryService;
@@ -60,6 +63,7 @@ public class AuthFacade {
         this.riskService = riskService;
         this.authEventLogService = authEventLogService;
         this.mfaService = mfaService;
+        this.rbacAuthorizationService = rbacAuthorizationService;
         this.frontendUrl = frontendUrl;
     }
 
@@ -157,12 +161,13 @@ public class AuthFacade {
         refreshTokenService.addRefresh(username, refreshToken, ip, userAgent, device, history);
         cookieService.addRefreshCookie(response, refreshToken);
         authEventLogService.loginSuccess(username);
+        Set<String> permissions = rbacAuthorizationService.findEffectivePermissions(username);
 
         return LoginResponseDTO.builder()
                 .mfaRequired(false)
                 .accessToken(accessToken)
                 .expiresIn(expiresIn)
-                .user(UserResponseDTO.from(user))
+                .user(UserResponseDTO.from(user, roles, permissions))
                 .build();
     }
 }

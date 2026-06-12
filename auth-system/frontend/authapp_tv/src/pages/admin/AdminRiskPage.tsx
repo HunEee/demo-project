@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { LockKeyhole, RotateCcw, ShieldAlert } from "lucide-react";
 import { Navigate } from "react-router";
+import { hasAdminAccess } from "@/auth/permissions";
 import useAuth from "@/auth/store";
 import { Button } from "@/components/ui/button";
 import { formatSecurityDateTime } from "@/lib/dateTime";
@@ -69,7 +70,7 @@ export default function AdminRiskPage() {
   const [sortState, setSortState] = useState<SortState>({ sort: "riskScore", direction: "DESC" });
   const [pendingAction, setPendingAction] = useState<{ item: AdminRisk; action: RiskAction } | null>(null);
   const [reason, setReason] = useState("");
-  const isAdmin = user?.roles?.includes("ROLE_ADMIN");
+  const isAdmin = hasAdminAccess(user);
 
   const load = async (nextPage = pageState.page, nextSort = sortState) => {
     const page = await getAdminRisks({

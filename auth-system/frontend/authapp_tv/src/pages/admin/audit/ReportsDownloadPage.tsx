@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Download } from "lucide-react";
 import { Navigate } from "react-router";
+import { hasAdminAccess } from "@/auth/permissions";
 import useAuth from "@/auth/store";
 import { Button } from "@/components/ui/button";
 import AdminFilters from "@/pages/admin/AdminFilters";
@@ -44,7 +45,7 @@ const riskOptions = [
 
 export default function ReportsDownloadPage() {
   const user = useAuth((state) => state.user);
-  const isAdmin = user?.roles?.includes("ROLE_ADMIN");
+  const isAdmin = hasAdminAccess(user);
   const [filters, setFilters] = useState(initialFilters);
 
   const exportParams = useMemo(

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate } from "react-router";
+import { hasAdminAccess } from "@/auth/permissions";
 import useAuth from "@/auth/store";
 import { Button } from "@/components/ui/button";
 import type { AdminRole, AdminUser } from "@/models/AdminModels";
@@ -54,7 +55,7 @@ const accountStatusLabel = (status?: string | null) => {
 
 export default function UserPermissionAssignmentPage() {
   const user = useAuth((state) => state.user);
-  const isAdmin = user?.roles?.includes("ROLE_ADMIN");
+  const isAdmin = hasAdminAccess(user);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [roles, setRoles] = useState<AdminRole[]>([]);
   const [filters, setFilters] = useState({ keyword: "", status: "", role: "" });
@@ -98,6 +99,7 @@ export default function UserPermissionAssignmentPage() {
 
   useEffect(() => {
     if (isAdmin) void load(0).catch(() => undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdmin]);
 
   const handleSort = (column: string) => {
@@ -228,12 +230,13 @@ export default function UserPermissionAssignmentPage() {
                 <th className={adminCellClassName}>이메일</th>
                 <th className={adminCellClassName}>부서</th>
                 <th className={adminCellClassName}>상태</th>
+                <th className={adminCellClassName}>소속 그룹</th>
                 <th className={adminCellClassName}>현재 역할</th>
                 <th className={adminCellClassName}>작업</th>
               </tr>
             </thead>
             <tbody>
-              {users.length === 0 ? <AdminEmptyRow colSpan={8} /> : null}
+              {users.length === 0 ? <AdminEmptyRow colSpan={9} /> : null}
               {users.map((item) => (
                 <tr key={item.username} className={adminRowClassName}>
                   <td className={adminCellClassName}>
@@ -254,16 +257,23 @@ export default function UserPermissionAssignmentPage() {
                   <td className={adminCellClassName}>{display(item.email)}</td>
                   <td className={adminCellClassName}>{display(item.department)}</td>
                   <td className={adminCellClassName}>
-                    <AdminBadge tone={statusTone(item.status)}>{accountStatusLabel(item.status)}</AdminBadge>
+                    <div className="flex justify-center">
+                      <AdminBadge tone={statusTone(item.status)}>{accountStatusLabel(item.status)}</AdminBadge>
+                    </div>
                   </td>
                   <td className={adminCellClassName}>
-                    <div className="flex flex-wrap justify-center gap-2">
+                    <div className="grid gap-1 justify-items-center">
+                      {(item.groups?.length ? item.groups : ["-"]).map((groupName) => (
+                        <AdminBadge key={groupName} tone="info">{groupName}</AdminBadge>
+                      ))}
+                    </div>
+                  </td>
+                  <td className={adminCellClassName}>
+                    <div className="grid gap-1 justify-items-center">
                       {(item.roles?.length ? item.roles : ["ROLE_USER"]).map((roleName) => {
                         const role = roles.find((candidate) => candidate.name === roleName);
                         return (
-                          <span key={roleName} className="inline-flex items-center gap-1">
-                            <AdminBadge tone={role?.sensitive ? "warning" : "default"}>{roleName}</AdminBadge>
-                          </span>
+                          <AdminBadge key={roleName} tone={role?.sensitive ? "warning" : "default"}>{roleName}</AdminBadge>
                         );
                       })}
                     </div>

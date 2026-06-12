@@ -21,6 +21,8 @@ const read = (path) => readFileSync(resolve(root, path), "utf8");
 
 // AuthService.ts 파일 읽기
 const authService = read("src/services/AuthService.ts");
+const userModel = read("src/models/User.ts");
+const permissionHelper = read("src/auth/permissions.ts");
 
 /**
  * - getCurrentUser()가 반드시 GET /users/me를 호출해야 하는지 검사
@@ -40,6 +42,27 @@ assert.doesNotMatch(
   authService,
   /apiClient\.get<User>\(["'`]\/user["'`]\)/,
   "getCurrentUser() must not call legacy GET /user",
+);
+
+assert.match(
+  userModel,
+  /permissions\?: string\[\]/,
+  "User model must expose effective RBAC permissions for frontend gating",
+);
+assert.match(
+  permissionHelper,
+  /export const hasAdminAccess/,
+  "Frontend must use a shared permission helper for admin access checks",
+);
+assert.match(
+  permissionHelper,
+  /ADMIN_ROLES_READ/,
+  "Admin access helper must include DB permission codes instead of relying only on ROLE_ADMIN",
+);
+assert.match(
+  permissionHelper,
+  /export const canAccessMenuItem/,
+  "Frontend must expose a shared helper for per-menu permission checks",
 );
 
 /* =========================================================
@@ -291,6 +314,26 @@ assert.match(
 );
 
 const navbar = read("src/components/Navbar.tsx");
+assert.match(
+  navbar,
+  /requiredPermissions: readonly string\[\]/,
+  "Admin navbar menu items must declare required permissions",
+);
+assert.match(
+  navbar,
+  /canAccessMenuItem\(user, item\)/,
+  "Admin navbar must filter each admin menu item by permissions",
+);
+assert.match(
+  navbar,
+  /visibleAdminGroups/,
+  "Admin navbar must derive visible admin groups before rendering desktop and mobile menus",
+);
+assert.match(
+  navbar,
+  /const isAdmin = isLogin && hasAdminAccess\(user\)/,
+  "Admin navbar must not show persisted admin menus when the user is not currently logged in",
+);
 assert.match(
   navbar,
   /label: "인증 관리"[\s\S]*path: "\/admin\/auth\/policies"[\s\S]*label: "보안 관리"[\s\S]*path: "\/admin\/security\/events"[\s\S]*label: "감사 \/ 모니터링"/,
@@ -569,8 +612,23 @@ for (const [path, pattern] of [
 const adminPermissionManagementPage = read("src/pages/admin/permissions/AdminPermissionManagementPage.tsx");
 assert.match(
   adminPermissionManagementPage,
-  /title="관리자 권한 관리"/,
-  "AdminPermissionManagementPage must present the page title in Korean",
+  /title="API 권한 매핑"/,
+  "AdminPermissionManagementPage must present API permission mapping as the page title",
+);
+assert.doesNotMatch(
+  adminPermissionManagementPage,
+  /<th className=\{adminCellClassName\}>설명<\/th>/,
+  "AdminPermissionManagementPage list table must not include a description column",
+);
+assert.doesNotMatch(
+  adminPermissionManagementPage,
+  /<td className=\{adminCellClassName\}>\{display\(rule\.description\)\}<\/td>/,
+  "AdminPermissionManagementPage list table must not render descriptions",
+);
+assert.match(
+  adminPermissionManagementPage,
+  /<AdminFormField label="설명" value=\{ruleForm\.description\}/,
+  "AdminPermissionManagementPage edit modal must keep the description field",
 );
 for (const englishCopy of [
   "API RBAC Rules",

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { Navigate, useParams } from "react-router";
 import { Ban, KeyRound, ShieldOff } from "lucide-react";
+import { hasAdminAccess } from "@/auth/permissions";
 import useAuth from "@/auth/store";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,7 +33,7 @@ export default function AdminUserDetailPage() {
   const user = useAuth((state) => state.user);
   const [detail, setDetail] = useState<AdminUserDetail | null>(null);
   const [activeTab, setActiveTab] = useState<DetailTab>("profile");
-  const isAdmin = user?.roles?.includes("ROLE_ADMIN");
+  const isAdmin = hasAdminAccess(user);
 
   const load = async () => {
     if (username) setDetail(await getAdminUserDetail(username));

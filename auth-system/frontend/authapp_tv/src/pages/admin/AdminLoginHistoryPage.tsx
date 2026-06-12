@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router";
+import { hasAdminAccess } from "@/auth/permissions";
 import useAuth from "@/auth/store";
 import { formatSecurityDateTime } from "@/lib/dateTime";
 import AdminFilters from "@/pages/admin/AdminFilters";
@@ -28,7 +29,7 @@ export default function AdminLoginHistoryPage() {
   const [filterOptions, setFilterOptions] = useState<AdminFilterOptions | null>(null);
   const [pageState, setPageState] = useState<PageState>({ page: 0, size: 10, totalPages: 1, totalElements: 0 });
   const [sortState, setSortState] = useState<SortState>({ sort: "loginAt", direction: "DESC" });
-  const isAdmin = user?.roles?.includes("ROLE_ADMIN");
+  const isAdmin = hasAdminAccess(user);
 
   const load = async (nextPage = pageState.page, nextSort = sortState) => {
     const page = await getAdminLoginHistory({

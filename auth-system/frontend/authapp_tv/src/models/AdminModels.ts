@@ -33,6 +33,7 @@ export type AdminUser = {
   social: boolean;
   createdAt?: string;
   roles?: string[];
+  groups?: string[];
 };
 
 export type AdminUserCreateRequest = {

@@ -10,6 +10,7 @@ import {
   ShieldCheck,
   Users,
 } from "lucide-react";
+import { hasAdminAccess } from "@/auth/permissions";
 import useAuth from "@/auth/store";
 import { Card, CardContent } from "@/components/ui/card";
 import type { AdminDashboardSummary } from "@/models/AdminModels";
@@ -30,7 +31,7 @@ const menu = [
 export default function AdminPage() {
   const user = useAuth((state) => state.user);
   const [summary, setSummary] = useState<AdminDashboardSummary | null>(null);
-  const isAdmin = user?.roles?.includes("ROLE_ADMIN");
+  const isAdmin = hasAdminAccess(user);
 
   useEffect(() => {
     if (isAdmin) {

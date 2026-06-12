@@ -35,12 +35,12 @@ public class AdminPermissionController {
     }
 
     @PatchMapping("/{id}")
-    public AdminPermissionResponse update(@PathVariable Long id, @RequestBody AdminPermissionRequest request) {
+    public AdminPermissionResponse update(@PathVariable(name = "id") Long id, @RequestBody AdminPermissionRequest request) {
         return adminPermissionService.update(id, request);
     }
 
     @DeleteMapping("/{id}")
-    public void delete(@PathVariable Long id) {
+    public void delete(@PathVariable(name = "id") Long id) {
         adminPermissionService.delete(id);
     }
 }

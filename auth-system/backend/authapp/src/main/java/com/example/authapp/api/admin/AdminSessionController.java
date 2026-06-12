@@ -39,7 +39,7 @@ public class AdminSessionController {
 
     // 특정 refresh token 세션을 폐기
     @DeleteMapping("/{id}")
-    public void revoke(@PathVariable Long id) {
+    public void revoke(@PathVariable(name = "id") Long id) {
         adminConsoleService.revokeSession(id);
     }
 

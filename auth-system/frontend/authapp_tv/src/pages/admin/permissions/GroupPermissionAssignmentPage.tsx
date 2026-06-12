@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Navigate } from "react-router";
+import { hasAdminAccess } from "@/auth/permissions";
 import useAuth from "@/auth/store";
 import { Button } from "@/components/ui/button";
 import type { AdminGroup, AdminGroupDetail, AdminRole } from "@/models/AdminModels";
@@ -46,7 +47,7 @@ const statusLabel = (enabled: boolean) => enabledStatusLabel(enabled, "활성", 
 
 export default function GroupPermissionAssignmentPage() {
   const user = useAuth((state) => state.user);
-  const isAdmin = user?.roles?.includes("ROLE_ADMIN");
+  const isAdmin = hasAdminAccess(user);
   const [groups, setGroups] = useState<AdminGroup[]>([]);
   const [roles, setRoles] = useState<AdminRole[]>([]);
   const [filters, setFilters] = useState({ keyword: "", type: "", status: "" });

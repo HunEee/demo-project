@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router";
 import { Save } from "lucide-react";
+import { hasAdminAccess } from "@/auth/permissions";
 import useAuth from "@/auth/store";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,7 +21,7 @@ const fields: Array<{ key: keyof AdminSettings; label: string; description: stri
 export default function AdminSettingsPage() {
   const user = useAuth((state) => state.user);
   const [settings, setSettings] = useState<AdminSettings | null>(null);
-  const isAdmin = user?.roles?.includes("ROLE_ADMIN");
+  const isAdmin = hasAdminAccess(user);
 
   useEffect(() => {
     if (isAdmin) void getAdminSettings().then(setSettings).catch(() => undefined);

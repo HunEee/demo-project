@@ -28,6 +28,7 @@ import com.example.authapp.domain.authorization.entity.RoleEntity;
 import com.example.authapp.domain.user.entity.SocialProviderType;
 import com.example.authapp.domain.user.entity.UserEntity;
 import com.example.authapp.domain.user.service.UserQueryService;
+import com.example.authapp.security.rbac.RbacAuthorizationService;
 import com.example.authapp.util.JWTUtil;
 
 import jakarta.servlet.http.Cookie;
@@ -49,6 +50,9 @@ class JwtServiceTest {
 
     @Mock
     private UserQueryService userQueryService;
+
+    @Mock
+    private RbacAuthorizationService rbacAuthorizationService;
 
     @InjectMocks
     private JwtService jwtService;
@@ -74,6 +78,7 @@ class JwtServiceTest {
 
         when(refreshTokenService.findByRefresh(oldRefreshToken)).thenReturn(oldEntity);
         when(riskService.analyzeTokenRisk(eq(oldEntity), any(), any(), any())).thenReturn(true);
+        when(rbacAuthorizationService.findEffectivePermissions("socialUser")).thenReturn(Set.of("ADMIN_USERS_READ"));
         when(userQueryService.getByUsername("socialUser")).thenReturn(UserEntity.builder()
                 .username("socialUser")
                 .email("social@example.com")
@@ -89,6 +94,7 @@ class JwtServiceTest {
 
         assertThat(result.accessToken()).isNotBlank();
         assertThat(result.user().getUsername()).isEqualTo("socialUser");
+        assertThat(result.user().getPermissions()).containsExactly("ADMIN_USERS_READ");
         verify(refreshTokenService).findByRefresh(oldRefreshToken);
         verify(riskService).analyzeTokenRisk(eq(oldEntity), any(), any(), any());
         verify(refreshTokenService).save(any(RefreshTokenEntity.class));
@@ -138,6 +144,7 @@ class JwtServiceTest {
         when(refreshTokenService.findByRefresh(oldRefreshToken)).thenReturn(oldEntity);
         when(riskService.analyzeTokenRisk(eq(oldEntity), eq("203.0.113.10"), eq("Windows / Chrome"), any()))
                 .thenReturn(true);
+        when(rbacAuthorizationService.findEffectivePermissions("user1")).thenReturn(Set.of());
         when(userQueryService.getByUsername("user1")).thenReturn(UserEntity.builder()
                 .username("user1")
                 .email("user1@example.com")
@@ -155,6 +162,40 @@ class JwtServiceTest {
         assertThat(newToken.getIpAddress()).isEqualTo("203.0.113.10");
         assertThat(newToken.getUserAgent()).isEqualTo("Mozilla/5.0 (Windows NT 10.0) AppleWebKit Chrome/120");
         assertThat(newToken.getDevice()).isEqualTo("Windows / Chrome");
+    }
+
+    @Test
+    void refreshRotateStoresReplacementJtiInsteadOfFullRefreshToken() {
+        String oldRefreshToken = JWTUtil.createJWT("user1", Set.of("ROLE_USER"), UUID.randomUUID().toString(), false);
+        RefreshTokenEntity oldEntity = RefreshTokenEntity.builder()
+                .username("user1")
+                .refresh(oldRefreshToken)
+                .jti(JWTUtil.getJti(oldRefreshToken))
+                .expiresAt(LocalDateTime.now().plusDays(7))
+                .revoked(false)
+                .build();
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setCookies(new Cookie("refreshToken", oldRefreshToken));
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        when(refreshTokenService.findByRefresh(oldRefreshToken)).thenReturn(oldEntity);
+        when(riskService.analyzeTokenRisk(eq(oldEntity), any(), any(), any())).thenReturn(true);
+        when(rbacAuthorizationService.findEffectivePermissions("user1")).thenReturn(Set.of());
+        when(userQueryService.getByUsername("user1")).thenReturn(UserEntity.builder()
+                .username("user1")
+                .email("user1@example.com")
+                .nickname("user1")
+                .enabled(true)
+                .locked(false)
+                .social(false)
+                .build());
+
+        jwtService.refreshRotate(request, response);
+
+        ArgumentCaptor<RefreshTokenEntity> newTokenCaptor = ArgumentCaptor.forClass(RefreshTokenEntity.class);
+        verify(refreshTokenService).save(newTokenCaptor.capture());
+        assertThat(oldEntity.getReplacedByToken()).isEqualTo(newTokenCaptor.getValue().getJti());
+        assertThat(oldEntity.getReplacedByToken()).hasSizeLessThanOrEqualTo(64);
     }
 
     @Test
@@ -186,12 +227,14 @@ class JwtServiceTest {
 
         when(refreshTokenService.findByRefresh(oldRefreshToken)).thenReturn(oldEntity);
         when(riskService.analyzeTokenRisk(eq(oldEntity), any(), any(), any())).thenReturn(true);
+        when(rbacAuthorizationService.findEffectivePermissions("user1")).thenReturn(Set.of("ADMIN_ROLES_READ"));
         when(userQueryService.getByUsername("user1")).thenReturn(user);
 
         var result = jwtService.refreshRotate(request, response);
 
         assertThat(JWTUtil.getRoles(result.accessToken())).containsExactly("ROLE_ADMIN");
         assertThat(result.user().getRoles()).containsExactly("ROLE_ADMIN");
+        assertThat(result.user().getPermissions()).containsExactly("ADMIN_ROLES_READ");
     }
 
     @Test

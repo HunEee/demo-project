@@ -1,5 +1,6 @@
 import { useCallback, useEffect } from "react";
 import { Navigate } from "react-router";
+import { hasAdminAccess } from "@/auth/permissions";
 import useAuth from "@/auth/store";
 import { formatSecurityDateTime } from "@/lib/dateTime";
 import type { AdminActionLog } from "@/models/AdminModels";
@@ -39,7 +40,7 @@ const policyActionLabel = (value?: string) =>
 
 export default function PolicyChangeHistoryPage() {
   const user = useAuth((state) => state.user);
-  const isAdmin = user?.roles?.includes("ROLE_ADMIN");
+  const isAdmin = hasAdminAccess(user);
 
   const fetchPage = useCallback(
     (params: typeof initialFilters & { page: number; size: number; sort: string; direction: "ASC" | "DESC" }) =>

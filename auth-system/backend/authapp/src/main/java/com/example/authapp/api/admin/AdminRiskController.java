@@ -37,17 +37,17 @@ public class AdminRiskController {
     }
 
     @PostMapping("/{username}/lock")
-    public void lockRiskUser(@PathVariable String username, @RequestBody(required = false) AdminActionRequest request) {
+    public void lockRiskUser(@PathVariable(name = "username") String username, @RequestBody(required = false) AdminActionRequest request) {
         adminConsoleService.lockRiskUser(username, request != null ? request.normalizedReason() : null);
     }
 
     @PostMapping("/{username}/tokens/revoke")
-    public void revokeRiskUserTokens(@PathVariable String username, @RequestBody(required = false) AdminActionRequest request) {
+    public void revokeRiskUserTokens(@PathVariable(name = "username") String username, @RequestBody(required = false) AdminActionRequest request) {
         adminConsoleService.revokeRiskUserTokens(username, request != null ? request.normalizedReason() : null);
     }
 
     @PostMapping("/{username}/mfa/require")
-    public void requireRiskUserMfa(@PathVariable String username, @RequestBody(required = false) AdminActionRequest request) {
+    public void requireRiskUserMfa(@PathVariable(name = "username") String username, @RequestBody(required = false) AdminActionRequest request) {
         adminConsoleService.requireRiskUserMfa(username, request != null ? request.normalizedReason() : null);
     }
     

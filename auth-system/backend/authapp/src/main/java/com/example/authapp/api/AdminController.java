@@ -31,27 +31,27 @@ public class AdminController {
     }
 
     @PostMapping("/users/{id}/lock")
-    public void lockUser(@PathVariable Long id) {
+    public void lockUser(@PathVariable(name = "id") Long id) {
         adminService.lockUser(id);
     }
 
     @PostMapping("/users/{id}/unlock")
-    public void unlockUser(@PathVariable Long id) {
+    public void unlockUser(@PathVariable(name = "id") Long id) {
         adminService.unlockUser(id);
     }
 
     @GetMapping("/login-history/{username}")
-    public List<LoginHistoryEntity> getLoginHistory(@PathVariable String username) {
+    public List<LoginHistoryEntity> getLoginHistory(@PathVariable(name = "username") String username) {
         return adminService.getLoginHistory(username);
     }
 
     @GetMapping("/security-event/{username}")
-    public List<AuthEventLogEntity> getSecurityEvents(@PathVariable String username) {
+    public List<AuthEventLogEntity> getSecurityEvents(@PathVariable(name = "username") String username) {
         return adminService.getSecurityEvents(username);
     }
 
     @PostMapping("/tokens/revoke/{username}")
-    public void revokeTokens(@PathVariable String username) {
+    public void revokeTokens(@PathVariable(name = "username") String username) {
         adminService.revokeAllTokens(username);
     }
     

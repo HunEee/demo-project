@@ -61,7 +61,7 @@ public class AdminSecurityController {
     // 사고를 해결 처리
     @PostMapping("/incidents/{id}/resolve")
     public void resolveIncident(
-            @PathVariable Long id,
+            @PathVariable(name = "id") Long id,
             @RequestBody(required = false) AdminActionRequest request,
             @AuthenticationPrincipal UserPrincipal admin
     ) {

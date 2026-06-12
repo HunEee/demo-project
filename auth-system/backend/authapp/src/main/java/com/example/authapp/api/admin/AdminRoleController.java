@@ -68,6 +68,6 @@ public class AdminRoleController {
             @PathVariable(name = "permissionId") Long permissionId,
             @RequestParam(name = "reason", required = false) String reason
     ) {
-        return adminRoleService.removePermission(id, permissionId);
+        return adminRoleService.removePermission(id, permissionId, reason);
     }
 }

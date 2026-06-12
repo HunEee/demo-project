@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, Navigate } from "react-router";
+import { hasAdminAccess } from "@/auth/permissions";
 import useAuth from "@/auth/store";
 import { Button } from "@/components/ui/button";
 import { formatSecurityDateTime } from "@/lib/dateTime";
@@ -54,7 +55,7 @@ const authMethodLabel = (item: AdminUser) => {
 
 export default function ExternalUsersPage() {
   const user = useAuth((state) => state.user);
-  const isAdmin = user?.roles?.includes("ROLE_ADMIN");
+  const isAdmin = hasAdminAccess(user);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [filters, setFilters] = useState({ keyword: "", status: "", authMethod: "" });
   const [filterOptions, setFilterOptions] = useState<AdminFilterOptions | null>(null);

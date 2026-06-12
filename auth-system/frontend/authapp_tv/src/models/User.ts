@@ -9,5 +9,6 @@ export default interface User {
   createdAt?: string;
   provider: string;
   roles: string[];
-  securityAlert?: boolean; // 보안 상태
+  permissions?: string[];
+  securityAlert?: boolean;
 }

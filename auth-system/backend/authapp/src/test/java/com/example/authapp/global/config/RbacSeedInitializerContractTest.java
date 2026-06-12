@@ -196,11 +196,43 @@ class RbacSeedInitializerContractTest {
                         .isTrue());
     }
 
+    @Test
+    void adminFilterOptionsAreAvailableToAnyAdminReadPermission() {
+        assertThat(requiredPermissions("GET", "/api/v1/admin/filter-options"))
+                .contains(
+                        "ADMIN_ADMIN_READ",
+                        "ADMIN_DASHBOARD_READ",
+                        "ADMIN_USERS_READ",
+                        "ADMIN_ROLES_READ",
+                        "ADMIN_PERMISSIONS_READ",
+                        "ADMIN_GROUPS_READ",
+                        "ADMIN_HR_USERS_READ",
+                        "ADMIN_AUDIT_READ",
+                        "ADMIN_SETTINGS_READ"
+                );
+    }
+
     private boolean isCovered(ApiEndpoint endpoint) {
         return ruleSeeds().stream().anyMatch(seed ->
                 (stringValue(seed, "httpMethod").equals(endpoint.method()) || stringValue(seed, "httpMethod").equals("*"))
                         && pathMatcher.match(stringValue(seed, "pathPattern"), endpoint.path())
         );
+    }
+
+    private Set<String> requiredPermissions(String method, String path) {
+        int bestSortOrder = ruleSeeds().stream()
+                .filter(seed -> stringValue(seed, "httpMethod").equals(method) || stringValue(seed, "httpMethod").equals("*"))
+                .filter(seed -> pathMatcher.match(stringValue(seed, "pathPattern"), path))
+                .mapToInt(seed -> intValue(seed, "sortOrder"))
+                .min()
+                .orElse(Integer.MAX_VALUE);
+
+        return ruleSeeds().stream()
+                .filter(seed -> stringValue(seed, "httpMethod").equals(method) || stringValue(seed, "httpMethod").equals("*"))
+                .filter(seed -> pathMatcher.match(stringValue(seed, "pathPattern"), path))
+                .filter(seed -> intValue(seed, "sortOrder") == bestSortOrder)
+                .map(seed -> stringValue(seed, "permissionCode"))
+                .collect(Collectors.toSet());
     }
 
     private List<?> permissionSeeds() {

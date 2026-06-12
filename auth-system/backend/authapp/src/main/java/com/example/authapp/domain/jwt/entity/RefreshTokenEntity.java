@@ -63,7 +63,7 @@ public class RefreshTokenEntity {
     private boolean revoked;
     
     //Refresh Token Rotation 시 새로 발급된 토큰 값을 저장
-    @Column(name = "replaced_by_token")
+    @Column(name = "replaced_by_token", length = 512)
     private String replacedByToken;
     
     // 로그인 디바이스 정보

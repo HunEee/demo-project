@@ -33,6 +33,7 @@ public record AdminUserResponse(
         boolean deleted,
         boolean social,
         Set<String> roles,
+        Set<String> groups,
         LocalDateTime createdAt
 ) {
     public static AdminUserResponse from(UserEntity user) {
@@ -44,6 +45,16 @@ public record AdminUserResponse(
             HrUserMasterEntity hrUser,
             boolean mfaEnabled,
             LocalDateTime latestSuccessfulLoginAt
+    ) {
+        return from(user, hrUser, mfaEnabled, latestSuccessfulLoginAt, Set.of());
+    }
+
+    public static AdminUserResponse from(
+            UserEntity user,
+            HrUserMasterEntity hrUser,
+            boolean mfaEnabled,
+            LocalDateTime latestSuccessfulLoginAt,
+            Set<String> groups
     ) {
         SocialProviderType providerType = user.getSocialProviderType();
         String authMethod = user.isSocial()
@@ -73,6 +84,7 @@ public record AdminUserResponse(
                 user.isDeleted(),
                 user.isSocial(),
                 user.getRoles().stream().map(RoleEntity::getName).collect(Collectors.toSet()),
+                groups,
                 user.getCreatedAt()
         );
     }

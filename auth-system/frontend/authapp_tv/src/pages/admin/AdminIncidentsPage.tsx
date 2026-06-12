@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { Navigate } from "react-router";
+import { hasAdminAccess } from "@/auth/permissions";
 import useAuth from "@/auth/store";
 import { Button } from "@/components/ui/button";
 import { formatSecurityDateTime } from "@/lib/dateTime";
@@ -49,7 +50,7 @@ export default function AdminIncidentsPage() {
   const [sortState, setSortState] = useState<SortState>({ sort: "createdAt", direction: "DESC" });
   const [resolveTarget, setResolveTarget] = useState<AdminIncident | null>(null);
   const [resolveReason, setResolveReason] = useState("보안 사고 검토 후 해결 처리");
-  const isAdmin = user?.roles?.includes("ROLE_ADMIN");
+  const isAdmin = hasAdminAccess(user);
 
   const load = async (nextPage = pageState.page, nextSort = sortState) => {
     const page = await getAdminIncidents({

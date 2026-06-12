@@ -27,6 +27,7 @@ import com.example.authapp.domain.mfa.service.MfaService;
 import com.example.authapp.domain.risk.service.RiskService;
 import com.example.authapp.domain.user.entity.UserEntity;
 import com.example.authapp.domain.user.service.UserQueryService;
+import com.example.authapp.security.rbac.RbacAuthorizationService;
 
 @ExtendWith(MockitoExtension.class)
 class AuthFacadeTest {
@@ -52,6 +53,9 @@ class AuthFacadeTest {
     @Mock
     private MfaService mfaService;
 
+    @Mock
+    private RbacAuthorizationService rbacAuthorizationService;
+
     @Test
     void socialLoginAnalyzesRiskAndRedirectsToConfiguredFrontendCookiePage() throws Exception {
         AuthFacade authFacade = new AuthFacade(
@@ -62,6 +66,7 @@ class AuthFacadeTest {
                 riskService,
                 authEventLogService,
                 mfaService,
+                rbacAuthorizationService,
                 "http://frontend.example"
         );
         UserEntity user = UserEntity.builder()

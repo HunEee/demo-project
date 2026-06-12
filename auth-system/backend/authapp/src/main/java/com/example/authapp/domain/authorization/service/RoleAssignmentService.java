@@ -13,10 +13,14 @@ import com.example.authapp.domain.authorization.entity.RoleAssignmentHistoryEnti
 import com.example.authapp.domain.authorization.entity.RoleEntity;
 import com.example.authapp.domain.authorization.repository.RoleAssignmentHistoryRepository;
 import com.example.authapp.domain.authorization.repository.RoleRepository;
+import com.example.authapp.domain.audit.entity.AdminActionType;
+import com.example.authapp.domain.audit.service.AdminActionLogRequest;
+import com.example.authapp.domain.audit.service.AdminActionLogService;
 import com.example.authapp.domain.organization.entity.GroupEntity;
 import com.example.authapp.domain.organization.repository.GroupRepository;
 import com.example.authapp.domain.user.entity.UserEntity;
 import com.example.authapp.domain.user.repository.UserRepository;
+import com.example.authapp.security.rbac.RbacAuthorizationService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -28,6 +32,8 @@ public class RoleAssignmentService {
     private final GroupRepository groupRepository;
     private final RoleRepository roleRepository;
     private final RoleAssignmentHistoryRepository historyRepository;
+    private final AdminActionLogService adminActionLogService;
+    private final RbacAuthorizationService rbacAuthorizationService;
 
     @Transactional(readOnly = true)
     public List<AdminRoleAssignmentHistoryResponse> history() {
@@ -45,6 +51,8 @@ public class RoleAssignmentService {
         if (!user.getRoles().contains(role)) {
             user.addRole(role);
             saveHistory("USER", username, defaultText(user.getNickname(), username), role, "ASSIGN", request);
+            recordRoleAssignmentAction("USER", username, defaultText(user.getNickname(), username), role, AdminActionType.ASSIGN_ROLE, request.reason());
+            rbacAuthorizationService.invalidateUserPermissionCache(username);
         }
     }
 
@@ -55,6 +63,8 @@ public class RoleAssignmentService {
         if (user.getRoles().contains(role)) {
             user.removeRole(role);
             saveHistory("USER", username, defaultText(user.getNickname(), username), role, "REVOKE", new AdminRoleAssignmentRequest(roleId, null, reason, null));
+            recordRoleAssignmentAction("USER", username, defaultText(user.getNickname(), username), role, AdminActionType.REMOVE_ROLE, reason);
+            rbacAuthorizationService.invalidateUserPermissionCache(username);
         }
     }
 
@@ -66,6 +76,8 @@ public class RoleAssignmentService {
         if (!group.getRoles().contains(role)) {
             group.addRole(role);
             saveHistory("GROUP", String.valueOf(groupId), group.getName(), role, "ASSIGN", request);
+            recordRoleAssignmentAction("GROUP", String.valueOf(groupId), group.getName(), role, AdminActionType.ASSIGN_ROLE, request.reason());
+            rbacAuthorizationService.invalidateAllUserPermissionCache();
         }
     }
 
@@ -76,6 +88,8 @@ public class RoleAssignmentService {
         if (group.getRoles().contains(role)) {
             group.removeRole(role);
             saveHistory("GROUP", String.valueOf(groupId), group.getName(), role, "REVOKE", new AdminRoleAssignmentRequest(roleId, null, reason, null));
+            recordRoleAssignmentAction("GROUP", String.valueOf(groupId), group.getName(), role, AdminActionType.REMOVE_ROLE, reason);
+            rbacAuthorizationService.invalidateAllUserPermissionCache();
         }
     }
 
@@ -131,5 +145,36 @@ public class RoleAssignmentService {
 
     private String blankToNull(String value) {
         return value == null || value.isBlank() ? null : value;
+    }
+
+    private void recordRoleAssignmentAction(
+            String targetType,
+            String targetId,
+            String targetName,
+            RoleEntity role,
+            AdminActionType actionType,
+            String reason
+    ) {
+        adminActionLogService.record(AdminActionLogRequest.builder()
+                .targetType(targetType)
+                .targetId(targetId)
+                .targetUsername("USER".equals(targetType) ? targetId : null)
+                .targetName(targetName)
+                .actionType(actionType)
+                .reason(blankToNull(reason))
+                .metadata(roleMetadata(role))
+                .build());
+    }
+
+    private String roleMetadata(RoleEntity role) {
+        return "{"
+                + "\"roleId\":" + (role.getId() == null ? "null" : role.getId()) + ","
+                + "\"roleName\":\"" + safe(role.getName()) + "\","
+                + "\"sensitive\":" + role.hasSensitivePermission()
+                + "}";
+    }
+
+    private String safe(String value) {
+        return value == null ? "" : value.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 }

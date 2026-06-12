@@ -8,6 +8,7 @@ import lombok.Getter;
 import java.time.LocalDateTime;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.Collections;
 
 @Getter
 @Builder
@@ -21,6 +22,7 @@ public class UserResponseDTO {
     private Boolean enabled;
     private String provider;
     private Set<String> roles; 
+    private Set<String> permissions;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -32,6 +34,10 @@ public class UserResponseDTO {
     }
 
     public static UserResponseDTO from(UserEntity user, Set<String> roles) {
+        return from(user, roles, Collections.emptySet());
+    }
+
+    public static UserResponseDTO from(UserEntity user, Set<String> roles, Set<String> permissions) {
         return UserResponseDTO.builder()
                 .id(user.getId())
                 .username(user.getUsername())
@@ -41,6 +47,7 @@ public class UserResponseDTO {
                 .enabled(user.isEnabled())
                 .provider(user.isSocial() ? user.getSocialProviderType().name() : "LOCAL")
                 .roles(roles)
+                .permissions(permissions)
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .build();

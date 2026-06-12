@@ -25,6 +25,7 @@ import {
   X,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { canAccessMenuItem, hasAdminAccess } from "@/auth/permissions";
 import useAuth from "@/auth/store";
 import { Button } from "./ui/button";
 import {
@@ -43,6 +44,11 @@ type MenuItem = {
   path: string;
   icon?: ComponentType<{ className?: string }>;
   end?: boolean;
+  requiredPermissions?: readonly string[];
+};
+
+type PermissionMenuItem = MenuItem & {
+  requiredPermissions: readonly string[];
 };
 
 type MenuGroup = {
@@ -74,7 +80,7 @@ const adminGroups: MenuGroup[] = [
       { label: "권한 관리", path: "/admin/permissions/permissions", icon: KeyRound },
       { label: "사용자 권한 할당", path: "/admin/permissions/user-assignments", icon: User },
       { label: "그룹 권한 할당", path: "/admin/permissions/group-assignments", icon: Users },
-      { label: "관리자 권한 관리", path: "/admin/permissions/admin-permissions", icon: ShieldCheck },
+      { label: "API 권한 매핑", path: "/admin/permissions/admin-permissions", icon: ShieldCheck },
     ],
   },
   {
@@ -146,6 +152,48 @@ const adminGroups: MenuGroup[] = [
   },
 ];
 
+const adminMenuPermissions: Record<string, readonly string[]> = {
+  "/admin/status/dashboard": ["ADMIN_DASHBOARD_READ"],
+  "/admin/account/users": ["ADMIN_USERS_READ"],
+  "/admin/account/hr-users": ["ADMIN_HR_USERS_READ"],
+  "/admin/account/external-users": ["ADMIN_USERS_READ", "ADMIN_HR_USERS_READ"],
+  "/admin/permissions/roles": ["ADMIN_ROLES_READ"],
+  "/admin/permissions/permissions": ["ADMIN_PERMISSIONS_READ"],
+  "/admin/permissions/user-assignments": ["ADMIN_ROLES_READ"],
+  "/admin/permissions/group-assignments": ["ADMIN_GROUPS_READ", "ADMIN_ROLES_READ"],
+  "/admin/permissions/admin-permissions": ["ADMIN_PERMISSIONS_READ"],
+  "/admin/auth/sessions": ["ADMIN_AUDIT_READ"],
+  "/admin/auth/mfa": ["ADMIN_USERS_SECURITY"],
+  "/admin/auth/policies": ["ADMIN_SETTINGS_READ"],
+  "/admin/security/events": ["ADMIN_AUDIT_READ"],
+  "/admin/security/risk-logins": ["ADMIN_AUDIT_READ"],
+  "/admin/security/admin-ip": ["ADMIN_SETTINGS_READ"],
+  "/admin/audit/logs": ["ADMIN_AUDIT_READ"],
+  "/admin/audit/admin-actions": ["ADMIN_AUDIT_READ"],
+  "/admin/audit/login-history": ["ADMIN_AUDIT_READ"],
+  "/admin/audit/policy-changes": ["ADMIN_ROLES_READ", "ADMIN_PERMISSIONS_READ"],
+  "/admin/audit/reports": ["ADMIN_AUDIT_READ"],
+  "/admin/integrations/applications": ["ADMIN_SETTINGS_READ"],
+  "/admin/integrations/oidc-clients": ["ADMIN_SETTINGS_READ"],
+  "/admin/integrations/api-clients": ["ADMIN_SETTINGS_READ"],
+  "/admin/integrations/service-accounts": ["ADMIN_SETTINGS_READ"],
+  "/admin/governance/access-requests": ["ADMIN_ROLES_READ"],
+  "/admin/governance/access-reviews": ["ADMIN_ROLES_READ", "ADMIN_PERMISSIONS_READ"],
+  "/admin/governance/temporary-permissions": ["ADMIN_ROLES_READ"],
+  "/admin/governance/permission-expiry": ["ADMIN_ROLES_READ"],
+  "/admin/notifications/settings": ["ADMIN_SETTINGS_READ"],
+  "/admin/notifications/templates": ["ADMIN_SETTINGS_READ"],
+  "/admin/notifications/history": ["ADMIN_SETTINGS_READ"],
+  "/admin/system/settings": ["ADMIN_SETTINGS_READ"],
+  "/admin/system/cors-redirect": ["ADMIN_SETTINGS_READ"],
+  "/admin/system/log-retention": ["ADMIN_SETTINGS_READ"],
+};
+
+const withRequiredPermissions = (item: MenuItem): PermissionMenuItem => ({
+  ...item,
+  requiredPermissions: adminMenuPermissions[item.path] ?? ["ADMIN_ADMIN_READ"],
+});
+
 const desktopLinkStyle: NavLinkProps["className"] = ({ isActive }) =>
   [
     "inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-sm transition",
@@ -168,7 +216,13 @@ export default function Navbar() {
   const [expandedMobileGroup, setExpandedMobileGroup] = useState<string | null>(null);
 
   const isLogin = checkLogin();
-  const isAdmin = user?.roles?.includes("ROLE_ADMIN");
+  const isAdmin = isLogin && hasAdminAccess(user);
+  const visibleAdminGroups = adminGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.map(withRequiredPermissions).filter((item) => canAccessMenuItem(user, item)),
+    }))
+    .filter((group) => group.items.length > 0);
   const displayName = user?.nickname || user?.username || "사용자";
   const initial = displayName.charAt(0).toUpperCase();
 
@@ -310,7 +364,7 @@ export default function Navbar() {
                   <ChevronDown className="size-4" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-64">
-                  {adminGroups.map((group) => {
+                  {visibleAdminGroups.map((group) => {
                     const Icon = group.icon;
                     const active = group.items.some(isPathActive);
                     return (
@@ -421,7 +475,7 @@ export default function Navbar() {
               {isAdmin ? (
                 <div className="mt-3">
                   <p className="mb-1 px-1 text-xs font-semibold text-muted-foreground">관리자</p>
-                  {adminGroups.map(renderMobileGroup)}
+                  {visibleAdminGroups.map(renderMobileGroup)}
                 </div>
               ) : null}
             </div>

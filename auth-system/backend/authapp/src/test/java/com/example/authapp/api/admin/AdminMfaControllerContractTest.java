@@ -8,13 +8,20 @@ import java.lang.reflect.Parameter;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.bind.annotation.PathVariable;
 
+import com.example.authapp.api.AdminController;
 import com.example.authapp.api.MfaController;
 
 class AdminMfaControllerContractTest {
 
     @Test
     void pathVariablesDeclareNamesBecauseParameterReflectionIsNotEnabled() {
+        assertPathVariablesNamed(AdminController.class);
+        assertPathVariablesNamed(AdminApiPermissionRuleController.class);
+        assertPathVariablesNamed(AdminPermissionController.class);
         assertPathVariablesNamed(AdminMfaController.class);
+        assertPathVariablesNamed(AdminRiskController.class);
+        assertPathVariablesNamed(AdminSecurityController.class);
+        assertPathVariablesNamed(AdminSessionController.class);
         assertPathVariablesNamed(MfaController.class);
     }
 
@@ -23,7 +30,7 @@ class AdminMfaControllerContractTest {
             for (Parameter parameter : method.getParameters()) {
                 PathVariable pathVariable = parameter.getAnnotation(PathVariable.class);
                 if (pathVariable != null) {
-                    assertThat(pathVariable.value())
+                    assertThat(pathVariable.value().isBlank() ? pathVariable.name() : pathVariable.value())
                             .as(controllerType.getSimpleName() + "." + method.getName())
                             .isNotBlank();
                 }

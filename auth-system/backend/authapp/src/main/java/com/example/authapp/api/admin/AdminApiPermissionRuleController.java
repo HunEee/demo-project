@@ -35,12 +35,12 @@ public class AdminApiPermissionRuleController {
     }
 
     @PatchMapping("/{id}")
-    public AdminApiPermissionRuleResponse update(@PathVariable Long id, @RequestBody AdminApiPermissionRuleRequest request) {
+    public AdminApiPermissionRuleResponse update(@PathVariable(name = "id") Long id, @RequestBody AdminApiPermissionRuleRequest request) {
         return adminApiPermissionRuleService.update(id, request);
     }
 
     @DeleteMapping("/{id}")
-    public void delete(@PathVariable Long id) {
+    public void delete(@PathVariable(name = "id") Long id) {
         adminApiPermissionRuleService.delete(id);
     }
 }
