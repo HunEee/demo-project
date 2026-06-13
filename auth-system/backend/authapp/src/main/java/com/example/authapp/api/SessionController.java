@@ -19,19 +19,19 @@ import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("${api.prefix}/sessions")
+@RequestMapping("${api.prefix}")
 public class SessionController {
 
     private final SessionService sessionService;
 
     // 세션 조회
-    @GetMapping
+    @GetMapping({"/sessions", "/me/sessions"})
     public List<SessionResponse> getSessions(@AuthenticationPrincipal UserPrincipal user, HttpServletRequest request) {
         return sessionService.getSessions(user.getUsername(), request);
     }
 
     // 개별 로그아웃
-    @DeleteMapping("/{id}")
+    @DeleteMapping({"/sessions/{id}", "/me/sessions/{id}"})
     public ResponseEntity <Void> logoutSession( @PathVariable("id") Long id, @AuthenticationPrincipal UserPrincipal user) {
         sessionService.logoutSession(id, user.getUsername());
         return ResponseEntity.ok().build();
@@ -39,7 +39,7 @@ public class SessionController {
 
 
     // 전체 로그아웃
-    @DeleteMapping
+    @DeleteMapping("/sessions")
     public ResponseEntity<Void> logoutAll(@AuthenticationPrincipal UserPrincipal user, HttpServletRequest request) {
         sessionService.logoutAll(user.getUsername(), request);
         return ResponseEntity.ok().build();

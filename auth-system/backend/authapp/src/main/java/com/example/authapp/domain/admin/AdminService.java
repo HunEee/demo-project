@@ -3,6 +3,7 @@ package com.example.authapp.domain.admin;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import com.example.authapp.domain.audit.entity.LoginHistoryEntity;
 import com.example.authapp.domain.audit.entity.AuthEventLogEntity;
@@ -62,8 +63,14 @@ public class AdminService {
     public void revokeAllTokens(String username) {
         List<RefreshTokenEntity> tokens = refreshTokenRepository.findByUsername(username);
         for (RefreshTokenEntity token : tokens) {
-            token.revoke();
+            token.revokeBy("ADMIN_REVOKE_ALL", currentActor());
         }
+    }
+
+    private String currentActor() {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || authentication.getName() == null) return "UNKNOWN";
+        return authentication.getName();
     }
 
     private UserEntity getUser(Long userId) {

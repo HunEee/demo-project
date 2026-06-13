@@ -48,9 +48,19 @@ export const getCurrentUserByEmail = async (emailId: string | undefined) => {
 // =============================
 // 토큰 재발급 (Refresh Token)
 // =============================
-export const refreshToken = async () => {
+export type RefreshReason = "ACCESS_TOKEN_MISSING" | "ACCESS_TOKEN_EXPIRED" | "UNKNOWN";
+
+export const refreshToken = async (reason: RefreshReason = "UNKNOWN") => {
   // accessToken 만료 시 새로운 토큰 발급 요청
-  const response = await authClient.post<LoginResponseData>(`/jwt/refresh`);
+  const response = await authClient.post<LoginResponseData>(
+    `/jwt/refresh`,
+    undefined,
+    {
+      headers: {
+        "X-Refresh-Reason": reason,
+      },
+    }
+  );
   return response.data;
 };
 

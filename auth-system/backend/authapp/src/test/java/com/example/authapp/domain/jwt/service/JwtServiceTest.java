@@ -21,10 +21,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 
+import com.example.authapp.domain.authorization.entity.RoleEntity;
 import com.example.authapp.domain.jwt.entity.RefreshTokenEntity;
 import com.example.authapp.domain.jwt.exception.JwtException;
 import com.example.authapp.domain.risk.service.RiskService;
-import com.example.authapp.domain.authorization.entity.RoleEntity;
 import com.example.authapp.domain.user.entity.SocialProviderType;
 import com.example.authapp.domain.user.entity.UserEntity;
 import com.example.authapp.domain.user.service.UserQueryService;
@@ -58,26 +58,15 @@ class JwtServiceTest {
     private JwtService jwtService;
 
     @Test
-    void exchangeUsesDatabaseRefreshTokenAndRiskValidationBeforeRotating() {
-        String oldRefreshToken = JWTUtil.createJWT("socialUser", Set.of("ROLE_USER"), UUID.randomUUID().toString(), false);
-        RefreshTokenEntity oldEntity = RefreshTokenEntity.builder()
-                .username("socialUser")
-                .refresh(oldRefreshToken)
-                .jti(JWTUtil.getJti(oldRefreshToken))
-                .expiresAt(LocalDateTime.now().plusDays(7))
-                .revoked(false)
-                .ipAddress("127.0.0.1")
-                .userAgent("JUnit")
-                .device("JUnit")
-                .build();
-        MockHttpServletRequest request = new MockHttpServletRequest();
-        request.setCookies(new Cookie("refreshToken", oldRefreshToken));
-        request.addHeader("User-Agent", "JUnit");
-        request.setRemoteAddr("127.0.0.1");
+    void exchangeUsesDatabaseRefreshTokenAndRiskValidationBeforeIssuingAccessToken() {
+        String refreshToken = JWTUtil.createJWT("socialUser", Set.of("ROLE_USER"), UUID.randomUUID().toString(), false);
+        RefreshTokenEntity session = activeSession("socialUser", refreshToken);
+        MockHttpServletRequest request = requestWithRefresh(refreshToken);
+        request.addHeader("X-Refresh-Reason", "OAUTH_COOKIE_EXCHANGE");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
-        when(refreshTokenService.findByRefresh(oldRefreshToken)).thenReturn(oldEntity);
-        when(riskService.analyzeTokenRisk(eq(oldEntity), any(), any(), any())).thenReturn(true);
+        when(refreshTokenService.findByRefreshForUpdate(refreshToken)).thenReturn(session);
+        when(riskService.analyzeTokenRisk(eq(session), any(), any(), any())).thenReturn(true);
         when(rbacAuthorizationService.findEffectivePermissions("socialUser")).thenReturn(Set.of("ADMIN_USERS_READ"));
         when(userQueryService.getByUsername("socialUser")).thenReturn(UserEntity.builder()
                 .username("socialUser")
@@ -95,138 +84,130 @@ class JwtServiceTest {
         assertThat(result.accessToken()).isNotBlank();
         assertThat(result.user().getUsername()).isEqualTo("socialUser");
         assertThat(result.user().getPermissions()).containsExactly("ADMIN_USERS_READ");
-        verify(refreshTokenService).findByRefresh(oldRefreshToken);
-        verify(riskService).analyzeTokenRisk(eq(oldEntity), any(), any(), any());
+        assertThat(session.getLastUsedAt()).isNotNull();
+        assertThat(session.isRevoked()).isTrue();
+        assertThat(session.getRevokedReason()).isEqualTo("ROTATED_OAUTH_COOKIE_EXCHANGE");
+        assertThat(session.getReplacedByToken()).isNotBlank();
+        verify(refreshTokenService).findByRefreshForUpdate(refreshToken);
+        verify(riskService).analyzeTokenRisk(eq(session), any(), any(), any());
         verify(refreshTokenService).save(any(RefreshTokenEntity.class));
         verify(cookieService).addRefreshCookie(eq(response), any());
     }
 
     @Test
     void exchangeRejectsRevokedOrHighRiskRefreshToken() {
-        String oldRefreshToken = JWTUtil.createJWT("socialUser", Set.of("ROLE_USER"), UUID.randomUUID().toString(), false);
-        RefreshTokenEntity oldEntity = RefreshTokenEntity.builder()
-                .username("socialUser")
-                .refresh(oldRefreshToken)
-                .jti(JWTUtil.getJti(oldRefreshToken))
-                .expiresAt(LocalDateTime.now().plusDays(7))
-                .revoked(true)
-                .build();
-        MockHttpServletRequest request = new MockHttpServletRequest();
-        request.setCookies(new Cookie("refreshToken", oldRefreshToken));
+        String refreshToken = JWTUtil.createJWT("socialUser", Set.of("ROLE_USER"), UUID.randomUUID().toString(), false);
+        RefreshTokenEntity session = activeSession("socialUser", refreshToken);
+        session.revokeBy("TOKEN_REUSE_DETECTED", "SYSTEM");
+        MockHttpServletRequest request = requestWithRefresh(refreshToken);
         MockHttpServletResponse response = new MockHttpServletResponse();
 
-        when(refreshTokenService.findByRefresh(oldRefreshToken)).thenReturn(oldEntity);
-        when(riskService.analyzeTokenRisk(eq(oldEntity), any(), any(), any())).thenReturn(false);
+        when(refreshTokenService.findByRefreshForUpdate(refreshToken)).thenReturn(session);
+        when(riskService.analyzeTokenRisk(eq(session), any(), any(), any())).thenReturn(false);
 
         assertThatThrownBy(() -> jwtService.cookie2Header(request, response))
                 .isInstanceOf(JwtException.class);
     }
 
     @Test
-    void refreshRotateStoresCurrentRequestClientInfoInNewRefreshToken() {
-        String oldRefreshToken = JWTUtil.createJWT("user1", Set.of("ROLE_USER"), UUID.randomUUID().toString(), false);
-        RefreshTokenEntity oldEntity = RefreshTokenEntity.builder()
-                .username("user1")
-                .refresh(oldRefreshToken)
-                .jti(JWTUtil.getJti(oldRefreshToken))
-                .expiresAt(LocalDateTime.now().plusDays(7))
-                .revoked(false)
-                .ipAddress("127.0.0.1")
-                .userAgent("OldAgent")
-                .device("OldDevice")
-                .build();
-        MockHttpServletRequest request = new MockHttpServletRequest();
-        request.setCookies(new Cookie("refreshToken", oldRefreshToken));
+    void refreshUsesCurrentRequestClientInfoForRiskValidation() {
+        String refreshToken = JWTUtil.createJWT("user1", Set.of("ROLE_USER"), UUID.randomUUID().toString(), false);
+        RefreshTokenEntity session = activeSession("user1", refreshToken);
+        MockHttpServletRequest request = requestWithRefresh(refreshToken);
         request.setRemoteAddr("203.0.113.10");
         request.addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0) AppleWebKit Chrome/120");
+        request.addHeader("X-Refresh-Reason", "ACCESS_TOKEN_EXPIRED");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
-        when(refreshTokenService.findByRefresh(oldRefreshToken)).thenReturn(oldEntity);
-        when(riskService.analyzeTokenRisk(eq(oldEntity), eq("203.0.113.10"), eq("Windows / Chrome"), any()))
+        when(refreshTokenService.findByRefreshForUpdate(refreshToken)).thenReturn(session);
+        when(riskService.analyzeTokenRisk(eq(session), eq("203.0.113.10"), eq("Windows / Chrome"), any()))
                 .thenReturn(true);
         when(rbacAuthorizationService.findEffectivePermissions("user1")).thenReturn(Set.of());
-        when(userQueryService.getByUsername("user1")).thenReturn(UserEntity.builder()
-                .username("user1")
-                .email("user1@example.com")
-                .nickname("user1")
-                .enabled(true)
-                .locked(false)
-                .social(false)
-                .build());
+        when(userQueryService.getByUsername("user1")).thenReturn(availableUser("user1"));
 
         jwtService.refreshRotate(request, response);
 
-        ArgumentCaptor<RefreshTokenEntity> newTokenCaptor = ArgumentCaptor.forClass(RefreshTokenEntity.class);
-        verify(refreshTokenService).save(newTokenCaptor.capture());
-        RefreshTokenEntity newToken = newTokenCaptor.getValue();
-        assertThat(newToken.getIpAddress()).isEqualTo("203.0.113.10");
-        assertThat(newToken.getUserAgent()).isEqualTo("Mozilla/5.0 (Windows NT 10.0) AppleWebKit Chrome/120");
-        assertThat(newToken.getDevice()).isEqualTo("Windows / Chrome");
+        verify(riskService).analyzeTokenRisk(eq(session), eq("203.0.113.10"), eq("Windows / Chrome"), any());
+        verify(refreshTokenService).save(any(RefreshTokenEntity.class));
     }
 
     @Test
-    void refreshRotateStoresReplacementJtiInsteadOfFullRefreshToken() {
-        String oldRefreshToken = JWTUtil.createJWT("user1", Set.of("ROLE_USER"), UUID.randomUUID().toString(), false);
-        RefreshTokenEntity oldEntity = RefreshTokenEntity.builder()
-                .username("user1")
-                .refresh(oldRefreshToken)
-                .jti(JWTUtil.getJti(oldRefreshToken))
-                .expiresAt(LocalDateTime.now().plusDays(7))
-                .revoked(false)
-                .build();
-        MockHttpServletRequest request = new MockHttpServletRequest();
-        request.setCookies(new Cookie("refreshToken", oldRefreshToken));
+    void refreshRotatesRefreshTokenAndCreatesNewSessionInSameFamily() {
+        String refreshToken = JWTUtil.createJWT("user1", Set.of("ROLE_USER"), UUID.randomUUID().toString(), false);
+        RefreshTokenEntity session = activeSession("user1", refreshToken);
+        MockHttpServletRequest request = requestWithRefresh(refreshToken);
+        request.addHeader("X-Refresh-Reason", "ACCESS_TOKEN_MISSING");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
-        when(refreshTokenService.findByRefresh(oldRefreshToken)).thenReturn(oldEntity);
-        when(riskService.analyzeTokenRisk(eq(oldEntity), any(), any(), any())).thenReturn(true);
+        when(refreshTokenService.findByRefreshForUpdate(refreshToken)).thenReturn(session);
+        when(riskService.analyzeTokenRisk(eq(session), any(), any(), any())).thenReturn(true);
         when(rbacAuthorizationService.findEffectivePermissions("user1")).thenReturn(Set.of());
-        when(userQueryService.getByUsername("user1")).thenReturn(UserEntity.builder()
-                .username("user1")
-                .email("user1@example.com")
-                .nickname("user1")
-                .enabled(true)
-                .locked(false)
-                .social(false)
-                .build());
+        when(userQueryService.getByUsername("user1")).thenReturn(availableUser("user1"));
 
-        jwtService.refreshRotate(request, response);
+        var result = jwtService.refreshRotate(request, response);
 
-        ArgumentCaptor<RefreshTokenEntity> newTokenCaptor = ArgumentCaptor.forClass(RefreshTokenEntity.class);
-        verify(refreshTokenService).save(newTokenCaptor.capture());
-        assertThat(oldEntity.getReplacedByToken()).isEqualTo(newTokenCaptor.getValue().getJti());
-        assertThat(oldEntity.getReplacedByToken()).hasSizeLessThanOrEqualTo(64);
+        ArgumentCaptor<RefreshTokenEntity> captor = ArgumentCaptor.forClass(RefreshTokenEntity.class);
+        verify(refreshTokenService).save(captor.capture());
+        RefreshTokenEntity replacement = captor.getValue();
+
+        assertThat(result.accessToken()).isNotBlank();
+        assertThat(JWTUtil.getJti(result.accessToken())).isEqualTo(replacement.getJti());
+        assertThat(session.isRevoked()).isTrue();
+        assertThat(session.getRevokedReason()).isEqualTo("ROTATED_ACCESS_TOKEN_MISSING");
+        assertThat(session.getReplacedByToken()).isEqualTo(replacement.getJti());
+        assertThat(session.getRotationGraceUntil()).isNotNull();
+        assertThat(replacement.getFamilyId()).isEqualTo(session.getFamilyId());
+        assertThat(replacement.getTokenSequence()).isEqualTo(session.getTokenSequence() + 1);
+        verify(cookieService).addRefreshCookie(eq(response), any());
     }
 
     @Test
-    void refreshRotateUsesCurrentDatabaseRolesForNewAccessToken() {
-        String oldRefreshToken = JWTUtil.createJWT("user1", Set.of("ROLE_USER"), UUID.randomUUID().toString(), false);
-        RefreshTokenEntity oldEntity = RefreshTokenEntity.builder()
+    void refreshRecoversRecentRotatedTokenWithoutCreatingAnotherSession() {
+        String refreshToken = JWTUtil.createJWT("user1", Set.of("ROLE_USER"), UUID.randomUUID().toString(), false);
+        RefreshTokenEntity session = activeSession("user1", refreshToken);
+        session.rotateTo("replacement-jti", LocalDateTime.now(), LocalDateTime.now().plusSeconds(30));
+        RefreshTokenEntity replacement = RefreshTokenEntity.builder()
                 .username("user1")
-                .refresh(oldRefreshToken)
-                .jti(JWTUtil.getJti(oldRefreshToken))
+                .refreshTokenHash("replacement-hash")
+                .jti("replacement-jti")
+                .familyId(session.getFamilyId())
+                .tokenSequence(session.getTokenSequence() + 1)
                 .expiresAt(LocalDateTime.now().plusDays(7))
                 .revoked(false)
                 .build();
+        MockHttpServletRequest request = requestWithRefresh(refreshToken);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        when(refreshTokenService.findByRefreshForUpdate(refreshToken)).thenReturn(session);
+        when(refreshTokenService.findActiveReplacement(session.getFamilyId(), "replacement-jti"))
+                .thenReturn(java.util.Optional.of(replacement));
+        when(rbacAuthorizationService.findEffectivePermissions("user1")).thenReturn(Set.of());
+        when(userQueryService.getByUsername("user1")).thenReturn(availableUser("user1"));
+
+        var result = jwtService.refreshRotate(request, response);
+
+        assertThat(result.accessToken()).isNotBlank();
+        assertThat(JWTUtil.getJti(result.accessToken())).isEqualTo("replacement-jti");
+        verify(riskService, never()).analyzeTokenRisk(any(), any(), any(), any());
+        verify(refreshTokenService, never()).save(any(RefreshTokenEntity.class));
+        verify(cookieService, never()).addRefreshCookie(any(), any());
+    }
+
+    @Test
+    void refreshUsesCurrentDatabaseRolesForNewAccessToken() {
+        String refreshToken = JWTUtil.createJWT("user1", Set.of("ROLE_USER"), UUID.randomUUID().toString(), false);
+        RefreshTokenEntity session = activeSession("user1", refreshToken);
         RoleEntity adminRole = RoleEntity.builder()
                 .name("ROLE_ADMIN")
                 .enabled(true)
                 .build();
-        UserEntity user = UserEntity.builder()
-                .username("user1")
-                .email("user1@example.com")
-                .nickname("user1")
-                .enabled(true)
-                .locked(false)
-                .social(false)
-                .build();
+        UserEntity user = availableUser("user1");
         user.addRole(adminRole);
-        MockHttpServletRequest request = new MockHttpServletRequest();
-        request.setCookies(new Cookie("refreshToken", oldRefreshToken));
+        MockHttpServletRequest request = requestWithRefresh(refreshToken);
         MockHttpServletResponse response = new MockHttpServletResponse();
 
-        when(refreshTokenService.findByRefresh(oldRefreshToken)).thenReturn(oldEntity);
-        when(riskService.analyzeTokenRisk(eq(oldEntity), any(), any(), any())).thenReturn(true);
+        when(refreshTokenService.findByRefreshForUpdate(refreshToken)).thenReturn(session);
+        when(riskService.analyzeTokenRisk(eq(session), any(), any(), any())).thenReturn(true);
         when(rbacAuthorizationService.findEffectivePermissions("user1")).thenReturn(Set.of("ADMIN_ROLES_READ"));
         when(userQueryService.getByUsername("user1")).thenReturn(user);
 
@@ -238,15 +219,9 @@ class JwtServiceTest {
     }
 
     @Test
-    void refreshRotateRejectsDisabledAccountBeforeIssuingNewTokens() {
-        String oldRefreshToken = JWTUtil.createJWT("user1", Set.of("ROLE_USER"), UUID.randomUUID().toString(), false);
-        RefreshTokenEntity oldEntity = RefreshTokenEntity.builder()
-                .username("user1")
-                .refresh(oldRefreshToken)
-                .jti(JWTUtil.getJti(oldRefreshToken))
-                .expiresAt(LocalDateTime.now().plusDays(7))
-                .revoked(false)
-                .build();
+    void refreshRejectsDisabledAccountBeforeIssuingNewAccessToken() {
+        String refreshToken = JWTUtil.createJWT("user1", Set.of("ROLE_USER"), UUID.randomUUID().toString(), false);
+        RefreshTokenEntity session = activeSession("user1", refreshToken);
         UserEntity disabledUser = UserEntity.builder()
                 .username("user1")
                 .email("user1@example.com")
@@ -255,18 +230,49 @@ class JwtServiceTest {
                 .locked(false)
                 .social(false)
                 .build();
-        MockHttpServletRequest request = new MockHttpServletRequest();
-        request.setCookies(new Cookie("refreshToken", oldRefreshToken));
+        MockHttpServletRequest request = requestWithRefresh(refreshToken);
         MockHttpServletResponse response = new MockHttpServletResponse();
 
-        when(refreshTokenService.findByRefresh(oldRefreshToken)).thenReturn(oldEntity);
-        when(riskService.analyzeTokenRisk(eq(oldEntity), any(), any(), any())).thenReturn(true);
+        when(refreshTokenService.findByRefreshForUpdate(refreshToken)).thenReturn(session);
+        when(riskService.analyzeTokenRisk(eq(session), any(), any(), any())).thenReturn(true);
         when(userQueryService.getByUsername("user1")).thenReturn(disabledUser);
 
         assertThatThrownBy(() -> jwtService.refreshRotate(request, response))
                 .isInstanceOf(JwtException.class);
         verify(refreshTokenService, never()).save(any(RefreshTokenEntity.class));
     }
-    
-    
+
+    private RefreshTokenEntity activeSession(String username, String refreshToken) {
+        return RefreshTokenEntity.builder()
+                .username(username)
+                .refreshTokenHash(RefreshTokenService.hashToken(refreshToken))
+                .jti(JWTUtil.getJti(refreshToken))
+                .familyId(JWTUtil.getJti(refreshToken))
+                .tokenSequence(0L)
+                .expiresAt(LocalDateTime.now().plusDays(7))
+                .revoked(false)
+                .ipAddress("127.0.0.1")
+                .userAgent("JUnit")
+                .device("JUnit")
+                .build();
+    }
+
+    private MockHttpServletRequest requestWithRefresh(String refreshToken) {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setCookies(new Cookie("refreshToken", refreshToken));
+        request.addHeader("User-Agent", "JUnit");
+        request.setRemoteAddr("127.0.0.1");
+        return request;
+    }
+
+    private UserEntity availableUser(String username) {
+        return UserEntity.builder()
+                .username(username)
+                .email(username + "@example.com")
+                .nickname(username)
+                .enabled(true)
+                .locked(false)
+                .social(false)
+                .build();
+    }
 }

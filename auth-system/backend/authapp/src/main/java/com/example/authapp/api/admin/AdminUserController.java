@@ -1,5 +1,7 @@
 package com.example.authapp.api.admin;
 
+import java.util.List;
+
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -13,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.authapp.domain.admin.AdminConsoleService;
 import com.example.authapp.domain.admin.dto.AdminDuplicateCheckResponse;
 import com.example.authapp.domain.admin.dto.AdminPasswordResetResponse;
+import com.example.authapp.domain.admin.dto.AdminSessionResponse;
 import com.example.authapp.domain.admin.dto.AdminUserCreateRequest;
 import com.example.authapp.domain.admin.dto.AdminUserDetailResponse;
 import com.example.authapp.domain.admin.dto.AdminUserResponse;
@@ -118,6 +121,16 @@ public class AdminUserController {
     @PostMapping("/{username}/revoke-tokens")
     public void revokeTokens(@PathVariable(name = "username") String username) {
         adminConsoleService.revokeUserTokens(username);
+    }
+
+    @GetMapping("/{username}/sessions")
+    public List<AdminSessionResponse> userSessions(@PathVariable(name = "username") String username) {
+        return adminConsoleService.sessionsByUsername(username);
+    }
+
+    @DeleteMapping("/{username}/sessions")
+    public void revokeUserSessions(@PathVariable(name = "username") String username) {
+        adminConsoleService.revokeUserSessions(username);
     }
 
     @PostMapping("/{username}/reset-password")

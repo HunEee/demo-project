@@ -12,6 +12,9 @@ public record AdminSessionResponse(
         String device,
         String ipAddress,
         boolean revoked,
+        String revokedReason,
+        LocalDateTime revokedAt,
+        String revokedBy,
         LocalDateTime createdAt,
         LocalDateTime expiresAt,
         LocalDateTime lastUsedAt
@@ -24,6 +27,9 @@ public record AdminSessionResponse(
                 token.getDevice(),
                 token.getIpAddress(),
                 token.isRevoked(),
+                token.getRevokedReason(),
+                token.getRevokedAt(),
+                token.getRevokedBy(),
                 token.getCreatedAt(),
                 token.getExpiresAt(),
                 token.getLastUsedAt()

@@ -211,7 +211,7 @@ public class SecurityConfig {
         );
 
         // JWT 필터 추가
-        http.addFilterBefore(new JWTFilter(), LogoutFilter.class);
+        http.addFilterBefore(new JWTFilter(refreshTokenService), LogoutFilter.class);
 
         // 세션 필터 설정 (STATELESS)
         http.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));

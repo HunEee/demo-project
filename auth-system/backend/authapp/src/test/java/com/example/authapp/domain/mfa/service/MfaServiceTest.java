@@ -157,6 +157,6 @@ class MfaServiceTest {
                 .hasMessageContaining("5회 실패")
                 .hasMessageContaining("모든 세션이 로그아웃");
         assertThat(challenge.isUsed()).isTrue();
-        verify(refreshTokenService).revokeAllByUsername("user1");
+        verify(refreshTokenService).revokeAllByUsername("user1", "MFA_FAILED_LIMIT");
     }
 }

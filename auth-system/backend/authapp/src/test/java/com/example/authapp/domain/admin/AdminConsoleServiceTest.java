@@ -23,6 +23,7 @@ import com.example.authapp.domain.hr.entity.HrUserMasterEntity;
 import com.example.authapp.domain.hr.entity.HrUserStatus;
 import com.example.authapp.domain.hr.repository.HrUserMasterRepository;
 import com.example.authapp.domain.jwt.repository.RefreshTokenRepository;
+import com.example.authapp.domain.jwt.entity.RefreshTokenEntity;
 import com.example.authapp.domain.mfa.repository.MfaMethodRepository;
 import com.example.authapp.domain.organization.repository.GroupUserRepository;
 import com.example.authapp.domain.risk.repository.RiskRepository;
@@ -294,5 +295,37 @@ class AdminConsoleServiceTest {
         when(userRepository.existsByUsername("lee.user")).thenReturn(true);
 
         assertThat(service().usernameExists("lee.user")).isTrue();
+    }
+
+    @Test
+    void disablingUserRevokesAllUserSessionsWithReason() {
+        AdminConsoleService service = service();
+        UserEntity user = UserEntity.builder()
+                .username("lee.user")
+                .email("lee@example.com")
+                .nickname("Lee")
+                .enabled(true)
+                .locked(false)
+                .social(false)
+                .build();
+        RefreshTokenEntity token = RefreshTokenEntity.builder()
+                .username("lee.user")
+                .refreshTokenHash("hash")
+                .jti("jti")
+                .familyId("jti")
+                .tokenSequence(0L)
+                .expiresAt(java.time.LocalDateTime.now().plusDays(7))
+                .revoked(false)
+                .build();
+
+        when(userRepository.findByUsername("lee.user")).thenReturn(Optional.of(user));
+        when(refreshTokenRepository.findByUsername("lee.user")).thenReturn(List.of(token));
+
+        service.disableUser("lee.user");
+
+        assertThat(user.isEnabled()).isFalse();
+        assertThat(token.isRevoked()).isTrue();
+        assertThat(token.getRevokedReason()).isEqualTo("ACCOUNT_DISABLED");
+        assertThat(token.getRevokedBy()).isEqualTo("UNKNOWN");
     }
 }

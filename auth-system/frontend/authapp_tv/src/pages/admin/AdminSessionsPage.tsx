@@ -112,11 +112,12 @@ export default function AdminSessionsPage() {
                 <th className={adminCellClassName}>
                   <AdminSortableHeader label="상태" column="revoked" sortState={sortState} onSort={handleSort} />
                 </th>
+                <th className={adminCellClassName}>폐기 사유</th>
                 <th className={adminCellClassName}>작업</th>
               </tr>
             </thead>
             <tbody>
-              {items.length === 0 ? <AdminEmptyRow colSpan={7} /> : null}
+              {items.length === 0 ? <AdminEmptyRow colSpan={8} /> : null}
               {items.map((item) => (
                 <tr key={item.id} className={adminRowClassName}>
                   <td className={adminCellClassName}>{item.username}</td>
@@ -130,6 +131,16 @@ export default function AdminSessionsPage() {
                   </td>
                   <td className={adminCellClassName}>
                     <AdminBadge tone={item.revoked ? "danger" : "success"}>{item.revoked ? "폐기" : "활성"}</AdminBadge>
+                  </td>
+                  <td className={adminCellClassName}>
+                    {item.revokedReason ? (
+                      <div>
+                        <div>{item.revokedReason}</div>
+                        <div className="text-xs text-muted-foreground">{formatSecurityDateTime(item.revokedAt)}</div>
+                      </div>
+                    ) : (
+                      "-"
+                    )}
                   </td>
                   <td className={adminCellClassName}>
                     <Button

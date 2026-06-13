@@ -21,17 +21,13 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 public class SessionService {
-	
+
     private final RefreshTokenService refreshTokenService;
     private final LoginHistoryService loginHistoryService;
     private final AuthEventLogService authEventLogService;
-    
-    // 세션 목록 조회
+
     public List<SessionResponse> getSessions(String username, HttpServletRequest request) {
-    	// 현재 쿠키에서 리프레시 토큰을 꺼내고 현재 세션 세팅 
-        String refreshToken = extractRefreshToken(request);
-        String currentJti = JWTUtil.getJti(refreshToken);
-    	
+        String currentJti = resolveCurrentJti(request);
         List<RefreshTokenEntity> tokens = refreshTokenService.findActiveByUsername(username);
 
         return tokens.stream()
@@ -44,59 +40,50 @@ public class SessionService {
                                 ? token.getLastUsedAt().toString()
                                 : token.getCreatedAt().toString())
                         .current(token.getJti().equals(currentJti))
-                        .build()
-                ).toList();
+                        .build())
+                .toList();
     }
 
-    // 특정 세션 로그아웃
     @Transactional
     public void logoutSession(Long id, String username) {
         RefreshTokenEntity refreshToken = refreshTokenService.findByIdAndUsername(id, username);
-
-        // 리프레시 토큰 만료
-        refreshToken.revoke();
-        
-        // 로그 기록과 이벤트 기록을 남김
-        processLogout(refreshToken.getRefresh());
-        
+        refreshToken.revokeBy("USER_LOGOUT_OTHER_DEVICE", username);
+        processLogout(refreshToken);
     }
 
-    // 전체 로그아웃
     @Transactional
     public void logoutAll(String username, HttpServletRequest request) {
-    	// 현재 쿠키에서 리프레시 토큰을 꺼내고 현재 세션 세팅 
-    	String refreshToken = extractRefreshToken(request);
-        String currentJti = JWTUtil.getJti(refreshToken);
-    	
-    	List<RefreshTokenEntity> tokens = refreshTokenService.findActiveByUsername(username);
-
-        tokens.stream()
-                .filter(t -> !t.getJti().equals(currentJti)) // 현재 세션 제외
-                .forEach(t -> {
-                    t.revoke();
-                    processLogout(t.getRefresh());
+        String currentJti = resolveCurrentJti(request);
+        refreshTokenService.findActiveByUsername(username)
+                .stream()
+                .filter(token -> !token.getJti().equals(currentJti))
+                .forEach(token -> {
+                    token.revokeBy("USER_LOGOUT_OTHER_DEVICES", username);
+                    processLogout(token);
                 });
-        
     }
-    
-    //*******************************************************************************************
-    // 내부 메서드
-    //*******************************************************************************************
-    
-    // 쿠키 추출
-    private String extractRefreshToken(HttpServletRequest request) {
-        if (request.getCookies() == null) {
-            throw new RuntimeException("쿠키 없음");
+
+    private String resolveCurrentJti(HttpServletRequest request) {
+        String authorization = request.getHeader("Authorization");
+        if (authorization != null && authorization.startsWith("Bearer ")) {
+            return JWTUtil.getJti(authorization.substring("Bearer ".length()));
         }
-        for (Cookie cookie : request.getCookies()) {
+        return JWTUtil.getJti(extractRefreshToken(request));
+    }
+
+    private String extractRefreshToken(HttpServletRequest request) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies == null) {
+            throw new IllegalStateException("refreshToken cookie not found");
+        }
+        for (Cookie cookie : cookies) {
             if ("refreshToken".equals(cookie.getName())) {
                 return cookie.getValue();
             }
         }
-        throw new RuntimeException("refreshToken 없음");
+        throw new IllegalStateException("refreshToken cookie not found");
     }
-    
-    // 로그아웃 기록 및 이벤트 기록
+
     private LocalDateTime resolveSessionStartTime(RefreshTokenEntity token) {
         if (token.getLoginHistory() != null) {
             return token.getLoginHistory().getLoginAt();
@@ -104,13 +91,12 @@ public class SessionService {
         return token.getCreatedAt();
     }
 
-    private void processLogout(String refreshTokenValue) {
-        LoginHistoryResponse history = refreshTokenService.revokeRefresh(refreshTokenValue);
-
-        if (history != null) {
-            loginHistoryService.logout(history);
-            authEventLogService.logout(history.username());
+    private void processLogout(RefreshTokenEntity refreshToken) {
+        if (refreshToken.getLoginHistory() == null) {
+            return;
         }
+        LoginHistoryResponse history = refreshToken.getLoginHistory().toResponse();
+        loginHistoryService.logout(history);
+        authEventLogService.logout(history.username());
     }
-    
 }

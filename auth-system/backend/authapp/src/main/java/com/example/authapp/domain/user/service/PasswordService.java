@@ -50,7 +50,7 @@ public class PasswordService {
         user.changePassword(encodedPassword);
 
         // 6. 모든 Refresh Token 무효화 (강제 로그아웃)
-        refreshTokenService.revokeAllByUsername(username);
+        refreshTokenService.revokeAllByUsername(username, "PASSWORD_CHANGED");
 
         // 7. 보안 로그 기록
         authEventLogService.passwordChange(username);
@@ -71,7 +71,7 @@ public class PasswordService {
         user.changePassword(encodedPassword);
 
         // 5. 기존 Refresh Token 전체 만료
-        refreshTokenService.revokeAllByUsername(user.getUsername());
+        refreshTokenService.revokeAllByUsername(user.getUsername(), "PASSWORD_RESET");
         
         // 6. 로그 기록
         authEventLogService.passwordReset(username);

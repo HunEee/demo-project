@@ -57,13 +57,23 @@ apiClient.interceptors.response.use(
 
     const is401 = status === 401;
 
-    // TOKEN_EXPIRED 또는 Authorization 헤더 없이 보호 API에 먼저 진입한 401은 refresh 시도
+    // TOKEN_EXPIRED or protected API entry without Authorization can be retried after refresh.
+    // SESSION_REVOKED means the access token's session was explicitly revoked and must not be recovered.
     const isRefreshable401 = is401 && (errorCode === "TOKEN_EXPIRED" || !errorCode);
 
     console.log("status:", status);
     console.log("errorCode:", errorCode);
     console.log("요청 정보:", original);
     console.log("재시도 여부:", original._retry);
+
+    if (is401 && (errorCode === "SESSION_REVOKED" || errorCode === "INVALID_TOKEN")) {
+      useAuth.getState().logout(true);
+      toast.error(errorMessage || "세션이 만료되었습니다. 다시 로그인해주세요.");
+      if (window.location.pathname !== "/login") {
+        window.location.assign("/login");
+      }
+      return Promise.reject(error);
+    }
 
     // refresh 대상이 아니면 그냥 에러 처리
     if (!isRefreshable401 || original._retry) {
@@ -96,7 +106,7 @@ apiClient.interceptors.response.use(
 
     try {
       console.log("토큰 재발급 시작...");
-      const loginResponse = await refreshToken();
+      const loginResponse = await refreshToken("ACCESS_TOKEN_EXPIRED");
       const newToken = loginResponse.accessToken;
       if (!newToken) throw new Error("토큰이 존재하지 않습니다.");
       const currentUser = loginResponse.user ?? useAuth.getState().user;
@@ -118,8 +128,8 @@ apiClient.interceptors.response.use(
 
     } catch (error) {
       // 재발급 실패 → 전체 요청 실패 처리 + 로그아웃
-      resolveQueue("null");
-      useAuth.getState().logout();
+      resolveQueue("");
+      useAuth.getState().logout(true);
       toast.error("세션이 만료되었습니다. 다시 로그인해주세요.");
       return Promise.reject(error);
     } finally {

@@ -1,7 +1,12 @@
 package com.example.authapp.domain.jwt.service;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
+import java.util.HexFormat;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,12 +35,33 @@ public class RefreshTokenService {
     // JWT Refresh 존재 확인 메소드
     @Transactional(readOnly = true)
     public boolean existsRefresh(String refreshToken) {
-        return refreshTokenRepository.existsByRefresh(refreshToken);
+        return refreshTokenRepository.existsByRefreshTokenHash(hashToken(refreshToken));
     }
     
     @Transactional(readOnly = true)
     public RefreshTokenEntity findByRefresh(String refreshToken) {
-        return refreshTokenRepository.findByRefresh(refreshToken).orElseThrow(JwtException::tokenNotFound);
+        return refreshTokenRepository.findByRefreshTokenHash(hashToken(refreshToken)).orElseThrow(JwtException::tokenNotFound);
+    }
+
+    @Transactional
+    public RefreshTokenEntity findByRefreshForUpdate(String refreshToken) {
+        return refreshTokenRepository.findByRefreshTokenHashForUpdate(hashToken(refreshToken))
+                .orElseThrow(JwtException::tokenNotFound);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean existsActiveSession(String username, String jti) {
+        return refreshTokenRepository.existsByUsernameAndJtiAndRevokedFalse(username, jti);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<RefreshTokenEntity> findActiveByUsernameAndJti(String username, String jti) {
+        return refreshTokenRepository.findByUsernameAndJtiAndRevokedFalse(username, jti);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<RefreshTokenEntity> findActiveReplacement(String familyId, String jti) {
+        return refreshTokenRepository.findByFamilyIdAndJtiAndRevokedFalse(familyId, jti);
     }
     
     @Transactional(readOnly = true)
@@ -66,8 +92,10 @@ public class RefreshTokenService {
         String jti = JWTUtil.getJti(refreshToken); 
     	RefreshTokenEntity entity = RefreshTokenEntity.builder()
                 .username(username)
-                .refresh(refreshToken)
+                .refreshTokenHash(hashToken(refreshToken))
                 .jti(jti)
+                .familyId(jti)
+                .tokenSequence(0L)
                 .expiresAt(LocalDateTime.now().plusDays(7))
                 .ipAddress(ip)
                 .userAgent(userAgent)
@@ -84,7 +112,8 @@ public class RefreshTokenService {
 
     // JWT Refresh 토큰 삭제 메소드
     public void removeRefresh(String refreshToken) {
-    	refreshTokenRepository.deleteByRefresh(refreshToken);
+        refreshTokenRepository.findByRefreshTokenHash(hashToken(refreshToken))
+                .ifPresent(refreshTokenRepository::delete);
     }
 
     // 특정 유저 Refresh 토큰 모두 삭제 (탈퇴)
@@ -99,11 +128,16 @@ public class RefreshTokenService {
     // 리프레시 토큰 만료 : revoked -> true 처리
     @Transactional
     public LoginHistoryResponse revokeRefresh(String refreshToken) {
+        return revokeRefresh(refreshToken, "LOGOUT", null);
+    }
+
+    @Transactional
+    public LoginHistoryResponse revokeRefresh(String refreshToken, String reason, String actorUsername) {
         RefreshTokenEntity entity = refreshTokenRepository
-                .findByRefresh(refreshToken)
+                .findByRefreshTokenHash(hashToken(refreshToken))
                 .orElseThrow(JwtException::tokenNotFound);
 
-        entity.revoke();
+        entity.revokeBy(reason, defaultActor(actorUsername, entity.getUsername()));
         
         LoginHistoryEntity history = entity.getLoginHistory();
 
@@ -114,11 +148,32 @@ public class RefreshTokenService {
     
     // 전체 세션 로그아웃 -> 모든 리프레시토큰 만료(비밀번호 변경, 토큰 탈취 및 위험 감지)
     public void revokeAllByUsername(String username) {
-        List<RefreshTokenEntity> tokens = refreshTokenRepository.findByUsername(username);
+        revokeAllByUsername(username, "USER_REVOKE", username);
+    }
 
-        for (RefreshTokenEntity token : tokens) {
-            token.revoke();
+    public void revokeAllByUsername(String username, String reason) {
+        revokeAllByUsername(username, reason, username);
+    }
+
+    public void revokeAllByUsername(String username, String reason, String actorUsername) {
+        String actor = defaultActor(actorUsername, username);
+        refreshTokenRepository.findByUsername(username).forEach(token -> token.revokeBy(reason, actor));
+    }
+
+    public static String hashToken(String token) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(digest.digest(token.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 is not available", e);
         }
+    }
+
+    private String defaultActor(String actorUsername, String fallbackUsername) {
+        if (actorUsername == null || actorUsername.isBlank()) {
+            return fallbackUsername;
+        }
+        return actorUsername;
     }
 
     public void flush() {

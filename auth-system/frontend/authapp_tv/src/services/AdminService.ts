@@ -354,6 +354,15 @@ export const revokeAdminSession = async (id: number) => {
   await apiClient.delete(`/admin/sessions/${id}`);
 };
 
+export const getAdminUserSessions = async (username: string) => {
+  const response = await apiClient.get<AdminSession[]>(`/admin/users/${username}/sessions`);
+  return response.data;
+};
+
+export const revokeAdminUserSessions = async (username: string) => {
+  await apiClient.delete(`/admin/users/${username}/sessions`);
+};
+
 export const getAdminRisks = async (params?: AdminParams) => {
   const response = await apiClient.get<PageResponse<AdminRisk>>("/admin/risks", { params: cleanAdminParams(params) });
   return response.data;

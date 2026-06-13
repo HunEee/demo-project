@@ -24,14 +24,14 @@ public class RiskActionService {
     private final AdminActionLogService adminActionLogService;
 
     public void blockHighRisk(String username, String ip, String device) {
-        refreshTokenService.revokeAllByUsername(username);
+        refreshTokenService.revokeAllByUsername(username, "HIGH_RISK_BLOCK", "SYSTEM");
         securityIncidentService.suspiciousLogin(username);
         authEventLogService.securityForceLogout(username);
         recordAuto(username, "HIGH", "BLOCK_HIGH_RISK", "SUCCESS", "High risk response executed", ip, device);
     }
 
     public void tokenReuseDetected(String username, String ip, String device) {
-        refreshTokenService.revokeAllByUsername(username);
+        refreshTokenService.revokeAllByUsername(username, "TOKEN_REUSE_DETECTED", "SYSTEM");
         securityIncidentService.tokenTheftDetected(username);
         authEventLogService.securityForceLogout(username);
         recordAuto(username, "CRITICAL", "TOKEN_REUSE_DETECTED", "SUCCESS", "Token reuse response executed", ip, device);

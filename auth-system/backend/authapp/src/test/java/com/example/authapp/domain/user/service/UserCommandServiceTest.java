@@ -39,6 +39,9 @@ class UserCommandServiceTest {
     private RoleRepository roleRepository;
 
     @Mock
+    private com.example.authapp.domain.jwt.service.RefreshTokenService refreshTokenService;
+
+    @Mock
     private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks

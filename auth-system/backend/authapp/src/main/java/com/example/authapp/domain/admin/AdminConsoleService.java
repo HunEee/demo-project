@@ -246,6 +246,7 @@ public class AdminConsoleService {
         if (request.locked() != null) {
             if (request.locked()) {
                 user.lock();
+                revokeSessions(username, "ACCOUNT_LOCKED", currentActor());
             } else {
                 user.unlock();
             }
@@ -255,6 +256,7 @@ public class AdminConsoleService {
                 user.enable();
             } else {
                 user.disable();
+                revokeSessions(username, "ACCOUNT_DISABLED", currentActor());
                 Optional.ofNullable(hrUser).ifPresent(HrUserMasterEntity::markAccountDisabled);
             }
         }
@@ -274,6 +276,7 @@ public class AdminConsoleService {
             case "ACTIVE", "ENABLED" -> user.enable();
             case "DISABLED", "INACTIVE" -> {
                 user.disable();
+                revokeSessions(username, "ACCOUNT_DISABLED", currentActor());
                 Optional.ofNullable(hrUser).ifPresent(HrUserMasterEntity::markAccountDisabled);
             }
             default -> throw new IllegalArgumentException("Unsupported user status: " + request.status());
@@ -290,6 +293,7 @@ public class AdminConsoleService {
         UserEntity user = userRepository.findByUsername(username).orElseThrow();
         String before = accountState(user);
         user.deactivate();
+        revokeSessions(username, "ACCOUNT_DELETED", currentActor());
         Optional.ofNullable(findHrUser(username)).ifPresent(HrUserMasterEntity::markAccountDisabled);
         saveAdminAction(username, AdminActionType.DELETE_USER, before, accountState(user), defaultText(reason, "Delete user account"));
     }
@@ -346,6 +350,7 @@ public class AdminConsoleService {
         UserEntity user = userRepository.findByUsername(username).orElseThrow();
         String before = accountState(user);
         user.lock();
+        revokeSessions(username, "ACCOUNT_LOCKED", currentActor());
         saveAdminAction(username, AdminActionType.LOCK_USER, before, accountState(user), "Lock user account");
     }
 
@@ -362,6 +367,7 @@ public class AdminConsoleService {
         UserEntity user = userRepository.findByUsername(username).orElseThrow();
         String before = accountState(user);
         user.disable();
+        revokeSessions(username, "ACCOUNT_DISABLED", currentActor());
         Optional.ofNullable(findHrUser(username)).ifPresent(HrUserMasterEntity::markAccountDisabled);
         saveAdminAction(username, AdminActionType.DISABLE_USER, before, accountState(user), "Disable user account");
     }
@@ -376,7 +382,7 @@ public class AdminConsoleService {
 
     @Transactional
     public void revokeUserTokens(String username) {
-        refreshTokenRepository.findByUsername(username).forEach(RefreshTokenEntity::revoke);
+        revokeSessions(username, "ADMIN_REVOKE_ALL", currentActor());
         saveAdminAction(username, AdminActionType.TOKEN_REVOKE, null, "{\"revoked\":true}", "Revoke all user tokens");
     }
 
@@ -418,7 +424,7 @@ public class AdminConsoleService {
 
     @Transactional
     public void revokeRiskUserTokens(String username, String reason) {
-        refreshTokenRepository.findByUsername(username).forEach(RefreshTokenEntity::revoke);
+        revokeSessions(username, "RISK_TOKEN_REVOKE", currentActor());
         String riskLevel = riskLevel(username);
         recordRiskAction(username, riskLevel, "REVOKE_TOKENS", "SUCCESS", defaultText(reason, "Manual high risk token revoke"));
         adminActionLogService.record(AdminActionLogRequest.builder()
@@ -574,9 +580,32 @@ public class AdminConsoleService {
         return page(content, page, size);
     }
 
+    @Transactional(readOnly = true)
+    public List<AdminSessionResponse> sessionsByUsername(String username) {
+        return refreshTokenRepository.findByUsername(username)
+                .stream()
+                .sorted(sessionComparator("lastUsedAt").reversed())
+                .map(AdminSessionResponse::from)
+                .toList();
+    }
+
     @Transactional
     public void revokeSession(Long id) {
-        refreshTokenRepository.findById(id).orElseThrow().revoke();
+        RefreshTokenEntity token = refreshTokenRepository.findById(id).orElseThrow();
+        token.revokeBy("ADMIN_REVOKE", currentActor());
+        saveAdminAction(
+                token.getUsername(),
+                AdminActionType.TOKEN_REVOKE,
+                null,
+                "{\"sessionId\":" + id + ",\"revoked\":true}",
+                "Revoke user session"
+        );
+    }
+
+    @Transactional
+    public void revokeUserSessions(String username) {
+        revokeSessions(username, "ADMIN_REVOKE_ALL", currentActor());
+        saveAdminAction(username, AdminActionType.TOKEN_REVOKE, null, "{\"revoked\":true}", "Revoke all user sessions");
     }
 
     @Transactional(readOnly = true)
@@ -796,6 +825,10 @@ public class AdminConsoleService {
 
     private AdminUserResponse toAdminUserResponse(UserEntity user) {
         return toAdminUserResponse(user, groupNames(user.getUsername()));
+    }
+
+    private void revokeSessions(String username, String reason, String actorUsername) {
+        refreshTokenRepository.findByUsername(username).forEach(token -> token.revokeBy(reason, actorUsername));
     }
 
     private AdminUserResponse toAdminUserResponse(UserEntity user, Set<String> groups) {

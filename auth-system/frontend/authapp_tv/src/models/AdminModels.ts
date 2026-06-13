@@ -129,6 +129,9 @@ export type AdminSession = {
   device?: string;
   ipAddress?: string;
   revoked: boolean;
+  revokedReason?: string;
+  revokedAt?: string;
+  revokedBy?: string;
   createdAt?: string;
   expiresAt?: string;
   lastUsedAt?: string;

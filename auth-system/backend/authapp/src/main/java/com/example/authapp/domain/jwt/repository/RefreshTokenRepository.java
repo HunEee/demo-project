@@ -5,37 +5,53 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.authapp.domain.jwt.entity.RefreshTokenEntity;
 
+import jakarta.persistence.LockModeType;
+
 public interface RefreshTokenRepository extends JpaRepository<RefreshTokenEntity, Long> {
 
-	// 리프레시 토큰이 존재하는지 여부
-	Boolean existsByRefresh(String refreshToken);
-	
-	// JWT Refresh 토큰 기반 삭제
-	@Transactional
-	void deleteByRefresh(String refresh);
-	
-	// username 기반 삭제 -> 탈퇴시
-	@Transactional
-	void deleteByUsername(String username);
-	
-	// 특정일 지난 refresh 토큰 삭제
-	@Transactional
-	void deleteByCreatedAtBefore(LocalDateTime createdAt);
-	
-    Optional<RefreshTokenEntity> findByRefresh(String refresh);
-    
-    // 유저의 토큰들 조회
+    Boolean existsByRefreshTokenHash(String refreshTokenHash);
+
+    Boolean existsByUsernameAndJtiAndRevokedFalse(String username, String jti);
+
+    @Transactional
+    void deleteByUsername(String username);
+
+    @Transactional
+    void deleteByCreatedAtBefore(LocalDateTime createdAt);
+
+    Optional<RefreshTokenEntity> findByRefreshTokenHash(String refreshTokenHash);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            SELECT r
+            FROM RefreshTokenEntity r
+            WHERE r.refreshTokenHash = :refreshTokenHash
+            """)
+    Optional<RefreshTokenEntity> findByRefreshTokenHashForUpdate(@Param("refreshTokenHash") String refreshTokenHash);
+
+    Optional<RefreshTokenEntity> findByUsernameAndJtiAndRevokedFalse(String username, String jti);
+
+    Optional<RefreshTokenEntity> findByFamilyIdAndJtiAndRevokedFalse(String familyId, String jti);
+
     List<RefreshTokenEntity> findByUsername(String username);
-	
-    
-    // 세션 관리
+
     List<RefreshTokenEntity> findByUsernameAndRevokedFalse(String username);
+
+    @Query("""
+            SELECT r
+            FROM RefreshTokenEntity r
+            WHERE r.familyId = :familyId
+              AND r.revoked = false
+            ORDER BY r.tokenSequence DESC
+            """)
+    List<RefreshTokenEntity> findActiveByFamilyId(@Param("familyId") String familyId);
 
     @Query("""
             SELECT r
@@ -45,7 +61,6 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshTokenEntity
               AND r.revoked = false
             """)
     List<RefreshTokenEntity> findActiveSessionsByUsername(@Param("username") String username);
-    
+
     Optional<RefreshTokenEntity> findByIdAndUsername(Long id, String username);
-    
 }

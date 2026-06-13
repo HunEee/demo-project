@@ -101,7 +101,7 @@ const useAuth = create<AuthState>()(
         }
 
         try {
-          const response = await refreshToken();
+          const response = await refreshToken("ACCESS_TOKEN_MISSING");
           if (!response.accessToken) throw new Error("토큰이 존재하지 않습니다.");
 
           if (get().accessToken) {

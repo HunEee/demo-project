@@ -16,6 +16,7 @@ import com.example.authapp.domain.user.event.UserProfileUpdatedEvent;
 import com.example.authapp.domain.user.event.UserSignedUpEvent;
 import com.example.authapp.domain.user.exception.UserException;
 import com.example.authapp.domain.authorization.repository.RoleRepository;
+import com.example.authapp.domain.jwt.service.RefreshTokenService;
 import com.example.authapp.domain.user.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,7 @@ public class UserCommandService {
 	private final PasswordEncoder passwordEncoder;
 	private final UserRepository userRepository;
     private final RoleRepository roleRepository;
+    private final RefreshTokenService refreshTokenService;
     
     private final ApplicationEventPublisher eventPublisher;
     
@@ -95,6 +97,7 @@ public class UserCommandService {
 
         // Soft delete
         user.deactivate();
+        refreshTokenService.revokeAllByUsername(username, "ACCOUNT_DELETED");
         
         // 로그 기록 이벤트 발행
         eventPublisher.publishEvent(new UserDeletedEvent(username));
@@ -114,6 +117,7 @@ public class UserCommandService {
 
         // Soft Delete로 통일
         user.deactivate();
+        refreshTokenService.revokeAllByUsername(username, "ACCOUNT_DELETED");
         
         // 로그 기록 이벤트 발행
         eventPublisher.publishEvent(new UserDeletedEvent(username));

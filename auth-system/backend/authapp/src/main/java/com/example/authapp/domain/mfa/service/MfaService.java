@@ -156,7 +156,7 @@ public class MfaService {
             int failedAttempts = challenge.recordFailedAttempt();
             if (failedAttempts >= MAX_CHALLENGE_FAILURES) {
                 challenge.markUsed();
-                refreshTokenService.revokeAllByUsername(challenge.getUsername());
+                refreshTokenService.revokeAllByUsername(challenge.getUsername(), "MFA_FAILED_LIMIT");
                 throw new IllegalArgumentException("MFA 인증 5회 실패로 모든 세션이 로그아웃되었습니다. 다시 로그인해주세요.");
             }
             int remainingAttempts = MAX_CHALLENGE_FAILURES - failedAttempts;
