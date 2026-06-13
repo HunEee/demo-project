@@ -5,6 +5,7 @@ import RootLayout from "./pages/RootLayout.tsx";
 import App from './App.tsx';
 import Login from "./pages/Login.tsx";
 import MfaVerifyPage from "./pages/MfaVerifyPage.tsx";
+import MfaSetupPage from "./pages/MfaSetupPage.tsx";
 import Signup from "./pages/Signup.tsx";
 import About from "./pages/About.tsx";
 import UserLayout from "./pages/users/UserLayout.tsx";
@@ -60,6 +61,7 @@ createRoot(document.getElementById('root')!).render(
         <Route index element={<App />} />
         <Route path="/login" element={<Login />} />
         <Route path="/login/mfa" element={<MfaVerifyPage />} />
+        <Route path="/login/mfa/setup" element={<MfaSetupPage />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/about" element={<About />} />
         <Route path="/cookie" element={<OAuth2CookieCallback />} />

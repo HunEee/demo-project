@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.example.authapp.global.exception.CustomException;
 import com.example.authapp.global.exception.dto.ErrorResponse;
+import com.example.authapp.domain.mfa.exception.MfaException;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -48,6 +49,13 @@ public class GlobalExceptionHandler {
     }
 
     // 3️. 잘못된 값
+    @ExceptionHandler(MfaException.class)
+    public ResponseEntity<ErrorResponse> handleMfaException(MfaException ex) {
+        log.warn("MfaException: {}", ex.getMessage());
+        return ResponseEntity.status(ex.getStatus())
+                .body(new ErrorResponse(ex.getStatus().value(), ex.getMessage(), ex.getCode()));
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException ex) {
     	log.warn(ex.toString()); 

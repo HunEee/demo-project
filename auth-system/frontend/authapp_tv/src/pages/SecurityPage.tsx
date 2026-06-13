@@ -16,6 +16,7 @@ export default function SecurityPage() {
   const [methods, setMethods] = useState<MfaMethodResponse[]>([]);
   const [setup, setSetup] = useState<TotpSetupResponse | null>(null);
   const [code, setCode] = useState("");
+  const [deleteCode, setDeleteCode] = useState("");
   const [error, setError] = useState("");
 
   const load = async () => {
@@ -35,7 +36,7 @@ export default function SecurityPage() {
       setSetup(await setupTotp());
       setCode("");
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "TOTP 설정을 시작하지 못했습니다.");
+      toast.error(error.response?.data?.message || "TOTP 등록을 시작하지 못했습니다.");
     }
   };
 
@@ -53,7 +54,12 @@ export default function SecurityPage() {
   };
 
   const handleDelete = async (id: number) => {
-    await deleteMfaMethod(id);
+    if (!deleteCode.trim()) {
+      toast.error("MFA 방식을 삭제하려면 현재 인증 코드를 입력해주세요.");
+      return;
+    }
+    await deleteMfaMethod(id, deleteCode);
+    setDeleteCode("");
     toast.success("MFA 방식이 삭제되었습니다.");
     await load();
   };
@@ -97,7 +103,7 @@ export default function SecurityPage() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-lg font-semibold">Authenticator MFA</h2>
-              <p className="text-sm text-muted-foreground">TOTP 앱으로 로그인 2차 인증을 보호합니다.</p>
+              <p className="text-sm text-muted-foreground">6자리 TOTP 코드로 로그인을 보호합니다.</p>
             </div>
             {!enabledTotp ? (
               <Button type="button" onClick={handleSetup}>
@@ -106,15 +112,27 @@ export default function SecurityPage() {
             ) : (
               <Button type="button" variant="destructive" onClick={() => handleDelete(enabledTotp.id)}>
                 <Trash2 className="h-4 w-4" />
-                초기화
+                삭제
               </Button>
             )}
           </div>
 
           {enabledTotp ? (
-            <div className="rounded-lg border bg-muted/30 p-4 text-sm">
-              <p>등록됨: {formatSecurityDateTime(enabledTotp.registeredAt)}</p>
-              <p>마지막 사용: {formatSecurityDateTime(enabledTotp.lastUsedAt)}</p>
+            <div className="space-y-4 rounded-lg border bg-muted/30 p-4 text-sm">
+              <div>
+                <p>등록일: {formatSecurityDateTime(enabledTotp.registeredAt)}</p>
+                <p>마지막 사용: {formatSecurityDateTime(enabledTotp.lastUsedAt)}</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="mfa-delete-code">현재 MFA 코드</Label>
+                <Input
+                  id="mfa-delete-code"
+                  inputMode="numeric"
+                  value={deleteCode}
+                  onChange={(event) => setDeleteCode(event.target.value)}
+                  maxLength={6}
+                />
+              </div>
             </div>
           ) : null}
 
@@ -123,7 +141,7 @@ export default function SecurityPage() {
               <img src={setup.qrCodeDataUri} alt="TOTP QR" className="h-44 w-44 rounded-lg border bg-white p-2" />
               <div className="space-y-3">
                 <div>
-                  <p className="text-sm text-muted-foreground">앱에서 QR을 스캔한 뒤 6자리 코드를 입력하세요.</p>
+                  <p className="text-sm text-muted-foreground">QR 코드를 스캔한 뒤 6자리 코드를 입력해주세요.</p>
                   <p className="mt-2 break-all rounded-lg bg-muted p-2 font-mono text-xs">{setup.secret}</p>
                 </div>
                 <div className="space-y-2">

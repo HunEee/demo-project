@@ -165,6 +165,8 @@ public class SecurityConfig {
                     API_PREFIX + "/users/password/reset",
                     API_PREFIX + "/verification/**",
                     API_PREFIX + "/auth/mfa/verify",
+                    API_PREFIX + "/auth/mfa/totp/setup",
+                    API_PREFIX + "/auth/mfa/totp/confirm",
                     API_PREFIX + "/auth/login",
                     API_PREFIX + "/login"
                 ).permitAll()

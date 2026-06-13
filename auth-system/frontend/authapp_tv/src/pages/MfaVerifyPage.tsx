@@ -22,11 +22,11 @@ export default function MfaVerifyPage() {
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (!challengeId) {
-      toast.error("MFA 인증 요청이 없습니다.");
+      toast.error("MFA 인증 요청 정보가 없습니다. 다시 로그인해주세요.");
       return;
     }
     if (!code.trim()) {
-      toast.error("인증 코드를 입력해 주세요.");
+      toast.error("인증 코드를 입력해주세요.");
       return;
     }
 
@@ -37,12 +37,13 @@ export default function MfaVerifyPage() {
         throw new Error("로그인 완료 응답이 올바르지 않습니다.");
       }
       changeLocalLoginData(response.accessToken, response.user, true);
-      toast.success("2차 인증이 완료되었습니다.");
+      toast.success("MFA 인증이 완료되었습니다.");
       navigate("/dashboard", { replace: true });
     } catch (error: any) {
-      const message = error.response?.data?.message || error.message || "2차 인증에 실패했습니다.";
+      const code = error.response?.data?.code;
+      const message = error.response?.data?.message || error.message || "MFA 인증에 실패했습니다.";
       toast.error(message);
-      if (message.includes("모든 세션")) {
+      if (code === "MFA_FAILED_LIMIT" || code === "MFA_CHALLENGE_EXPIRED" || code === "MFA_CONTEXT_CHANGED") {
         void logout(true);
         navigate("/login", { replace: true });
       }
@@ -60,8 +61,8 @@ export default function MfaVerifyPage() {
               <KeyRound className="h-5 w-5" />
             </div>
             <div>
-              <h1 className="text-xl font-semibold">2차 인증</h1>
-              <p className="text-sm text-muted-foreground">Authenticator 앱의 6자리 코드를 입력하세요.</p>
+              <h1 className="text-xl font-semibold">MFA 인증</h1>
+              <p className="text-sm text-muted-foreground">Authenticator 앱의 6자리 코드를 입력해주세요.</p>
             </div>
           </div>
 

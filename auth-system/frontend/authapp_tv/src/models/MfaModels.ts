@@ -8,6 +8,21 @@ export type TotpSetupResponse = {
   qrCodeDataUri: string;
 };
 
+export type PreAuthTotpSetupResponse = {
+  challengeId: string;
+  methodId: number;
+  secret: string;
+  otpAuthUri: string;
+  qrCodeDataUri: string;
+  expiresAt: string;
+};
+
+export type PreAuthTotpConfirmRequest = {
+  challengeId: string;
+  methodId: number;
+  code: string;
+};
+
 export type MfaMethodResponse = {
   id: number;
   type: MfaMethodType;

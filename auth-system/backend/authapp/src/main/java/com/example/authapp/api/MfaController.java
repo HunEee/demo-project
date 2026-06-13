@@ -1,6 +1,7 @@
 package com.example.authapp.api;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -14,12 +15,16 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.example.authapp.application.auth.AuthFacade;
 import com.example.authapp.application.auth.dto.LoginResponseDTO;
+import com.example.authapp.domain.mfa.dto.MfaMethodDeleteRequest;
 import com.example.authapp.domain.mfa.dto.MfaMethodResponse;
 import com.example.authapp.domain.mfa.dto.MfaVerifyRequest;
+import com.example.authapp.domain.mfa.dto.PreAuthTotpConfirmRequest;
+import com.example.authapp.domain.mfa.dto.PreAuthTotpSetupResponse;
 import com.example.authapp.domain.mfa.dto.TotpConfirmRequest;
 import com.example.authapp.domain.mfa.dto.TotpSetupResponse;
 import com.example.authapp.domain.mfa.service.MfaService;
 import com.example.authapp.security.principal.UserPrincipal;
+import com.example.authapp.util.ClientUtil;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -52,9 +57,34 @@ public class MfaController {
     }
 
     @DeleteMapping("/mfa/methods/{id}")
-    public ResponseEntity<Void> deleteMethod(@AuthenticationPrincipal UserPrincipal principal, @PathVariable("id") Long id) {
-        mfaService.deleteMethod(principal.getUsername(), id);
+    public ResponseEntity<Void> deleteMethod(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable("id") Long id,
+            @RequestBody MfaMethodDeleteRequest request
+    ) {
+        mfaService.deleteMethod(principal.getUsername(), id, request.code());
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/auth/mfa/totp/setup")
+    public PreAuthTotpSetupResponse setupPreAuthTotp(
+            @RequestBody Map<String, String> request,
+            HttpServletRequest httpRequest
+    ) {
+        return mfaService.setupPreAuthTotpRegistration(
+                request.get("challengeId"),
+                ClientUtil.getIp(httpRequest),
+                ClientUtil.getUserAgent(httpRequest)
+        );
+    }
+
+    @PostMapping("/auth/mfa/totp/confirm")
+    public LoginResponseDTO confirmPreAuthTotp(
+            @RequestBody PreAuthTotpConfirmRequest request,
+            HttpServletRequest httpRequest,
+            HttpServletResponse response
+    ) {
+        return authFacade.completeMfaRegistration(request, httpRequest, response);
     }
 
     @PostMapping("/auth/mfa/verify")

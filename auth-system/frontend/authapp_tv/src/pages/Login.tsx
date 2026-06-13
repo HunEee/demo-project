@@ -39,7 +39,8 @@ export default function Login() {
       setError("");
       const response = await login(loginData);
       if (response.mfaRequired && response.challengeId) {
-        navigate(`/login/mfa?challengeId=${encodeURIComponent(response.challengeId)}`, { replace: true });
+        const target = response.mfaRegistrationRequired ? "/login/mfa/setup" : "/login/mfa";
+        navigate(`${target}?challengeId=${encodeURIComponent(response.challengeId)}`, { replace: true });
         return;
       }
       toast.success("로그인 성공");

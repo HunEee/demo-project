@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,7 +24,9 @@ import com.example.authapp.domain.audit.service.LoginHistoryService;
 import com.example.authapp.domain.jwt.service.CookieService;
 import com.example.authapp.domain.jwt.service.RefreshTokenService;
 import com.example.authapp.domain.mfa.dto.MfaLoginDecision;
+import com.example.authapp.domain.mfa.dto.PreAuthTotpConfirmRequest;
 import com.example.authapp.domain.mfa.service.MfaService;
+import com.example.authapp.domain.authorization.entity.RoleEntity;
 import com.example.authapp.domain.risk.service.RiskService;
 import com.example.authapp.domain.user.entity.UserEntity;
 import com.example.authapp.domain.user.service.UserQueryService;
@@ -55,6 +58,44 @@ class AuthFacadeTest {
 
     @Mock
     private RbacAuthorizationService rbacAuthorizationService;
+
+    @Test
+    void completeMfaRegistrationIssuesTokensAfterPreAuthTotpConfirmation() {
+        AuthFacade authFacade = new AuthFacade(
+                userQueryService,
+                refreshTokenService,
+                cookieService,
+                loginHistoryService,
+                riskService,
+                authEventLogService,
+                mfaService,
+                rbacAuthorizationService,
+                "http://frontend.example"
+        );
+        PreAuthTotpConfirmRequest mfaRequest = new PreAuthTotpConfirmRequest("challenge-1", 10L, "123456");
+        UserEntity user = UserEntity.builder().username("admin").email("admin@example.com").enabled(true).locked(false).build();
+        RoleEntity role = RoleEntity.builder().name("ROLE_ADMIN").enabled(true).build();
+        user.addRole(role);
+        LoginHistoryEntity history = LoginHistoryEntity.builder()
+                .username("admin")
+                .success(true)
+                .build();
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("User-Agent", "JUnit");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        when(mfaService.confirmPreAuthTotpRegistration(eq(mfaRequest), any(), any())).thenReturn("admin");
+        when(userQueryService.getByUsername("admin")).thenReturn(user);
+        when(loginHistoryService.saveSuccess(eq("admin"), any(), any(), any())).thenReturn(history);
+        when(rbacAuthorizationService.findEffectivePermissions("admin")).thenReturn(Set.of());
+
+        var result = authFacade.completeMfaRegistration(mfaRequest, request, response);
+
+        assertThat(result.isMfaRequired()).isFalse();
+        assertThat(result.getAccessToken()).isNotBlank();
+        assertThat(result.getUser().getUsername()).isEqualTo("admin");
+        verify(riskService).analyzeLoginRisk(user, history);
+    }
 
     @Test
     void socialLoginAnalyzesRiskAndRedirectsToConfiguredFrontendCookiePage() throws Exception {

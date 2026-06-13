@@ -18,6 +18,8 @@ import com.example.authapp.domain.jwt.service.CookieService;
 import com.example.authapp.domain.jwt.service.RefreshTokenService;
 import com.example.authapp.domain.mfa.dto.MfaChallengeResult;
 import com.example.authapp.domain.mfa.dto.MfaVerifyRequest;
+import com.example.authapp.domain.mfa.dto.PreAuthTotpConfirmRequest;
+import com.example.authapp.domain.mfa.exception.MfaException;
 import com.example.authapp.domain.mfa.service.MfaService;
 import com.example.authapp.domain.risk.service.RiskService;
 import com.example.authapp.domain.user.entity.UserEntity;
@@ -95,9 +97,20 @@ public class AuthFacade {
         return issueTokens(user, username, roles, request, response);
     }
 
-    @Transactional(noRollbackFor = IllegalArgumentException.class)
+    @Transactional(noRollbackFor = MfaException.class)
     public LoginResponseDTO completeMfaLogin(MfaVerifyRequest mfaRequest, HttpServletRequest request, HttpServletResponse response) {
         String username = mfaService.verifyChallenge(mfaRequest, ClientUtil.getIp(request), ClientUtil.getUserAgent(request));
+        UserEntity user = userQueryService.getByUsername(username);
+        Set<String> roles = user.getRoles()
+                .stream()
+                .map(role -> role.getName())
+                .collect(Collectors.toSet());
+        return issueTokens(user, username, roles, request, response);
+    }
+
+    @Transactional(noRollbackFor = MfaException.class)
+    public LoginResponseDTO completeMfaRegistration(PreAuthTotpConfirmRequest mfaRequest, HttpServletRequest request, HttpServletResponse response) {
+        String username = mfaService.confirmPreAuthTotpRegistration(mfaRequest, ClientUtil.getIp(request), ClientUtil.getUserAgent(request));
         UserEntity user = userQueryService.getByUsername(username);
         Set<String> roles = user.getRoles()
                 .stream()

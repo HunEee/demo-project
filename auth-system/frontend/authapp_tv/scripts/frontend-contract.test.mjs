@@ -615,6 +615,9 @@ assert.match(
   /title="API 권한 매핑"/,
   "AdminPermissionManagementPage must present API permission mapping as the page title",
 );
+const navbarSource = read("src/components/Navbar.tsx");
+assert.match(navbarSource, /label: "API 권한 매핑", path: "\/admin\/permissions\/admin-permissions"/, "Navbar must name the API permission mapping menu correctly");
+assert.doesNotMatch(navbarSource, /관리자 권한 관리/, "Navbar must not keep the old admin permission management label");
 assert.doesNotMatch(
   adminPermissionManagementPage,
   /<th className=\{adminCellClassName\}>설명<\/th>/,
@@ -630,6 +633,11 @@ assert.match(
   /<AdminFormField label="설명" value=\{ruleForm\.description\}/,
   "AdminPermissionManagementPage edit modal must keep the description field",
 );
+
+const userPermissionAssignmentPage = read("src/pages/admin/permissions/UserPermissionAssignmentPage.tsx");
+assert.match(userPermissionAssignmentPage, />소속 그룹</, "UserPermissionAssignmentPage must show user groups in the table");
+assert.match(userPermissionAssignmentPage, /item\.groups\?\./, "UserPermissionAssignmentPage must render groups from user rows");
+assert.match(userPermissionAssignmentPage, /grid gap-1 justify-items-center/, "UserPermissionAssignmentPage must stack role and group badges vertically");
 for (const englishCopy of [
   "API RBAC Rules",
   "Add Rule",
@@ -865,3 +873,20 @@ assert.match(
   /updateUser\(\{/,
   "UserProfile must call the real profile update API",
 );
+
+/* =========================================================
+ * MFA login registration flow tests
+ * ========================================================= */
+
+const loginPage = read("src/pages/Login.tsx");
+assert.match(loginPage, /mfaRegistrationRequired/, "Login page must branch MFA registration-required responses");
+assert.match(loginPage, /\/login\/mfa\/setup/, "Login page must route registration-required users to MFA setup");
+
+const mfaSetupPage = read("src/pages/MfaSetupPage.tsx");
+assert.match(mfaSetupPage, /setupPreAuthTotp/, "MfaSetupPage must call pre-auth TOTP setup");
+assert.match(mfaSetupPage, /confirmPreAuthTotp/, "MfaSetupPage must complete pre-auth TOTP registration");
+assert.match(mfaSetupPage, /changeLocalLoginData/, "MfaSetupPage must store final login tokens after registration");
+
+const mfaVerifyPage = read("src/pages/MfaVerifyPage.tsx");
+assert.match(mfaVerifyPage, /error\.response\?\.data\?\.code/, "MfaVerifyPage must use stable backend error codes");
+assert.doesNotMatch(mfaVerifyPage, /includes\(/, "MfaVerifyPage must not branch on localized message substrings");
