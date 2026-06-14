@@ -1,4 +1,4 @@
-package com.example.authapp.api;
+﻿package com.example.authapp.api;
 
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.example.authapp.domain.audit.dto.LoginHistoryResponseDTO;
 import com.example.authapp.domain.audit.dto.PageResponseDTO;
-import com.example.authapp.domain.audit.service.LoginHistoryService;
+import com.example.authapp.application.audit.usecase.LoginHistoryUseCase;
 import com.example.authapp.security.principal.UserPrincipal;
 
 import lombok.RequiredArgsConstructor;
@@ -18,7 +18,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class LoginHistoryController {
 	
-    private final LoginHistoryService loginHistoryService;
+    private final LoginHistoryUseCase loginHistoryService;
     
     @GetMapping
     public PageResponseDTO<LoginHistoryResponseDTO> getLoginHistories(

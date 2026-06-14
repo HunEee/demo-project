@@ -105,6 +105,14 @@ public class AuthEventLogService {
     public void tokenReissue(String username) {
         save(username, AuthEventType.TOKEN_REISSUE, "토큰 재발급");
     }
+
+    public void tokenReissueFail(String username, String reason) {
+        save(defaultText(username, "UNKNOWN"), AuthEventType.TOKEN_REISSUE_FAIL, "토큰 재발급 실패: " + defaultText(reason, "UNKNOWN"));
+    }
+
+    public void mfaRegistered(String username, String methodType) {
+        save(username, AuthEventType.MFA_REGISTERED, "MFA 등록: " + defaultText(methodType, "UNKNOWN"));
+    }
     
     //*********************************************************************************************************************
     public void adminForceLogout(String username) {
@@ -117,9 +125,8 @@ public class AuthEventLogService {
 
     //*********************************************************************************************************************
 
-
-
-
-    
+    private String defaultText(String value, String fallback) {
+        return value == null || value.isBlank() ? fallback : value;
+    }
 
 }

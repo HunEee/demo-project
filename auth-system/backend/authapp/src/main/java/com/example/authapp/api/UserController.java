@@ -24,9 +24,6 @@ import com.example.authapp.domain.user.dto.UserResponse;
 import com.example.authapp.domain.user.dto.password.ChangePasswordRequest;
 import com.example.authapp.domain.user.dto.password.ResetPasswordRequest;
 import com.example.authapp.domain.user.dto.user.CheckUsernameRequest;
-import com.example.authapp.domain.user.service.PasswordService;
-import com.example.authapp.domain.user.service.UserCommandService;
-import com.example.authapp.domain.user.service.UserQueryService;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -36,81 +33,71 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/v1/users")
 public class UserController {
 
-    private final UserCommandService userCommandService;
-    private final UserQueryService userQueryService;
-    private final PasswordService passwordService;
-    
     private final UserFacade userFacade; 
     
-    // 회원가입(email + verificationCode 포함)
+    // 이메일 인증코드를 포함해 회원가입을 처리한다.
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Long> signup(@Valid @RequestBody SignupRequest request){
         return ResponseEntity.status(201).body(userFacade.signup(request));
     }
     
-    // 유저 수정 (자체 로그인 유저만)
+    // 내 프로필 정보를 수정한다.
     @PatchMapping(value = "/me", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Long> updateUser(        
     		@AuthenticationPrincipal(expression = "username") String username,
             @RequestBody UpdateUserProfileRequest request
     ) {
-        return ResponseEntity.status(200).body(userCommandService.updateUser(username, request));
+        return ResponseEntity.status(200).body(userFacade.updateMyProfile(username, request));
     }
 
-    // 유저 제거 
+    // 내 계정을 삭제한다.
     @DeleteMapping("/me")
     public ResponseEntity<Void> deleteMyAccount(@AuthenticationPrincipal(expression = "username") String username) {
-        userCommandService.deleteMyAccount(username);
-        return ResponseEntity.noContent().build(); //204
+        userFacade.deleteMyAccount(username);
+        return ResponseEntity.noContent().build();
     }
     
-    //*******************************************************************************************************************************
-    //*******************************************************************************************************************************
-    
-    // 자체 로그인 유저 존재 확인
+    // 사용자명 존재 여부를 확인한다.
     @PostMapping(value = "/exists", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Boolean> checkUserExists(@Valid @RequestBody CheckUsernameRequest request){
-        return ResponseEntity.ok(userQueryService.existUsername(request.username()));
+        return ResponseEntity.ok(userFacade.existsUsername(request));
     }
 
-    // 모든 유저 조회 (관리자용)
+    // 전체 사용자 목록을 조회한다.
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<UserResponse>> getAllUsers() {
-        List<UserResponse> users = userQueryService.getAllUsers();
+        List<UserResponse> users = userFacade.getAllUsers();
         return ResponseEntity.ok(users);
     }
     
-    // 유저 정보
+    // 내 사용자 정보를 조회한다.
     @GetMapping(value = "/me", produces = MediaType.APPLICATION_JSON_VALUE)
     public UserResponse me(@AuthenticationPrincipal(expression = "username") String username) {
-        return userQueryService.getMyInfo(username);
+        return userFacade.getMyInfo(username);
     }
     
-    // 아이디 찾기(로그아웃 상태) -> email + verificationCode
+    // 이메일 인증코드로 사용자명을 찾는다.
     @PostMapping("/find-username")
     public ResponseEntity<Map<String, String>> findUsername(@Valid @RequestBody FindUsernameRequest request) {
         String username = userFacade.findUsername(request);
         return ResponseEntity.ok(Collections.singletonMap("username", username));
     }
     
-    //*******************************************************************************************************************************
-    //*******************************************************************************************************************************
-    
-    // 비밀번호 변경(로그인 상태)
+    // 로그인 사용자의 비밀번호를 변경한다.
     @PutMapping("/me/password")
     public void changePassword(
             @AuthenticationPrincipal(expression = "username") String username,
             @Valid @RequestBody ChangePasswordRequest request
     ) {
-        passwordService.changePassword(username,request.currentPassword(),request.newPassword());
+        userFacade.changePassword(username, request.currentPassword(), request.newPassword());
     }
 
-    // 비밀번호 찾기(로그아웃 상태) -> username + email + verificationCode
+    // 이메일 인증코드로 비밀번호를 초기화한다.
     @PostMapping("/password/reset")
     public ResponseEntity<String> resetPassword(
             @Valid @RequestBody ResetPasswordRequest request
     ) {
-        passwordService.resetPassword(request.username(),request.email(),request.verificationCode(),request.newPassword());
+        userFacade.resetPassword(request.username(), request.email(), request.verificationCode(), request.newPassword());
         return ResponseEntity.ok("비밀번호 재설정 완료");
     }
 

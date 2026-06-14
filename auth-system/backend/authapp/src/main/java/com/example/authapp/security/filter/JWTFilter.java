@@ -9,8 +9,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.example.authapp.domain.jwt.service.RefreshTokenService;
+import com.example.authapp.domain.jwt.service.JwtTokenProvider;
 import com.example.authapp.security.principal.UserPrincipal;
-import com.example.authapp.util.JWTUtil;
 
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
@@ -22,9 +22,11 @@ import jakarta.servlet.http.HttpServletResponse;
 public class JWTFilter extends OncePerRequestFilter {
 
     private final RefreshTokenService refreshTokenService;
+    private final JwtTokenProvider jwtTokenProvider;
 
-    public JWTFilter(RefreshTokenService refreshTokenService) {
+    public JWTFilter(RefreshTokenService refreshTokenService, JwtTokenProvider jwtTokenProvider) {
         this.refreshTokenService = refreshTokenService;
+        this.jwtTokenProvider = jwtTokenProvider;
     }
 
     @Override
@@ -45,16 +47,16 @@ public class JWTFilter extends OncePerRequestFilter {
         String accessToken = authorization.split(" ")[1];
 
         try {
-            JWTUtil.validate(accessToken, true);
+            jwtTokenProvider.validate(accessToken, true);
 
-            String username = JWTUtil.getUsername(accessToken);
-            String jti = JWTUtil.getJti(accessToken);
+            String username = jwtTokenProvider.getUsername(accessToken);
+            String jti = jwtTokenProvider.getJti(accessToken);
             if (!refreshTokenService.existsActiveSession(username, jti)) {
                 sendError(response, "SESSION_REVOKED", "Session revoked");
                 return;
             }
 
-            var authorities = JWTUtil.getRoles(accessToken)
+            var authorities = jwtTokenProvider.getRoles(accessToken)
                     .stream()
                     .map(SimpleGrantedAuthority::new)
                     .toList();

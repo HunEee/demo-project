@@ -1,6 +1,8 @@
 package com.example.authapp.domain.jwt.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -17,6 +19,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.example.authapp.domain.jwt.entity.RefreshTokenEntity;
+import com.example.authapp.domain.jwt.entity.TokenSettingsEntity;
 import com.example.authapp.domain.jwt.repository.RefreshTokenRepository;
 import com.example.authapp.util.JWTUtil;
 
@@ -26,12 +29,20 @@ class RefreshTokenServiceTest {
     @Mock
     private RefreshTokenRepository refreshTokenRepository;
 
+    @Mock
+    private JwtTokenProvider jwtTokenProvider;
+
+    @Mock
+    private TokenSettingsService tokenSettingsService;
+
     @InjectMocks
     private RefreshTokenService refreshTokenService;
 
     @Test
     void addRefreshStoresTokenHashInsteadOfPlainToken() {
         String refreshToken = JWTUtil.createJWT("user1", Set.of("ROLE_USER"), UUID.randomUUID().toString(), false);
+        when(jwtTokenProvider.getJti(refreshToken)).thenReturn(JWTUtil.getJti(refreshToken));
+        when(tokenSettingsService.current()).thenReturn(TokenSettingsEntity.defaults());
 
         refreshTokenService.addRefresh("user1", refreshToken, "127.0.0.1", "JUnit", "JUnit", null);
 
@@ -111,21 +122,13 @@ class RefreshTokenServiceTest {
 
     @Test
     void revokeAllByUsernameUsesUsernameAsActor() {
-        RefreshTokenEntity token = RefreshTokenEntity.builder()
-                .username("user1")
-                .refreshTokenHash("hash")
-                .jti("jti")
-                .familyId("jti")
-                .tokenSequence(0L)
-                .expiresAt(LocalDateTime.now().plusDays(7))
-                .revoked(false)
-                .build();
-
-        when(refreshTokenRepository.findByUsername("user1")).thenReturn(java.util.List.of(token));
-
         refreshTokenService.revokeAllByUsername("user1", "PASSWORD_CHANGED");
 
-        assertThat(token.getRevokedReason()).isEqualTo("PASSWORD_CHANGED");
-        assertThat(token.getRevokedBy()).isEqualTo("user1");
+        verify(refreshTokenRepository).revokeActiveByUsername(
+                eq("user1"),
+                eq("PASSWORD_CHANGED"),
+                eq("user1"),
+                any(LocalDateTime.class)
+        );
     }
 }

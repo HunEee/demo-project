@@ -1,4 +1,4 @@
-package com.example.authapp.api;
+﻿package com.example.authapp.api;
 
 import java.util.List;
 
@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.authapp.domain.session.dto.SessionResponse;
-import com.example.authapp.domain.session.service.SessionService;
+import com.example.authapp.application.session.usecase.SessionUseCase;
 import com.example.authapp.security.principal.UserPrincipal;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -22,15 +22,15 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("${api.prefix}")
 public class SessionController {
 
-    private final SessionService sessionService;
+    private final SessionUseCase sessionService;
 
-    // 세션 조회
+    // 내 활성 세션 목록을 조회한다.
     @GetMapping({"/sessions", "/me/sessions"})
     public List<SessionResponse> getSessions(@AuthenticationPrincipal UserPrincipal user, HttpServletRequest request) {
         return sessionService.getSessions(user.getUsername(), request);
     }
 
-    // 개별 로그아웃
+    // 지정한 세션을 로그아웃한다.
     @DeleteMapping({"/sessions/{id}", "/me/sessions/{id}"})
     public ResponseEntity <Void> logoutSession( @PathVariable("id") Long id, @AuthenticationPrincipal UserPrincipal user) {
         sessionService.logoutSession(id, user.getUsername());
@@ -38,7 +38,7 @@ public class SessionController {
     }
 
 
-    // 전체 로그아웃
+    // 현재 세션을 제외한 다른 세션을 로그아웃한다.
     @DeleteMapping("/sessions")
     public ResponseEntity<Void> logoutAll(@AuthenticationPrincipal UserPrincipal user, HttpServletRequest request) {
         sessionService.logoutAll(user.getUsername(), request);

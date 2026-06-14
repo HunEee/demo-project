@@ -65,14 +65,6 @@ public class AdminActionLogEntity {
     @Column(length = 500)
     private String reason;
 
-    @Lob
-    @Column(name = "before_value")
-    private String beforeValue;
-
-    @Lob
-    @Column(name = "after_value")
-    private String afterValue;
-
     @Column(name = "ip_address", length = 45)
     private String ipAddress;
 
@@ -89,8 +81,13 @@ public class AdminActionLogEntity {
     @Column(name = "risk_level", length = 30)
     private String riskLevel;
 
-    @Lob
-    @Column(name = "metadata")
+    @Column(name = "after_value", columnDefinition = "TEXT")
+    private String afterValue;
+
+    @Column(name = "before_value", columnDefinition = "TEXT")
+    private String beforeValue;
+    
+    @Column(name = "metadata", columnDefinition = "TEXT")
     private String metadata;
 
     @CreatedDate

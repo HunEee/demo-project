@@ -131,13 +131,15 @@ for (const childRoute of [
   '<Route path="account/users/:username" element={<UserDetailPage />} />',
   '<Route path="account/hr-users" element={<HrUserMasterPage />} />',
   '<Route path="account/external-users" element={<ExternalUsersPage />} />',
-  '<Route path="auth/policies" element={<AuthPolicyPage />} />',
+  '<Route path="policies/auth" element={<AuthPolicyPage />} />',
+  '<Route path="policies/session-token" element={<SessionTokenPolicyPage />} />',
+  '<Route path="policies/risk" element={<RiskPolicyPage />} />',
+  '<Route path="policies/operations" element={<OperationsPolicyPage />} />',
   '<Route path="audit/logs" element={<AuditLogsPage />} />',
   '<Route path="audit/login-history" element={<AdminLoginHistoryPage />} />',
   '<Route path="security/events" element={<SecurityEventsPage />} />',
   '<Route path="auth/sessions" element={<LoginSessionManagementPage />} />',
   '<Route path="security/risk-logins" element={<RiskLoginDetectionPage />} />',
-  '<Route path="system/settings" element={<SystemSettingsPage />} />',
 ]) {
   const childIndex = main.indexOf(childRoute, adminRouteIndex);
   const closeIndex = main.indexOf("</Route>", adminRouteIndex);
@@ -243,7 +245,6 @@ for (const page of [
   "AdminIncidentsPage",
   "AdminSessionsPage",
   "AdminRiskPage",
-  "AdminSettingsPage",
 ]) {
   const adminPage = read(`src/pages/admin/${page}.tsx`);
   assert.match(
@@ -306,13 +307,6 @@ assert.match(
   "Admin filter footer must keep server filter text on the left and action buttons on the right",
 );
 
-const adminSettingsPage = read("src/pages/admin/AdminSettingsPage.tsx");
-assert.match(
-  adminSettingsPage,
-  /className="[^"]*mx-auto[^"]*max-w-3xl/,
-  "AdminSettingsPage settings card must be centered in the admin content area",
-);
-
 const navbar = read("src/components/Navbar.tsx");
 assert.match(
   navbar,
@@ -336,7 +330,7 @@ assert.match(
 );
 assert.match(
   navbar,
-  /label: "인증 관리"[\s\S]*path: "\/admin\/auth\/policies"[\s\S]*label: "보안 관리"[\s\S]*path: "\/admin\/security\/events"[\s\S]*label: "감사 \/ 모니터링"/,
+  /label: "\\uC778\\uC99D \\uAD00\\uB9AC"[\s\S]*path: "\/admin\/auth\/sessions"[\s\S]*label: "\\uC815\\uCC45 \\uAD00\\uB9AC"[\s\S]*path: "\/admin\/policies\/auth"[\s\S]*path: "\/admin\/policies\/session-token"[\s\S]*path: "\/admin\/policies\/risk"[\s\S]*path: "\/admin\/policies\/operations"[\s\S]*label: "\\uAC10\\uC0AC \/ \\uBAA8\\uB2C8\\uD130\\uB9C1"/,
   "Admin navbar must order Authentication Management, Security Management, then Audit / Monitoring",
 );
 assert.doesNotMatch(

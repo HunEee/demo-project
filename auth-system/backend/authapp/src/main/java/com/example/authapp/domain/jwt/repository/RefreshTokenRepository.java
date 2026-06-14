@@ -6,6 +6,7 @@ import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
@@ -63,4 +64,21 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshTokenEntity
     List<RefreshTokenEntity> findActiveSessionsByUsername(@Param("username") String username);
 
     Optional<RefreshTokenEntity> findByIdAndUsername(Long id, String username);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+            update RefreshTokenEntity token
+            set token.revoked = true,
+                token.revokedReason = :reason,
+                token.revokedBy = :actor,
+                token.revokedAt = :revokedAt
+            where token.username = :username
+              and token.revoked = false
+            """)
+    int revokeActiveByUsername(
+            @Param("username") String username,
+            @Param("reason") String reason,
+            @Param("actor") String actor,
+            @Param("revokedAt") LocalDateTime revokedAt
+    );
 }

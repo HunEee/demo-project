@@ -1,4 +1,4 @@
-package com.example.authapp.api.admin;
+﻿package com.example.authapp.api.admin;
 
 import java.util.List;
 
@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.authapp.domain.authorization.dto.AdminRoleAssignmentHistoryResponse;
-import com.example.authapp.domain.authorization.service.RoleAssignmentService;
+import com.example.authapp.application.admin.usecase.AdminRoleAssignmentUseCase;
 
 import lombok.RequiredArgsConstructor;
 
@@ -16,7 +16,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class AdminRoleAssignmentHistoryController {
 
-    private final RoleAssignmentService roleAssignmentService;
+    private final AdminRoleAssignmentUseCase roleAssignmentService;
 
     @GetMapping
     public List<AdminRoleAssignmentHistoryResponse> history() {

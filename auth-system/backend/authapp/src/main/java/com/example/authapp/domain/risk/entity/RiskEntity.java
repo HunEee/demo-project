@@ -76,11 +76,23 @@ public class RiskEntity {
         this.riskLevel = calculateLevel(this.riskScore);
         this.lastReason = reason;
     }
+
+    public void increaseRisk(int score, String reason, int mediumThreshold, int highThreshold, int criticalThreshold) {
+        this.riskScore = Math.min(100, this.riskScore + score);
+        this.riskLevel = calculateLevel(this.riskScore, mediumThreshold, highThreshold, criticalThreshold);
+        this.lastReason = reason;
+    }
     
     // 점수 감소 메서드(위험 회복)
     public void decreaseRisk(int score, String reason) {
         this.riskScore = Math.max(0, this.riskScore - score);
         this.riskLevel = calculateLevel(this.riskScore);
+        this.lastReason = reason;
+    }
+
+    public void decreaseRisk(int score, String reason, int mediumThreshold, int highThreshold, int criticalThreshold) {
+        this.riskScore = Math.max(0, this.riskScore - score);
+        this.riskLevel = calculateLevel(this.riskScore, mediumThreshold, highThreshold, criticalThreshold);
         this.lastReason = reason;
     }
     
@@ -96,6 +108,13 @@ public class RiskEntity {
         if (score >= 80) return RiskLevel.CRITICAL;
         if (score >= 60) return RiskLevel.HIGH;
         if (score >= 30) return RiskLevel.MEDIUM;
+        return RiskLevel.LOW;
+    }
+
+    private RiskLevel calculateLevel(int score, int mediumThreshold, int highThreshold, int criticalThreshold) {
+        if (score >= criticalThreshold) return RiskLevel.CRITICAL;
+        if (score >= highThreshold) return RiskLevel.HIGH;
+        if (score >= mediumThreshold) return RiskLevel.MEDIUM;
         return RiskLevel.LOW;
     }
     

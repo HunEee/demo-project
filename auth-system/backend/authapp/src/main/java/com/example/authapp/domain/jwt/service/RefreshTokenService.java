@@ -16,7 +16,6 @@ import com.example.authapp.domain.audit.entity.LoginHistoryEntity;
 import com.example.authapp.domain.jwt.entity.RefreshTokenEntity;
 import com.example.authapp.domain.jwt.exception.JwtException;
 import com.example.authapp.domain.jwt.repository.RefreshTokenRepository;
-import com.example.authapp.util.JWTUtil;
 
 import lombok.RequiredArgsConstructor;
 
@@ -26,6 +25,8 @@ import lombok.RequiredArgsConstructor;
 public class RefreshTokenService {
 
     private final RefreshTokenRepository refreshTokenRepository;
+    private final JwtTokenProvider jwtTokenProvider;
+    private final TokenSettingsService tokenSettingsService;
 	
     
     // ========================================================================================================
@@ -89,14 +90,14 @@ public class RefreshTokenService {
     
     // JWT Refresh 토큰 발급 후 저장 메소드
     public void addRefresh(String username,String refreshToken,String ip,String userAgent,String device, LoginHistoryEntity loginHistory) {
-        String jti = JWTUtil.getJti(refreshToken); 
+        String jti = jwtTokenProvider.getJti(refreshToken); 
     	RefreshTokenEntity entity = RefreshTokenEntity.builder()
                 .username(username)
                 .refreshTokenHash(hashToken(refreshToken))
                 .jti(jti)
                 .familyId(jti)
                 .tokenSequence(0L)
-                .expiresAt(LocalDateTime.now().plusDays(7))
+                .expiresAt(LocalDateTime.now().plusDays(tokenSettingsService.current().getRefreshTokenLifetimeDays()))
                 .ipAddress(ip)
                 .userAgent(userAgent)
                 .device(device)
@@ -157,7 +158,12 @@ public class RefreshTokenService {
 
     public void revokeAllByUsername(String username, String reason, String actorUsername) {
         String actor = defaultActor(actorUsername, username);
-        refreshTokenRepository.findByUsername(username).forEach(token -> token.revokeBy(reason, actor));
+        refreshTokenRepository.revokeActiveByUsername(username, reason, actor, LocalDateTime.now());
+    }
+
+    public int revokeActiveByUsername(String username, String reason, String actorUsername) {
+        String actor = defaultActor(actorUsername, username);
+        return refreshTokenRepository.revokeActiveByUsername(username, reason, actor, LocalDateTime.now());
     }
 
     public static String hashToken(String token) {

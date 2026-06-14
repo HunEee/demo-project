@@ -6,7 +6,6 @@ import {
   BarChart3,
   Clock3,
   Lock,
-  Settings,
   ShieldCheck,
   Users,
 } from "lucide-react";
@@ -24,8 +23,7 @@ const menu = [
   { to: "/admin/security-events", label: "보안 이벤트", description: "토큰/계정 이벤트", icon: ShieldCheck },
   { to: "/admin/incidents", label: "보안 사고", description: "미해결 사고 처리", icon: AlertTriangle },
   { to: "/admin/sessions", label: "세션/토큰", description: "활성 세션 폐기", icon: Lock },
-  { to: "/admin/risk", label: "위험 사용자", description: "위험 점수 모니터링", icon: BarChart3 },
-  { to: "/admin/settings", label: "운영 설정", description: "보안 정책 기준값", icon: Settings },
+  { to: "/admin/risk", label: "위험 사용자", description: "위험 점수와 이벤트 모니터링", icon: BarChart3 },
 ];
 
 export default function AdminPage() {
@@ -46,6 +44,8 @@ export default function AdminPage() {
     { label: "활성 사용자", value: summary?.activeUsers ?? 0, unit: "명", icon: ShieldCheck },
     { label: "미해결 사고", value: summary?.openIncidents ?? 0, unit: "건", icon: AlertTriangle },
     { label: "고위험 사용자", value: summary?.highRiskUsers ?? 0, unit: "건", icon: BarChart3 },
+    { label: "미해결 위험 이벤트", value: summary?.unresolvedRiskEvents ?? 0, unit: "건", icon: AlertTriangle },
+    { label: "오늘 CRITICAL 이벤트", value: summary?.criticalRiskEventsToday ?? 0, unit: "건", icon: BarChart3 },
   ];
 
   return (
@@ -53,24 +53,24 @@ export default function AdminPage() {
       title="관리자 대시보드"
       description="계정, 세션, 보안 이벤트를 한 화면에서 확인하고 운영 작업으로 바로 이동합니다."
     >
-      <section className="grid gap-4 md:grid-cols-4">
+      <section className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
         {metrics.map((metric) => {
           const Icon = metric.icon;
           return (
-          <Card key={metric.label} className="rounded-lg">
-            <CardContent className="flex items-start justify-between gap-4 p-5">
-              <div>
-                <p className="text-sm text-muted-foreground">{metric.label}</p>
-                <p className="mt-2 flex items-baseline justify-center gap-1 text-3xl font-semibold tabular-nums">
-                  <span>{metric.value}</span>
-                  <span className="text-base font-medium text-muted-foreground">{metric.unit}</span>
-                </p>
-              </div>
-              <span className="rounded-lg bg-muted p-2 text-muted-foreground">
-                <Icon className="h-5 w-5" />
-              </span>
-            </CardContent>
-          </Card>
+            <Card key={metric.label} className="rounded-lg">
+              <CardContent className="flex items-start justify-between gap-4 p-5">
+                <div>
+                  <p className="text-sm text-muted-foreground">{metric.label}</p>
+                  <p className="mt-2 flex items-baseline justify-center gap-1 text-3xl font-semibold tabular-nums">
+                    <span>{metric.value}</span>
+                    <span className="text-base font-medium text-muted-foreground">{metric.unit}</span>
+                  </p>
+                </div>
+                <span className="rounded-lg bg-muted p-2 text-muted-foreground">
+                  <Icon className="h-5 w-5" />
+                </span>
+              </CardContent>
+            </Card>
           );
         })}
       </section>

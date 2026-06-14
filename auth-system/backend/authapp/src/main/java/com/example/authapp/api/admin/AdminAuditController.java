@@ -1,4 +1,4 @@
-package com.example.authapp.api.admin;
+﻿package com.example.authapp.api.admin;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -8,12 +8,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.example.authapp.domain.admin.AdminConsoleService;
+import com.example.authapp.application.admin.usecase.AdminAuditUseCase;
 import com.example.authapp.domain.admin.dto.AdminActionLogResponse;
 import com.example.authapp.domain.admin.dto.AdminAuditLogResponse;
 import com.example.authapp.domain.admin.dto.AdminLoginHistoryResponse;
 import com.example.authapp.domain.audit.dto.PageResponseDTO;
-import com.example.authapp.domain.audit.service.AuditLogExportService;
+import com.example.authapp.application.audit.usecase.AuditLogExportUseCase;
 
 import lombok.RequiredArgsConstructor;
 
@@ -22,10 +22,10 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class AdminAuditController {
 
-    private final AdminConsoleService adminConsoleService;
-    private final AuditLogExportService auditLogExportService;
+    private final AdminAuditUseCase adminConsoleService;
+    private final AuditLogExportUseCase auditLogExportService;
 
-    // 전체 감사 이벤트를 조회
+    // 전체 감사 이벤트를 조회한다.
     @GetMapping("/audit-logs")
     public PageResponseDTO<AdminAuditLogResponse> auditLogs(
             @RequestParam(name = "page", defaultValue = "0") int page,
@@ -82,7 +82,7 @@ public class AdminAuditController {
                 .body(file.bytes());
     }
 
-    // 전체 로그인 이력을 조회
+    // 전체 로그인 이력을 조회한다.
     @GetMapping("/login-history")
     public PageResponseDTO<AdminLoginHistoryResponse> loginHistory(
             @RequestParam(name = "page", defaultValue = "0") int page,

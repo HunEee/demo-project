@@ -12,6 +12,8 @@ public enum AuthEventType {
     PASSWORD_RESET("비밀번호 초기화"),
 
     TOKEN_REISSUE("토큰 재발급"),
+    TOKEN_REISSUE_FAIL("토큰 재발급 실패"),
+    MFA_REGISTERED("MFA 등록"),
 
     ADMIN_FORCE_LOGOUT("관리자 강제 로그아웃"),
     SECURITY_FORCE_LOGOUT("보안 강제 로그아웃"),

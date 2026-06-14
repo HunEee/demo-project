@@ -1,4 +1,4 @@
-package com.example.authapp.api;
+﻿package com.example.authapp.api;
 
 import java.util.List;
 import java.util.Map;
@@ -22,7 +22,7 @@ import com.example.authapp.domain.mfa.dto.PreAuthTotpConfirmRequest;
 import com.example.authapp.domain.mfa.dto.PreAuthTotpSetupResponse;
 import com.example.authapp.domain.mfa.dto.TotpConfirmRequest;
 import com.example.authapp.domain.mfa.dto.TotpSetupResponse;
-import com.example.authapp.domain.mfa.service.MfaService;
+import com.example.authapp.application.auth.usecase.MfaUseCase;
 import com.example.authapp.security.principal.UserPrincipal;
 import com.example.authapp.util.ClientUtil;
 
@@ -35,14 +35,16 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/v1")
 public class MfaController {
 
-    private final MfaService mfaService;
+    private final MfaUseCase mfaService;
     private final AuthFacade authFacade;
 
+    // 로그인 후 TOTP 등록 정보를 생성한다.
     @PostMapping("/mfa/totp/setup")
     public TotpSetupResponse setupTotp(@AuthenticationPrincipal UserPrincipal principal) {
         return mfaService.setupTotp(principal.getUsername());
     }
 
+    // 로그인 후 TOTP 등록을 확정한다.
     @PostMapping("/mfa/totp/confirm")
     public MfaMethodResponse confirmTotp(
             @AuthenticationPrincipal UserPrincipal principal,
@@ -51,11 +53,13 @@ public class MfaController {
         return mfaService.confirmTotp(principal.getUsername(), request);
     }
 
+    // 내 MFA 수단 목록을 조회한다.
     @GetMapping("/mfa/methods")
     public List<MfaMethodResponse> methods(@AuthenticationPrincipal UserPrincipal principal) {
         return mfaService.methods(principal.getUsername());
     }
 
+    // MFA 수단을 삭제한다.
     @DeleteMapping("/mfa/methods/{id}")
     public ResponseEntity<Void> deleteMethod(
             @AuthenticationPrincipal UserPrincipal principal,
@@ -66,6 +70,7 @@ public class MfaController {
         return ResponseEntity.noContent().build();
     }
 
+    // 로그인 전 TOTP 등록 정보를 생성한다.
     @PostMapping("/auth/mfa/totp/setup")
     public PreAuthTotpSetupResponse setupPreAuthTotp(
             @RequestBody Map<String, String> request,
@@ -78,6 +83,7 @@ public class MfaController {
         );
     }
 
+    // 로그인 전 TOTP 등록을 확정하고 JWT를 발급한다.
     @PostMapping("/auth/mfa/totp/confirm")
     public LoginResponseDTO confirmPreAuthTotp(
             @RequestBody PreAuthTotpConfirmRequest request,
@@ -87,6 +93,7 @@ public class MfaController {
         return authFacade.completeMfaRegistration(request, httpRequest, response);
     }
 
+    // MFA challenge를 검증하고 JWT를 발급한다.
     @PostMapping("/auth/mfa/verify")
     public LoginResponseDTO verifyMfa(
             @RequestBody MfaVerifyRequest request,

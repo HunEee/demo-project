@@ -24,7 +24,6 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { motion } from "framer-motion";
 import { canAccessMenuItem, hasAdminAccess } from "@/auth/permissions";
 import useAuth from "@/auth/store";
 import { Button } from "./ui/button";
@@ -33,9 +32,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
@@ -47,10 +43,6 @@ type MenuItem = {
   requiredPermissions?: readonly string[];
 };
 
-type PermissionMenuItem = MenuItem & {
-  requiredPermissions: readonly string[];
-};
-
 type MenuGroup = {
   label: string;
   icon: ComponentType<{ className?: string }>;
@@ -58,11 +50,6 @@ type MenuGroup = {
 };
 
 const adminGroups: MenuGroup[] = [
-  {
-    label: "현황",
-    icon: LayoutDashboard,
-    items: [{ label: "대시보드", path: "/admin/status/dashboard", icon: LayoutDashboard, end: true }],
-  },
   {
     label: "계정 관리",
     icon: Users,
@@ -87,9 +74,8 @@ const adminGroups: MenuGroup[] = [
     label: "인증 관리",
     icon: ShieldCheck,
     items: [
-      { label: "로그인 / 세션 관리", path: "/admin/auth/sessions", icon: LayoutDashboard },
+      { label: "로그인/세션 관리", path: "/admin/auth/sessions", icon: LayoutDashboard },
       { label: "MFA 관리", path: "/admin/auth/mfa", icon: ShieldCheck },
-      { label: "인증 정책 관리", path: "/admin/auth/policies", icon: SlidersHorizontal },
     ],
   },
   {
@@ -98,7 +84,16 @@ const adminGroups: MenuGroup[] = [
     items: [
       { label: "보안 이벤트 관리", path: "/admin/security/events", icon: FileText },
       { label: "위험 로그인 탐지", path: "/admin/security/risk-logins", icon: CircleAlert },
-      { label: "관리자 IP 제한", path: "/admin/security/admin-ip", icon: ShieldCheck },
+    ],
+  },
+  {
+    label: "정책 관리",
+    icon: SlidersHorizontal,
+    items: [
+      { label: "인증 정책", path: "/admin/policies/auth", icon: ShieldCheck },
+      { label: "세션/토큰 정책", path: "/admin/policies/session-token", icon: KeyRound },
+      { label: "위험탐지 정책", path: "/admin/policies/risk", icon: CircleAlert },
+      { label: "운영 보안 정책", path: "/admin/policies/operations", icon: Settings },
     ],
   },
   {
@@ -141,15 +136,6 @@ const adminGroups: MenuGroup[] = [
       { label: "발송 이력", path: "/admin/notifications/history", icon: ClipboardCheck },
     ],
   },
-  {
-    label: "시스템 설정",
-    icon: Settings,
-    items: [
-      { label: "시스템 설정", path: "/admin/system/settings", icon: Settings },
-      { label: "CORS / Redirect URI 설정", path: "/admin/system/cors-redirect", icon: Link2 },
-      { label: "로그 보관 정책", path: "/admin/system/log-retention", icon: FileText },
-    ],
-  },
 ];
 
 const adminMenuPermissions: Record<string, readonly string[]> = {
@@ -164,10 +150,12 @@ const adminMenuPermissions: Record<string, readonly string[]> = {
   "/admin/permissions/admin-permissions": ["ADMIN_PERMISSIONS_READ"],
   "/admin/auth/sessions": ["ADMIN_AUDIT_READ"],
   "/admin/auth/mfa": ["ADMIN_USERS_SECURITY"],
-  "/admin/auth/policies": ["ADMIN_SETTINGS_READ"],
   "/admin/security/events": ["ADMIN_AUDIT_READ"],
   "/admin/security/risk-logins": ["ADMIN_AUDIT_READ"],
-  "/admin/security/admin-ip": ["ADMIN_SETTINGS_READ"],
+  "/admin/policies/auth": ["ADMIN_SETTINGS_READ"],
+  "/admin/policies/session-token": ["ADMIN_SETTINGS_READ"],
+  "/admin/policies/risk": ["ADMIN_SETTINGS_READ"],
+  "/admin/policies/operations": ["ADMIN_SETTINGS_READ"],
   "/admin/audit/logs": ["ADMIN_AUDIT_READ"],
   "/admin/audit/admin-actions": ["ADMIN_AUDIT_READ"],
   "/admin/audit/login-history": ["ADMIN_AUDIT_READ"],
@@ -184,12 +172,13 @@ const adminMenuPermissions: Record<string, readonly string[]> = {
   "/admin/notifications/settings": ["ADMIN_SETTINGS_READ"],
   "/admin/notifications/templates": ["ADMIN_SETTINGS_READ"],
   "/admin/notifications/history": ["ADMIN_SETTINGS_READ"],
-  "/admin/system/settings": ["ADMIN_SETTINGS_READ"],
-  "/admin/system/cors-redirect": ["ADMIN_SETTINGS_READ"],
-  "/admin/system/log-retention": ["ADMIN_SETTINGS_READ"],
 };
 
-const withRequiredPermissions = (item: MenuItem): PermissionMenuItem => ({
+const adminDirectItems: MenuItem[] = [
+  { label: "대시보드", path: "/admin/status/dashboard", icon: LayoutDashboard, end: true },
+];
+
+const withRequiredPermissions = (item: MenuItem): MenuItem => ({
   ...item,
   requiredPermissions: adminMenuPermissions[item.path] ?? ["ADMIN_ADMIN_READ"],
 });
@@ -213,7 +202,8 @@ export default function Navbar() {
   const location = useLocation();
   const { checkLogin, user, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [expandedMobileGroup, setExpandedMobileGroup] = useState<string | null>(null);
+  const [expandedMobileGroups, setExpandedMobileGroups] = useState<Set<string>>(() => new Set());
+  const [expandedDesktopGroups, setExpandedDesktopGroups] = useState<Set<string>>(() => new Set());
 
   const isLogin = checkLogin();
   const isAdmin = isLogin && hasAdminAccess(user);
@@ -223,6 +213,7 @@ export default function Navbar() {
       items: group.items.map(withRequiredPermissions).filter((item) => canAccessMenuItem(user, item)),
     }))
     .filter((group) => group.items.length > 0);
+  const visibleAdminDirectItems = adminDirectItems.map(withRequiredPermissions).filter((item) => canAccessMenuItem(user, item));
   const displayName = user?.nickname || user?.username || "사용자";
   const initial = displayName.charAt(0).toUpperCase();
 
@@ -255,9 +246,18 @@ export default function Navbar() {
     goTo("/");
   };
 
+  const toggleGroup = (label: string, expandedGroups: Set<string>, setExpandedGroups: (groups: Set<string>) => void) => {
+    const next = new Set(expandedGroups);
+    if (next.has(label)) next.delete(label);
+    else next.add(label);
+    setExpandedGroups(next);
+  };
+
+  const activeGroupLabels = (groups: MenuGroup[]) =>
+    new Set(groups.filter((group) => group.items.some(isPathActive)).map((group) => group.label));
+
   const renderDesktopDropdownItem = (item: MenuItem) => {
     const Icon = item.icon ?? FileText;
-
     return (
       <DropdownMenuItem
         key={item.path}
@@ -270,10 +270,49 @@ export default function Navbar() {
     );
   };
 
+  const renderDesktopGroup = (group: MenuGroup) => {
+    const Icon = group.icon;
+    const expanded = expandedDesktopGroups.has(group.label);
+    const active = group.items.some(isPathActive);
+    return (
+      <div key={group.label} className="py-1">
+        <button
+          type="button"
+          className={`flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm font-semibold transition ${
+            active ? activeDropdownItem : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
+          }`}
+          onClick={() => toggleGroup(group.label, expandedDesktopGroups, setExpandedDesktopGroups)}
+        >
+          <Icon className="size-4 shrink-0" />
+          <span className="min-w-0 flex-1 truncate">{group.label}</span>
+          <ChevronRight className={`size-4 shrink-0 transition ${expanded ? "rotate-90" : ""}`} />
+        </button>
+        {expanded ? <div className="grid gap-1 pb-1 pl-5 pt-1">{group.items.map(renderDesktopDropdownItem)}</div> : null}
+      </div>
+    );
+  };
+
+  const renderDesktopStandaloneAdminItem = (item: MenuItem) => {
+    const Icon = item.icon ?? FileText;
+    const active = isPathActive(item);
+    return (
+      <button
+        key={item.path}
+        type="button"
+        className={`flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm font-semibold transition ${
+          active ? activeDropdownItem : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
+        }`}
+        onClick={() => goTo(item.path)}
+      >
+        <Icon className="size-4 shrink-0" />
+        <span className="min-w-0 flex-1 truncate">{item.label}</span>
+      </button>
+    );
+  };
+
   const renderMobileItem = (item: MenuItem) => {
     const Icon = item.icon ?? FileText;
     const active = isPathActive(item);
-
     return (
       <button
         key={item.path}
@@ -291,17 +330,16 @@ export default function Navbar() {
 
   const renderMobileGroup = (group: MenuGroup) => {
     const Icon = group.icon;
-    const expanded = expandedMobileGroup === group.label;
+    const expanded = expandedMobileGroups.has(group.label);
     const active = group.items.some(isPathActive);
-
     return (
-      <div key={group.label} className="border-b border-border/70 py-1">
+      <div key={group.label} className="py-1">
         <button
           type="button"
           className={`flex w-full items-center gap-3 px-1 py-3 text-left text-lg font-bold tracking-normal ${
             active ? "text-primary" : "text-foreground"
           }`}
-          onClick={() => setExpandedMobileGroup(expanded ? null : group.label)}
+          onClick={() => toggleGroup(group.label, expandedMobileGroups, setExpandedMobileGroups)}
         >
           <Icon className="size-5 shrink-0 text-muted-foreground" />
           <span className="min-w-0 flex-1 truncate">{group.label}</span>
@@ -315,199 +353,178 @@ export default function Navbar() {
 
   return (
     <>
-    <nav className="sticky top-0 z-50 border-b border-border/70 bg-background/95 backdrop-blur-xl">
-      <div className="relative mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
-        <motion.button
-          type="button"
-          initial={{ opacity: 0, x: -16 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="group flex shrink-0 items-center gap-3 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
-          onClick={() => goTo("/")}
-          aria-label="SecureAuth 홈으로 이동"
-        >
-          <span className="flex size-10 items-center justify-center rounded-xl bg-foreground text-background shadow-sm transition group-hover:scale-105">
-            <ShieldCheck className="size-5" />
-          </span>
-          <span className="flex flex-col leading-tight">
-            <span className="text-base font-semibold">SecureAuth</span>
-            <span className="text-xs text-muted-foreground">인증 보안 시스템</span>
-          </span>
-        </motion.button>
-
-        <div className="hidden items-center gap-3 lg:flex">
-          <div className="flex items-center gap-1 rounded-xl border border-border/70 bg-muted/35 p-1">
-            {mainItems.map(({ label, path, icon: Icon = FileText, end }) => (
-              <NavLink key={path} to={path} end={end} className={desktopLinkStyle}>
-                <Icon className="size-4" />
-                {label}
-              </NavLink>
-            ))}
-
-            {isLogin && (
-              <DropdownMenu>
-                <DropdownMenuTrigger className={`${dropdownTriggerBase} ${isAccountActive ? activeDropdownTrigger : ""}`}>
-                  <User className="size-4" />
-                  마이페이지
-                  <ChevronDown className="size-4" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-48">
-                  {accountItems.map(renderDesktopDropdownItem)}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-
-            {isAdmin && (
-              <DropdownMenu>
-                <DropdownMenuTrigger className={`${dropdownTriggerBase} ${isAdminActive ? activeDropdownTrigger : ""}`}>
-                  <Settings className="size-4" />
-                  관리자
-                  <ChevronDown className="size-4" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-64">
-                  {visibleAdminGroups.map((group) => {
-                    const Icon = group.icon;
-                    const active = group.items.some(isPathActive);
-                    return (
-                      <DropdownMenuSub key={group.label}>
-                        <DropdownMenuSubTrigger className={active ? activeDropdownItem : ""}>
-                          <Icon className="size-4" />
-                          {group.label}
-                        </DropdownMenuSubTrigger>
-                        <DropdownMenuSubContent className="w-64">
-                          {group.items.map(renderDesktopDropdownItem)}
-                        </DropdownMenuSubContent>
-                      </DropdownMenuSub>
-                    );
-                  })}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-          </div>
-
-          {isLogin ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger className="flex shrink-0 items-center gap-2 rounded-xl border border-border bg-background px-2 py-1.5 transition hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40">
-                <span className="flex size-8 items-center justify-center rounded-lg bg-foreground text-sm font-semibold text-background">
-                  {initial}
-                </span>
-                <span className="max-w-28 truncate text-sm font-medium">{displayName}</span>
-                <ChevronDown className="size-4 text-muted-foreground" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-44">
-                <DropdownMenuItem onClick={() => goTo("/dashboard/profile")} className={dropdownItemBase}>
-                  <User className="size-4" />
-                  프로필
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout} className="gap-2 text-destructive focus:text-destructive">
-                  <LogOut className="size-4" />
-                  로그아웃
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <div className="flex items-center gap-2">
-              <Button type="button" variant="ghost" className="h-10 rounded-xl px-4" onClick={() => goTo("/login")}>
-                <LogIn className="size-4" />
-                로그인
-              </Button>
-              <Button type="button" variant="outline" className="h-10 rounded-xl px-4" onClick={() => goTo("/signup")}>
-                <UserPlus className="size-4" />
-                회원가입
-              </Button>
-            </div>
-          )}
-        </div>
-
-        <Button
-          type="button"
-          variant="outline"
-          size="icon-lg"
-          className="lg:hidden"
-          onClick={() => setMobileOpen(true)}
-          aria-label="전체 메뉴 열기"
-          aria-expanded={mobileOpen}
-        >
-          <Menu className="size-5" />
-        </Button>
-      </div>
-
-    </nav>
-
-    {mobileOpen
-      ? createPortal(
-        <div className="fixed inset-0 z-[9999] isolate lg:hidden">
+      <nav className="sticky top-0 z-50 border-b border-border/70 bg-background/95 backdrop-blur-xl">
+        <div className="relative mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
           <button
             type="button"
-            className="absolute inset-0 bg-black/40"
-            onClick={() => setMobileOpen(false)}
-            aria-label="전체 메뉴 닫기"
-          />
-          <motion.aside
-            initial={{ x: "100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "100%" }}
-            transition={{ duration: 0.24, ease: "easeOut" }}
-            className="absolute right-0 top-0 z-10 flex h-dvh w-[min(92vw,390px)] flex-col border-l border-border bg-white shadow-2xl dark:bg-zinc-950"
+            className="group flex shrink-0 items-center gap-3 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+            onClick={() => goTo("/")}
+            aria-label="SecureAuth 홈으로 이동"
           >
-            <div className="flex h-16 items-center justify-between border-b px-5">
-              <div className="min-w-0">
-                <p className="text-xs font-medium text-muted-foreground">SecureAuth</p>
-                <p className="truncate text-lg font-bold text-foreground">전체 메뉴</p>
-              </div>
-              <button
-                type="button"
-                className="flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-muted"
-                onClick={() => setMobileOpen(false)}
-                aria-label="전체 메뉴 닫기"
-              >
-                <X className="size-5" />
-              </button>
-            </div>
+            <span className="flex size-10 items-center justify-center rounded-xl bg-foreground text-background shadow-sm transition group-hover:scale-105">
+              <ShieldCheck className="size-5" />
+            </span>
+            <span className="flex flex-col leading-tight">
+              <span className="text-base font-semibold">SecureAuth</span>
+              <span className="text-xs text-muted-foreground">인증 보안 시스템</span>
+            </span>
+          </button>
 
-            <div className="flex-1 overflow-y-auto px-4 py-3">
-              <div className="border-b border-border/70 pb-2">{mainItems.map(renderMobileItem)}</div>
+          <div className="hidden items-center gap-3 lg:flex">
+            <div className="flex items-center gap-1 rounded-xl border border-border/70 bg-muted/35 p-1">
+              {mainItems.map(({ label, path, icon: Icon = FileText, end }) => (
+                <NavLink key={path} to={path} end={end} className={desktopLinkStyle}>
+                  <Icon className="size-4" />
+                  {label}
+                </NavLink>
+              ))}
 
               {isLogin ? (
-                <div className="mt-2">{renderMobileGroup({ label: "마이페이지", icon: User, items: accountItems })}</div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger className={`${dropdownTriggerBase} ${isAccountActive ? activeDropdownTrigger : ""}`}>
+                    <User className="size-4" />
+                    마이페이지
+                    <ChevronDown className="size-4" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-80 p-2">
+                    {accountItems.map(renderDesktopDropdownItem)}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               ) : null}
 
               {isAdmin ? (
-                <div className="mt-3">
-                  <p className="mb-1 px-1 text-xs font-semibold text-muted-foreground">관리자</p>
-                  {visibleAdminGroups.map(renderMobileGroup)}
-                </div>
+                <DropdownMenu
+                  onOpenChange={(open) => {
+                    if (open) setExpandedDesktopGroups(activeGroupLabels(visibleAdminGroups));
+                  }}
+                >
+                  <DropdownMenuTrigger className={`${dropdownTriggerBase} ${isAdminActive ? activeDropdownTrigger : ""}`}>
+                    <Settings className="size-4" />
+                    관리자
+                    <ChevronDown className="size-4" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="max-h-[72vh] w-80 overflow-y-auto p-2">
+                    {visibleAdminDirectItems.map(renderDesktopStandaloneAdminItem)}
+                    {visibleAdminGroups.map(renderDesktopGroup)}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               ) : null}
             </div>
 
-            <div className="border-t p-4">
-              {isLogin ? (
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-base font-semibold text-destructive hover:bg-muted"
-                >
-                  <LogOut className="size-4" />
-                  로그아웃
-                </button>
-              ) : (
-                <div className="grid grid-cols-2 gap-2">
-                  <Button type="button" variant="outline" className="h-11 rounded-xl" onClick={() => goTo("/login")}>
-                    <LogIn className="size-4" />
-                    로그인
-                  </Button>
-                  <Button type="button" className="h-11 rounded-xl" onClick={() => goTo("/signup")}>
-                    <UserPlus className="size-4" />
-                    회원가입
-                  </Button>
+            {isLogin ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger className="flex shrink-0 items-center gap-2 rounded-xl border border-border bg-background px-2 py-1.5 transition hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40">
+                  <span className="flex size-8 items-center justify-center rounded-lg bg-foreground text-sm font-semibold text-background">
+                    {initial}
+                  </span>
+                  <span className="max-w-28 truncate text-sm font-medium">{displayName}</span>
+                  <ChevronDown className="size-4 text-muted-foreground" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-44">
+                  <DropdownMenuItem onClick={() => goTo("/dashboard/profile")} className={dropdownItemBase}>
+                    <User className="size-4" />
+                    프로필
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout} className="gap-2 text-destructive focus:text-destructive">
+                    <LogOut className="size-4" />
+                    로그아웃
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Button type="button" variant="ghost" className="h-10 rounded-xl px-4" onClick={() => goTo("/login")}>
+                  <LogIn className="size-4" />
+                  로그인
+                </Button>
+                <Button type="button" variant="outline" className="h-10 rounded-xl px-4" onClick={() => goTo("/signup")}>
+                  <UserPlus className="size-4" />
+                  회원가입
+                </Button>
+              </div>
+            )}
+          </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="icon-lg"
+            className="lg:hidden"
+            onClick={() => setMobileOpen(true)}
+            aria-label="전체 메뉴 열기"
+            aria-expanded={mobileOpen}
+          >
+            <Menu className="size-5" />
+          </Button>
+        </div>
+      </nav>
+
+      {mobileOpen
+        ? createPortal(
+            <div className="fixed inset-0 z-[9999] isolate lg:hidden">
+              <button
+                type="button"
+                className="absolute inset-0 bg-black/40"
+                onClick={() => setMobileOpen(false)}
+                aria-label="전체 메뉴 닫기"
+              />
+              <aside className="absolute right-0 top-0 z-10 flex h-dvh w-[min(92vw,390px)] flex-col border-l border-border bg-white shadow-2xl dark:bg-zinc-950">
+                <div className="flex h-16 items-center justify-between border-b px-5">
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-muted-foreground">SecureAuth</p>
+                    <p className="truncate text-lg font-bold text-foreground">전체 메뉴</p>
+                  </div>
+                  <button
+                    type="button"
+                    className="flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-muted"
+                    onClick={() => setMobileOpen(false)}
+                    aria-label="전체 메뉴 닫기"
+                  >
+                    <X className="size-5" />
+                  </button>
                 </div>
-              )}
-            </div>
-          </motion.aside>
-        </div>,
-        document.body,
-      )
-      : null}
+
+                <div className="flex-1 overflow-y-auto px-4 py-3">
+                  <div className="border-b border-border/70 pb-2">{mainItems.map(renderMobileItem)}</div>
+                  {isLogin ? <div className="mt-2">{renderMobileGroup({ label: "마이페이지", icon: User, items: accountItems })}</div> : null}
+                  {isAdmin ? (
+                    <div className="mt-3">
+                      <p className="mb-1 px-1 text-xs font-semibold text-muted-foreground">관리자</p>
+                      {visibleAdminDirectItems.map(renderMobileItem)}
+                      {visibleAdminGroups.map(renderMobileGroup)}
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="border-t p-4">
+                  {isLogin ? (
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-base font-semibold text-destructive hover:bg-muted"
+                    >
+                      <LogOut className="size-4" />
+                      로그아웃
+                    </button>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button type="button" variant="outline" className="h-11 rounded-xl" onClick={() => goTo("/login")}>
+                        <LogIn className="size-4" />
+                        로그인
+                      </Button>
+                      <Button type="button" className="h-11 rounded-xl" onClick={() => goTo("/signup")}>
+                        <UserPlus className="size-4" />
+                        회원가입
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </aside>
+            </div>,
+            document.body,
+          )
+        : null}
     </>
   );
 }

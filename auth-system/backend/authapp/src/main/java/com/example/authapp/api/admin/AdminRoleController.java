@@ -1,4 +1,4 @@
-package com.example.authapp.api.admin;
+﻿package com.example.authapp.api.admin;
 
 import java.util.List;
 
@@ -16,7 +16,7 @@ import com.example.authapp.domain.authorization.dto.AdminRoleDetailResponse;
 import com.example.authapp.domain.authorization.dto.AdminRolePermissionRequest;
 import com.example.authapp.domain.authorization.dto.AdminRoleRequest;
 import com.example.authapp.domain.authorization.dto.AdminRoleResponse;
-import com.example.authapp.domain.authorization.service.AdminRoleService;
+import com.example.authapp.application.admin.usecase.AdminRoleUseCase;
 
 import lombok.RequiredArgsConstructor;
 
@@ -25,7 +25,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class AdminRoleController {
 
-    private final AdminRoleService adminRoleService;
+    private final AdminRoleUseCase adminRoleService;
 
     @GetMapping
     public List<AdminRoleResponse> roles() {

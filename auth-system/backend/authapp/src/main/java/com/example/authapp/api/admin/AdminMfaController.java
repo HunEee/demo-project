@@ -1,4 +1,4 @@
-package com.example.authapp.api.admin;
+﻿package com.example.authapp.api.admin;
 
 import java.util.List;
 
@@ -16,7 +16,7 @@ import com.example.authapp.domain.mfa.dto.AdminMfaUserResponse;
 import com.example.authapp.domain.mfa.dto.MfaExceptionRequest;
 import com.example.authapp.domain.mfa.dto.MfaPolicyRequest;
 import com.example.authapp.domain.mfa.dto.MfaPolicyResponse;
-import com.example.authapp.domain.mfa.service.AdminMfaService;
+import com.example.authapp.application.admin.usecase.AdminMfaUseCase;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +26,7 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/v1/admin/mfa")
 public class AdminMfaController {
 
-    private final AdminMfaService adminMfaService;
+    private final AdminMfaUseCase adminMfaService;
 
     @GetMapping("/users")
     public List<AdminMfaUserResponse> users() {

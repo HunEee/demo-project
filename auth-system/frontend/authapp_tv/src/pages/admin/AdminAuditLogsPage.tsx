@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { Navigate } from "react-router";
 import { hasAdminAccess } from "@/auth/permissions";
 import useAuth from "@/auth/store";
-import { formatSecurityDateTime } from "@/lib/dateTime";
 import AdminFilters from "@/pages/admin/AdminFilters";
 import AdminPageShell from "@/pages/admin/AdminPageShell";
+import AdminDateTimeCell from "@/pages/admin/AdminDateTimeCell";
 import {
   AdminBadge,
   AdminEmptyRow,
@@ -81,6 +81,8 @@ export default function AdminAuditLogsPage() {
       void load().catch(() => undefined);
       void getAdminFilterOptions().then(setFilterOptions).catch(() => undefined);
     }
+    // Initial admin load only; filter, sort, and reset handlers call load explicitly.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdmin]);
 
   if (!isAdmin) return <Navigate to="/dashboard" replace />;
@@ -123,8 +125,8 @@ export default function AdminAuditLogsPage() {
               {items.length === 0 ? <AdminEmptyRow colSpan={5} /> : null}
               {items.map((item) => (
                 <tr key={item.id} className={adminRowClassName}>
-                  <td className={`${adminCellClassName} whitespace-nowrap tabular-nums`}>
-                    {formatSecurityDateTime(item.createdAt)}
+                  <td className={adminCellClassName}>
+                    <AdminDateTimeCell value={item.createdAt} />
                   </td>
                   <td className={adminCellClassName}>{item.username}</td>
                   <td className={adminCellClassName}>

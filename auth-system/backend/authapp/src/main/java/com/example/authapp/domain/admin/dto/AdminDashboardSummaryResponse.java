@@ -9,5 +9,7 @@ public record AdminDashboardSummaryResponse(
         long totalSessions,
         long revokedSessions,
         long openIncidents,
-        long highRiskUsers
+        long highRiskUsers,
+        long unresolvedRiskEvents,
+        long criticalRiskEventsToday
 ) {}

@@ -1,4 +1,4 @@
-package com.example.authapp.api.admin;
+﻿package com.example.authapp.api.admin;
 
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.example.authapp.domain.admin.AdminConsoleService;
+import com.example.authapp.application.admin.usecase.AdminSecurityUseCase;
 import com.example.authapp.domain.admin.dto.AdminActionRequest;
 import com.example.authapp.domain.admin.dto.AdminAuditLogResponse;
 import com.example.authapp.domain.admin.dto.AdminIncidentResponse;
@@ -23,10 +23,10 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class AdminSecurityController {
 
-    private final AdminConsoleService adminConsoleService;
+    private final AdminSecurityUseCase adminConsoleService;
 
-    // 보안 이벤트 중심 목록
-    // 감사 로그와 같은 저장소를 사용하되 메뉴를 분리
+    // 보안 이벤트 목록을 조회한다.
+    // 보안 이벤트를 조회한다.
     @GetMapping("/security-events")
     public PageResponseDTO<AdminAuditLogResponse> securityEvents(
             @RequestParam(name = "page", defaultValue = "0") int page,
@@ -41,7 +41,7 @@ public class AdminSecurityController {
         return new PageResponseDTO<>(adminConsoleService.securityEvents(page, size, username, type, from, to, sort, direction));
     }
 
-    // 보안 사고 목록을 조회
+    // 보안 사고 목록을 조회한다.
     @GetMapping("/incidents")
     public PageResponseDTO<AdminIncidentResponse> incidents(
             @RequestParam(name = "page", defaultValue = "0") int page,
@@ -58,7 +58,7 @@ public class AdminSecurityController {
         return new PageResponseDTO<>(adminConsoleService.incidents(page, size, username, type, severity, resolved, from, to, sort, direction));
     }
 
-    // 사고를 해결 처리
+    // 보안 사고를 해결 처리한다.
     @PostMapping("/incidents/{id}/resolve")
     public void resolveIncident(
             @PathVariable(name = "id") Long id,

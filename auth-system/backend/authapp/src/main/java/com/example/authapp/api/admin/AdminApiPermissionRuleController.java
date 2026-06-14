@@ -1,4 +1,4 @@
-package com.example.authapp.api.admin;
+﻿package com.example.authapp.api.admin;
 
 import java.util.List;
 
@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.example.authapp.domain.authorization.dto.AdminApiPermissionRuleRequest;
 import com.example.authapp.domain.authorization.dto.AdminApiPermissionRuleResponse;
-import com.example.authapp.domain.authorization.service.AdminApiPermissionRuleService;
+import com.example.authapp.application.admin.usecase.AdminApiPermissionRuleUseCase;
 
 import lombok.RequiredArgsConstructor;
 
@@ -22,7 +22,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class AdminApiPermissionRuleController {
 
-    private final AdminApiPermissionRuleService adminApiPermissionRuleService;
+    private final AdminApiPermissionRuleUseCase adminApiPermissionRuleService;
 
     @GetMapping
     public List<AdminApiPermissionRuleResponse> rules() {

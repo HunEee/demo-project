@@ -1,4 +1,4 @@
-package com.example.authapp.api.admin;
+﻿package com.example.authapp.api.admin;
 
 import java.util.List;
 
@@ -17,7 +17,7 @@ import com.example.authapp.domain.organization.dto.AdminGroupMemberRequest;
 import com.example.authapp.domain.organization.dto.AdminGroupRequest;
 import com.example.authapp.domain.organization.dto.AdminGroupResponse;
 import com.example.authapp.domain.organization.dto.AdminGroupRoleRequest;
-import com.example.authapp.domain.organization.service.AdminGroupService;
+import com.example.authapp.application.admin.usecase.AdminGroupUseCase;
 
 import lombok.RequiredArgsConstructor;
 
@@ -26,7 +26,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class AdminGroupController {
 
-    private final AdminGroupService adminGroupService;
+    private final AdminGroupUseCase adminGroupService;
 
     @GetMapping
     public List<AdminGroupResponse> groups() {

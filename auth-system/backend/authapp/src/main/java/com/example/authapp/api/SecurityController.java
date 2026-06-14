@@ -1,4 +1,4 @@
-package com.example.authapp.api;
+﻿package com.example.authapp.api;
 
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.authapp.domain.audit.dto.SecurityStatusResponseDTO;
-import com.example.authapp.domain.audit.service.SecurityDashboardService;
+import com.example.authapp.application.audit.usecase.SecurityDashboardUseCase;
 import com.example.authapp.security.principal.UserPrincipal;
 
 import lombok.RequiredArgsConstructor;
@@ -16,7 +16,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class SecurityController {
 
-    private final SecurityDashboardService securityService;
+    private final SecurityDashboardUseCase securityService;
 
     @GetMapping
     public SecurityStatusResponseDTO getSecurityStatus(@AuthenticationPrincipal UserPrincipal user) {

@@ -41,29 +41,54 @@ public class RiskEventEntity {
 
     private String username;
 
-    // 이벤트 점수 (+10, +30 등)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "event_type", length = 80)
+    private RiskEventType eventType;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "risk_level", length = 30)
+    private RiskLevel riskLevel;
+
     @Column(name = "score")
     private int score;
-    
-    // 위험 이유 
+
     @Column(name = "reason", length = 1000)
     private String reason;
 
     @Column(name = "ip_address")
     private String ipAddress;
 
+    @Column(name = "user_agent", length = 500)
+    private String userAgent;
+
     private String device;
 
     private String location;
+
+    @Column(name = "description", length = 1000)
+    private String description;
+
+    @Builder.Default
+    @Column(name = "resolved", nullable = false)
+    private boolean resolved = false;
+
+    @Column(name = "resolved_at")
+    private LocalDateTime resolvedAt;
+
+    @Column(name = "resolved_by", length = 100)
+    private String resolvedBy;
 
     @CreatedDate
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
-    // 로그인 기록과 연결
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "login_history_id")
     private LoginHistoryEntity loginHistory;
-    
-    
+
+    public void resolve(String actorUsername) {
+        this.resolved = true;
+        this.resolvedAt = LocalDateTime.now();
+        this.resolvedBy = actorUsername;
+    }
 }

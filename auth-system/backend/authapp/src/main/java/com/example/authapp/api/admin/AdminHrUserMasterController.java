@@ -1,4 +1,4 @@
-package com.example.authapp.api.admin;
+﻿package com.example.authapp.api.admin;
 
 import java.util.List;
 
@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.authapp.domain.admin.dto.AdminDuplicateCheckResponse;
 import com.example.authapp.domain.hr.dto.HrUserMasterRequest;
 import com.example.authapp.domain.hr.dto.HrUserMasterResponse;
-import com.example.authapp.domain.hr.service.HrUserMasterService;
+import com.example.authapp.application.admin.usecase.AdminHrUserMasterUseCase;
 
 import lombok.RequiredArgsConstructor;
 
@@ -24,7 +24,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class AdminHrUserMasterController {
 
-    private final HrUserMasterService hrUserMasterService;
+    private final AdminHrUserMasterUseCase hrUserMasterService;
 
     @GetMapping
     public List<HrUserMasterResponse> list(

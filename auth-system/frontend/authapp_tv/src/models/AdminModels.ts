@@ -67,6 +67,8 @@ export type AdminDashboardSummary = {
   revokedSessions: number;
   openIncidents: number;
   highRiskUsers: number;
+  unresolvedRiskEvents: number;
+  criticalRiskEventsToday: number;
 };
 
 export type AdminFilterOption = {
@@ -146,6 +148,23 @@ export type AdminRisk = {
   updatedAt?: string;
 };
 
+export type AdminRiskEvent = {
+  id: number;
+  username: string;
+  eventType?: string;
+  riskLevel?: string;
+  score: number;
+  description?: string;
+  reason?: string;
+  ipAddress?: string;
+  userAgent?: string;
+  device?: string;
+  resolved: boolean;
+  resolvedBy?: string;
+  resolvedAt?: string;
+  createdAt?: string;
+};
+
 export type AdminActionLog = {
   id: number;
   actorUsername: string;
@@ -193,6 +212,155 @@ export type AdminSettings = {
   criticalRiskThreshold: number;
   sessionExpireDays: number;
   forceLogoutOnCriticalRisk: boolean;
+  mfaPolicy: "OFF" | "OPTIONAL" | "REQUIRED_FOR_ADMIN" | "REQUIRED_FOR_ALL";
+};
+
+export type AdminSecurityPolicyCenter = {
+  authentication: AdminAuthenticationPolicy;
+  sessionToken: AdminTokenPolicy;
+  riskDetection: AdminRiskSecurityPolicy;
+  riskRules: AdminRiskRulePolicy[];
+  operationalSecurity: AdminOperationalSecurityPolicy;
+};
+
+export type AdminAuthenticationPolicy = {
+  login: AdminAuthPolicy;
+  password: AdminPasswordPolicy;
+  lockout: AdminLockoutPolicy;
+  mfa: AdminMfaSecurityPolicy;
+  verificationToken: AdminVerificationTokenPolicy;
+};
+
+export type AdminOperationalSecurityPolicy = {
+  adminAccess: AdminAdminAccessPolicy;
+  corsRedirect: AdminCorsRedirectPolicy;
+  logRetention: AdminLogRetentionPolicy;
+  rateLimit: AdminRateLimitPolicy;
+};
+
+export type AdminAuthPolicy = {
+  localPasswordLoginEnabled: boolean;
+  socialLoginEnabled: boolean;
+  signupEnabled: boolean;
+  rememberMeEnabled: boolean;
+  defaultPostLoginRoute: string;
+  genericLoginFailureMessageEnforced: boolean;
+};
+
+export type AdminPasswordPolicy = {
+  minLength: number;
+  requireUppercase: boolean;
+  requireLowercase: boolean;
+  requireDigit: boolean;
+  requireSpecial: boolean;
+  historyCount: number;
+  expirationDays: number;
+  temporaryPasswordExpirationMinutes: number;
+  blockUsernameEmailInclusion: boolean;
+};
+
+export type AdminLockoutPolicy = {
+  failedLoginThreshold: number;
+  failureWindowMinutes: number;
+  lockDurationMinutes: number;
+  adminFailedLoginThreshold: number;
+  autoUnlockEnabled: boolean;
+  manualUnlockAuditRequired: boolean;
+};
+
+export type AdminMfaSecurityPolicy = {
+  policy: "OFF" | "OPTIONAL" | "REQUIRED_FOR_ADMIN" | "REQUIRED_FOR_ALL";
+  highRiskMfaThreshold: number;
+  temporaryExceptionMaxDays: number;
+  challengeFailureLimit: number;
+  challengeExpirationMinutes: number;
+};
+
+export type AdminTokenPolicy = {
+  accessTokenLifetimeMinutes: number;
+  refreshTokenLifetimeDays: number;
+  rotationEnabled: boolean;
+  rotationGraceSeconds: number;
+  allowRecentRotationRecovery: boolean;
+  maxActiveSessionsUser: number;
+  maxActiveSessionsAdmin: number;
+  idleTimeoutMinutes: number;
+  revokeOnPasswordChange: boolean;
+  revokeOnMfaReset: boolean;
+};
+
+export type AdminRiskSecurityPolicy = {
+  mediumThreshold: number;
+  highThreshold: number;
+  criticalThreshold: number;
+  mfaRequiredScore: number;
+  tokenRevokeScore: number;
+  loginBlockScore: number;
+  revokeAllSessionsScore: number;
+  autoResponseEnabled: boolean;
+  firstLoginNewIpExempt: boolean;
+  firstLoginNewUserAgentExempt: boolean;
+  tokenReuseForceCritical: boolean;
+  tokenReuseRevokeAllSessions: boolean;
+  tokenContextChangeRevokeFamily: boolean;
+};
+
+export type AdminRiskRulePolicy = {
+  id?: number;
+  eventType: string;
+  enabled: boolean;
+  score: number;
+  riskLevel: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+  thresholdCount?: number | null;
+  windowMinutes?: number | null;
+  nightStartHour?: number | null;
+  nightEndHour?: number | null;
+  description?: string | null;
+};
+
+export type AdminAdminAccessPolicy = {
+  adminIpAllowlistEnabled: boolean;
+  denyUnknownProxyHeaders: boolean;
+  trustedProxyHeaderMode: string;
+  requireMfaForAdminAccess: boolean;
+  adminSessionMaxAgeMinutes: number;
+  allowedAdminIps?: string | null;
+};
+
+export type AdminCorsRedirectPolicy = {
+  allowCredentials: boolean;
+  allowedMethods: string;
+  allowedOrigins?: string | null;
+  allowedRedirectUris?: string | null;
+};
+
+export type AdminVerificationTokenPolicy = {
+  signupTokenExpirationMinutes: number;
+  passwordResetTokenExpirationMinutes: number;
+  maxVerificationAttempts: number;
+  resendCooldownSeconds: number;
+  dailySendLimitPerEmail: number;
+  invalidatePreviousTokenOnResend: boolean;
+};
+
+export type AdminLogRetentionPolicy = {
+  auditLogRetentionDays: number;
+  loginHistoryRetentionDays: number;
+  riskEventRetentionDays: number;
+  securityIncidentRetentionDays: number;
+  adminActionLogRetentionDays: number;
+  exportRequiresReason: boolean;
+  auditLogDeleteDisabled: boolean;
+  archiveBeforePurge: boolean;
+};
+
+export type AdminRateLimitPolicy = {
+  loginPerIpPerMinute: number;
+  loginPerUsernamePerMinute: number;
+  refreshPerSessionPerMinute: number;
+  passwordResetPerEmailPerDay: number;
+  verificationEmailPerEmailPerDay: number;
+  adminWritePerMinute: number;
 };
 
 export type HrUserMaster = {

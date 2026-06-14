@@ -29,9 +29,12 @@ import GroupPermissionAssignmentPage from './pages/admin/permissions/GroupPermis
 import AdminPermissionManagementPage from './pages/admin/permissions/AdminPermissionManagementPage.tsx';
 import LoginSessionManagementPage from './pages/admin/security/LoginSessionManagementPage.tsx';
 import MfaManagementPage from './pages/admin/security/MfaManagementPage.tsx';
-import AuthPolicyPage from './pages/admin/security/AuthPolicyPage.tsx';
 import RiskLoginDetectionPage from './pages/admin/security/RiskLoginDetectionPage.tsx';
 import SecurityEventsPage from './pages/admin/security/SecurityEventsPage.tsx';
+import AuthPolicyPage from './pages/admin/policies/AuthPolicyPage.tsx';
+import SessionTokenPolicyPage from './pages/admin/policies/SessionTokenPolicyPage.tsx';
+import RiskPolicyPage from './pages/admin/policies/RiskPolicyPage.tsx';
+import OperationsPolicyPage from './pages/admin/policies/OperationsPolicyPage.tsx';
 import ApplicationSsoPage from './pages/admin/integrations/ApplicationSsoPage.tsx';
 import OidcClientsPage from './pages/admin/integrations/OidcClientsPage.tsx';
 import ApiClientsPage from './pages/admin/integrations/ApiClientsPage.tsx';
@@ -48,10 +51,6 @@ import ReportsDownloadPage from './pages/admin/audit/ReportsDownloadPage.tsx';
 import NotificationSettingsPage from './pages/admin/notifications/NotificationSettingsPage.tsx';
 import NotificationTemplatesPage from './pages/admin/notifications/NotificationTemplatesPage.tsx';
 import NotificationHistoryPage from './pages/admin/notifications/NotificationHistoryPage.tsx';
-import SystemSettingsPage from './pages/admin/system/SystemSettingsPage.tsx';
-import CorsRedirectSettingsPage from './pages/admin/system/CorsRedirectSettingsPage.tsx';
-import LogRetentionPolicyPage from './pages/admin/system/LogRetentionPolicyPage.tsx';
-import AdminIpRestrictionPage from './pages/admin/system/AdminIpRestrictionPage.tsx';
 
 
 createRoot(document.getElementById('root')!).render(
@@ -93,10 +92,13 @@ createRoot(document.getElementById('root')!).render(
           <Route path="permissions/admin-permissions" element={<AdminPermissionManagementPage />} />
           <Route path="auth/sessions" element={<LoginSessionManagementPage />} />
           <Route path="auth/mfa" element={<MfaManagementPage />} />
-          <Route path="auth/policies" element={<AuthPolicyPage />} />
+          <Route path="policies/auth" element={<AuthPolicyPage />} />
+          <Route path="policies/session-token" element={<SessionTokenPolicyPage />} />
+          <Route path="policies/risk" element={<RiskPolicyPage />} />
+          <Route path="policies/operations" element={<OperationsPolicyPage />} />
           <Route path="security/risk-logins" element={<RiskLoginDetectionPage />} />
+          <Route path="security/policies" element={<AuthPolicyPage />} />
           <Route path="security/events" element={<SecurityEventsPage />} />
-          <Route path="security/admin-ip" element={<AdminIpRestrictionPage />} />
           <Route path="integrations/applications" element={<ApplicationSsoPage />} />
           <Route path="integrations/oidc-clients" element={<OidcClientsPage />} />
           <Route path="integrations/api-clients" element={<ApiClientsPage />} />
@@ -113,9 +115,6 @@ createRoot(document.getElementById('root')!).render(
           <Route path="notifications/settings" element={<NotificationSettingsPage />} />
           <Route path="notifications/templates" element={<NotificationTemplatesPage />} />
           <Route path="notifications/history" element={<NotificationHistoryPage />} />
-          <Route path="system/settings" element={<SystemSettingsPage />} />
-          <Route path="system/cors-redirect" element={<CorsRedirectSettingsPage />} />
-          <Route path="system/log-retention" element={<LogRetentionPolicyPage />} />
           <Route path="users" element={<UserManagementPage />} />
           <Route path="users/:username" element={<UserDetailPage />} />
           <Route path="audit-logs" element={<AuditLogsPage />} />
@@ -123,7 +122,6 @@ createRoot(document.getElementById('root')!).render(
           <Route path="security-events" element={<SecurityEventsPage />} />
           <Route path="sessions" element={<LoginSessionManagementPage />} />
           <Route path="risk" element={<RiskLoginDetectionPage />} />
-          <Route path="settings" element={<SystemSettingsPage />} />
         </Route>
 
       </Route>

@@ -1,4 +1,4 @@
-package com.example.authapp.api;
+﻿package com.example.authapp.api;
 
 import java.util.List;
 
@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.example.authapp.domain.admin.AdminService;
+import com.example.authapp.application.admin.usecase.AdminLegacyUseCase;
 import com.example.authapp.domain.admin.dto.AdminUserResponse;
 import com.example.authapp.domain.audit.entity.LoginHistoryEntity;
 import com.example.authapp.domain.audit.entity.AuthEventLogEntity;
@@ -20,7 +20,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class AdminController {
 
-    private final AdminService adminService;
+    private final AdminLegacyUseCase adminService;
 
     @GetMapping("/users")
     public List<AdminUserResponse> getUsers() {

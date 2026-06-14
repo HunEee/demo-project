@@ -5,7 +5,7 @@ import { hasAdminAccess } from "@/auth/permissions";
 import useAuth from "@/auth/store";
 import { Button } from "@/components/ui/button";
 import { formatSecurityDateTime } from "@/lib/dateTime";
-import type { AdminFilterOptions, AdminRisk } from "@/models/AdminModels";
+import type { AdminFilterOptions, AdminRisk, AdminRiskEvent } from "@/models/AdminModels";
 import AdminFilters from "@/pages/admin/AdminFilters";
 import AdminPageShell from "@/pages/admin/AdminPageShell";
 import {
@@ -24,7 +24,15 @@ import {
   adminTheadClassName,
   statusTone,
 } from "@/pages/admin/adminUi";
-import { getAdminFilterOptions, getAdminRisks, lockRiskUser, requireRiskUserMfa, revokeRiskUserTokens } from "@/services/AdminService";
+import {
+  getAdminFilterOptions,
+  getAdminRiskEvents,
+  getAdminRisks,
+  lockRiskUser,
+  requireRiskUserMfa,
+  resolveAdminRiskEvent,
+  revokeRiskUserTokens,
+} from "@/services/AdminService";
 
 type RiskAction = "lock" | "revoke" | "mfa";
 
@@ -64,9 +72,11 @@ const riskLevelLabel = (value?: string) => {
 export default function AdminRiskPage() {
   const user = useAuth((state) => state.user);
   const [items, setItems] = useState<AdminRisk[]>([]);
+  const [riskEvents, setRiskEvents] = useState<AdminRiskEvent[]>([]);
   const [filters, setFilters] = useState({ username: "", level: "", minScore: "" });
   const [filterOptions, setFilterOptions] = useState<AdminFilterOptions | null>(null);
   const [pageState, setPageState] = useState<PageState>({ page: 0, size: 10, totalPages: 1, totalElements: 0 });
+  const [riskEventPageState, setRiskEventPageState] = useState<PageState>({ page: 0, size: 10, totalPages: 1, totalElements: 0 });
   const [sortState, setSortState] = useState<SortState>({ sort: "riskScore", direction: "DESC" });
   const [pendingAction, setPendingAction] = useState<{ item: AdminRisk; action: RiskAction } | null>(null);
   const [reason, setReason] = useState("");
@@ -84,6 +94,17 @@ export default function AdminRiskPage() {
     });
     setItems(page.content);
     setPageState((prev) => ({ ...prev, page: page.page, size: page.size, totalPages: page.totalPages, totalElements: page.totalElements }));
+  };
+
+  const loadRiskEvents = async (nextPage = riskEventPageState.page) => {
+    const page = await getAdminRiskEvents({
+      page: nextPage,
+      size: riskEventPageState.size,
+      sort: "createdAt",
+      direction: "DESC",
+    });
+    setRiskEvents(page.content);
+    setRiskEventPageState((prev) => ({ ...prev, page: page.page, size: page.size, totalPages: page.totalPages, totalElements: page.totalElements }));
   };
 
   const handleSort = (column: string) => {
@@ -129,11 +150,19 @@ export default function AdminRiskPage() {
     await load();
   };
 
+  const resolveRiskEvent = async (id: number) => {
+    await resolveAdminRiskEvent(id);
+    await loadRiskEvents();
+  };
+
   useEffect(() => {
     if (isAdmin) {
       void load().catch(() => undefined);
+      void loadRiskEvents().catch(() => undefined);
       void getAdminFilterOptions().then(setFilterOptions).catch(() => undefined);
     }
+    // Initial admin load only; filters, pagination, and actions call loaders explicitly.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdmin]);
 
   if (!isAdmin) return <Navigate to="/dashboard" replace />;
@@ -217,6 +246,55 @@ export default function AdminRiskPage() {
         </table>
         <AdminPagination pageState={pageState} onPageChange={(page) => void load(page)} />
       </AdminTableCard>
+
+      <section className="grid gap-3">
+        <div>
+          <h2 className="text-lg font-semibold tracking-normal">위험 로그인 이벤트</h2>
+          <p className="mt-1 text-sm text-muted-foreground">룰 기반으로 자동 생성된 위험 로그인 이벤트입니다.</p>
+        </div>
+        <AdminTableCard>
+          <table className={`${adminTableClassName} min-w-[1080px]`}>
+            <thead className={adminTheadClassName}>
+              <tr>
+                <th className={adminCellClassName}>시간</th>
+                <th className={adminCellClassName}>사용자</th>
+                <th className={adminCellClassName}>이벤트</th>
+                <th className={adminCellClassName}>위험도</th>
+                <th className={adminCellClassName}>점수</th>
+                <th className={adminCellClassName}>IP</th>
+                <th className={adminCellClassName}>User-Agent</th>
+                <th className={adminCellClassName}>상태</th>
+                <th className={adminCellClassName}>처리</th>
+              </tr>
+            </thead>
+            <tbody>
+              {riskEvents.length === 0 ? <AdminEmptyRow colSpan={9} /> : null}
+              {riskEvents.map((event) => (
+                <tr key={event.id} className={adminRowClassName}>
+                  <td className={`${adminCellClassName} whitespace-nowrap tabular-nums`}>
+                    {formatSecurityDateTime(event.createdAt)}
+                  </td>
+                  <td className={adminCellClassName}>{event.username}</td>
+                  <td className={adminCellClassName}>{event.eventType || "-"}</td>
+                  <td className={adminCellClassName}>
+                    <AdminBadge tone={statusTone(event.riskLevel)}>{riskLevelLabel(event.riskLevel)}</AdminBadge>
+                  </td>
+                  <td className={`${adminCellClassName} tabular-nums`}>{event.score}</td>
+                  <td className={adminCellClassName}>{event.ipAddress || "-"}</td>
+                  <td className={`${adminCellClassName} max-w-64 break-all text-xs`}>{event.userAgent || event.device || "-"}</td>
+                  <td className={adminCellClassName}>{event.resolved ? "해결" : "미해결"}</td>
+                  <td className={adminCellClassName}>
+                    <Button size="sm" variant="outline" disabled={event.resolved} onClick={() => void resolveRiskEvent(event.id)}>
+                      해결
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <AdminPagination pageState={riskEventPageState} onPageChange={(page) => void loadRiskEvents(page)} />
+        </AdminTableCard>
+      </section>
 
       <AdminCrudModal
         open={pendingAction !== null}

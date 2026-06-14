@@ -1,15 +1,16 @@
-import { useCallback, useEffect, useMemo } from "react";
-import { Download } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Download, Eye } from "lucide-react";
 import { Navigate } from "react-router";
 import { hasAdminAccess } from "@/auth/permissions";
 import useAuth from "@/auth/store";
 import { Button } from "@/components/ui/button";
-import { formatSecurityDateTime } from "@/lib/dateTime";
 import type { AdminActionLog } from "@/models/AdminModels";
 import AdminFilters from "@/pages/admin/AdminFilters";
+import AdminDateTimeCell from "@/pages/admin/AdminDateTimeCell";
 import AdminPageShell from "@/pages/admin/AdminPageShell";
 import {
   AdminBadge,
+  AdminCrudModal,
   AdminEmptyRow,
   AdminPagination,
   AdminSortableHeader,
@@ -62,6 +63,7 @@ const actionOptions = [
   { label: "계정 비활성화", value: "DISABLE_USER" },
   { label: "계정 활성화", value: "ENABLE_USER" },
   { label: "토큰 폐기", value: "TOKEN_REVOKE" },
+  { label: "세션 강제 종료", value: "REVOKE_SESSION" },
   { label: "비밀번호 초기화", value: "PASSWORD_RESET" },
   { label: "MFA 초기화", value: "MFA_RESET" },
   { label: "사고 해결", value: "RESOLVE_INCIDENT" },
@@ -75,14 +77,23 @@ const actionLabel = (value?: string) => actionOptions.find((option) => option.va
 const resultLabel = (value?: string) => resultOptions.find((option) => option.value === value)?.label ?? displayValue(value);
 const riskLabel = (value?: string) => riskOptions.find((option) => option.value === value)?.label ?? displayValue(value);
 
-function shortText(value?: string) {
+function prettyJson(value?: string) {
   if (!value) return "-";
-  return value.length > 120 ? `${value.slice(0, 120)}...` : value;
+  try {
+    return JSON.stringify(JSON.parse(value), null, 2);
+  } catch {
+    return value;
+  }
+}
+
+function userAgentText(item: AdminActionLog) {
+  return displayValue(item.userAgent ?? item.device);
 }
 
 export default function AdminActionLogsPage() {
   const user = useAuth((state) => state.user);
   const isAdmin = hasAdminAccess(user);
+  const [selectedLog, setSelectedLog] = useState<AdminActionLog | null>(null);
 
   const fetchPage = useCallback(
     (params: typeof initialFilters & { page: number; size: number; sort: string; direction: "ASC" | "DESC" }) =>
@@ -108,7 +119,7 @@ export default function AdminActionLogsPage() {
 
   useEffect(() => {
     if (isAdmin) void load().catch(() => undefined);
-  }, [isAdmin]);
+  }, [isAdmin, load]);
 
   const handleExport = async () => {
     const blob = await exportAdminActionLogs(exportParams);
@@ -155,7 +166,7 @@ export default function AdminActionLogsPage() {
       />
 
       <AdminTableCard>
-        <table className={`${adminTableClassName} min-w-[1280px]`}>
+        <table className={`${adminTableClassName} min-w-[860px]`}>
           <thead className={adminTheadClassName}>
             <tr>
               <th className={adminCellClassName}>
@@ -168,23 +179,19 @@ export default function AdminActionLogsPage() {
               <th className={adminCellClassName}>
                 <AdminSortableHeader label="작업" column="actionType" sortState={sortState} onSort={handleSort} />
               </th>
-              <th className={adminCellClassName}>변경 전</th>
-              <th className={adminCellClassName}>변경 후</th>
-              <th className={adminCellClassName}>IP</th>
-              <th className={adminCellClassName}>디바이스</th>
               <th className={adminCellClassName}>
                 <AdminSortableHeader label="결과" column="result" sortState={sortState} onSort={handleSort} />
               </th>
-              <th className={adminCellClassName}>사유</th>
               <th className={adminCellClassName}>위험도</th>
+              <th className={adminCellClassName}>상세</th>
             </tr>
           </thead>
           <tbody>
-            {items.length === 0 ? <AdminEmptyRow colSpan={11} /> : null}
+            {items.length === 0 ? <AdminEmptyRow colSpan={7} /> : null}
             {items.map((item) => (
               <tr key={item.id} className={adminRowClassName}>
-                <td className={`${adminCellClassName} whitespace-nowrap tabular-nums`}>
-                  {formatSecurityDateTime(item.createdAt)}
+                <td className={adminCellClassName}>
+                  <AdminDateTimeCell value={item.createdAt} />
                 </td>
                 <td className={adminCellClassName}>{displayValue(item.actorUsername)}</td>
                 <td className={adminCellClassName}>
@@ -196,16 +203,17 @@ export default function AdminActionLogsPage() {
                 <td className={adminCellClassName}>
                   <AdminBadge tone="info">{actionLabel(item.actionType)}</AdminBadge>
                 </td>
-                <td className={`${adminCellClassName} max-w-56 text-left font-mono text-xs`}>{shortText(item.beforeValue)}</td>
-                <td className={`${adminCellClassName} max-w-56 text-left font-mono text-xs`}>{shortText(item.afterValue)}</td>
-                <td className={adminCellClassName}>{displayValue(item.ipAddress)}</td>
-                <td className={`${adminCellClassName} max-w-48 text-xs`}>{displayValue(item.device ?? item.userAgent)}</td>
                 <td className={adminCellClassName}>
                   <AdminBadge tone={statusTone(item.result)}>{resultLabel(item.result)}</AdminBadge>
                 </td>
-                <td className={`${adminCellClassName} max-w-52 text-left`}>{displayValue(item.reason)}</td>
                 <td className={adminCellClassName}>
                   {item.riskLevel ? <AdminBadge tone={statusTone(item.riskLevel)}>{riskLabel(item.riskLevel)}</AdminBadge> : "-"}
+                </td>
+                <td className={adminCellClassName}>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedLog(item)}>
+                    <Eye className="h-4 w-4" />
+                    상세
+                  </Button>
                 </td>
               </tr>
             ))}
@@ -213,6 +221,73 @@ export default function AdminActionLogsPage() {
         </table>
         <AdminPagination pageState={pageState} onPageChange={(page) => void load(page)} />
       </AdminTableCard>
+
+      <AdminCrudModal
+        open={selectedLog !== null}
+        title="감사 로그 상세"
+        description="전후 데이터, 메타데이터, 요청 정보를 확인합니다."
+        contentClassName="sm:max-w-[760px]"
+        onOpenChange={(open) => {
+          if (!open) setSelectedLog(null);
+        }}
+      >
+        {selectedLog ? (
+          <div className="grid gap-4 text-sm">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <p className="text-xs text-muted-foreground">수행자</p>
+                <p className="mt-1 font-medium">{displayValue(selectedLog.actorUsername)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">작업</p>
+                <p className="mt-1 font-medium">{actionLabel(selectedLog.actionType)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">대상</p>
+                <p className="mt-1 font-medium">
+                  {displayValue(selectedLog.targetType)} / {displayValue(selectedLog.targetUsername ?? selectedLog.targetId)}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">결과</p>
+                <p className="mt-1 font-medium">{resultLabel(selectedLog.result)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">IP</p>
+                <p className="mt-1 font-medium">{displayValue(selectedLog.ipAddress)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">User-Agent</p>
+                <p className="mt-1 break-all font-medium">{userAgentText(selectedLog)}</p>
+              </div>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">사유</p>
+              <p className="mt-1 rounded border bg-muted/20 p-3">{displayValue(selectedLog.reason)}</p>
+            </div>
+            <div className="grid gap-3 lg:grid-cols-2">
+              <div>
+                <p className="text-xs text-muted-foreground">변경 전</p>
+                <pre className="mt-1 max-h-64 overflow-auto rounded border bg-muted/30 p-3 text-xs">
+                  {prettyJson(selectedLog.beforeValue)}
+                </pre>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">변경 후</p>
+                <pre className="mt-1 max-h-64 overflow-auto rounded border bg-muted/30 p-3 text-xs">
+                  {prettyJson(selectedLog.afterValue)}
+                </pre>
+              </div>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">메타데이터</p>
+              <pre className="mt-1 max-h-64 overflow-auto rounded border bg-muted/30 p-3 text-xs">
+                {prettyJson(selectedLog.metadata)}
+              </pre>
+            </div>
+          </div>
+        ) : null}
+      </AdminCrudModal>
     </AdminPageShell>
   );
 }

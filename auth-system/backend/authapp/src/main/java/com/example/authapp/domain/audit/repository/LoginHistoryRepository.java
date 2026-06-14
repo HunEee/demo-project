@@ -8,6 +8,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import com.example.authapp.domain.audit.entity.LoginHistoryEntity;
 import com.example.authapp.domain.audit.entity.LoginStatus;
@@ -49,5 +50,51 @@ public interface LoginHistoryRepository extends JpaRepository<LoginHistoryEntity
 
     // 최근 로그인 이력 조회 -> 리스크 서비스에서 위험을 계산 하기 위함
 	List<LoginHistoryEntity> findTop20ByUsernameOrderByLoginAtDesc(String username);
+
+    @Query("""
+            select count(l)
+            from LoginHistory l
+            where l.username = :username
+              and l.success = false
+              and l.loginAt >= :since
+            """)
+    long countFailedLoginsSince(@Param("username") String username, @Param("since") LocalDateTime since);
+
+    @Query("""
+            select case when count(l) > 0 then true else false end
+            from LoginHistory l
+            where l.username = :username
+              and l.success = true
+              and l.ipAddress = :ipAddress
+              and (:excludeId < 0 or l.id <> :excludeId)
+            """)
+    boolean existsSuccessfulLoginFromIp(
+            @Param("username") String username,
+            @Param("ipAddress") String ipAddress,
+            @Param("excludeId") Long excludeId
+    );
+
+    @Query("""
+            select case when count(l) > 0 then true else false end
+            from LoginHistory l
+            where l.username = :username
+              and l.success = true
+              and l.userAgent = :userAgent
+              and (:excludeId < 0 or l.id <> :excludeId)
+            """)
+    boolean existsSuccessfulLoginFromUserAgent(
+            @Param("username") String username,
+            @Param("userAgent") String userAgent,
+            @Param("excludeId") Long excludeId
+    );
+
+    @Query("""
+            select count(l)
+            from LoginHistory l
+            where l.username = :username
+              and l.success = true
+              and (:excludeId < 0 or l.id <> :excludeId)
+            """)
+    long countSuccessfulLoginsBefore(@Param("username") String username, @Param("excludeId") Long excludeId);
 	
 }

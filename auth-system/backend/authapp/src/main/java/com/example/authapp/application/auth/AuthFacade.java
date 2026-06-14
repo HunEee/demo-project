@@ -1,4 +1,4 @@
-package com.example.authapp.application.auth;
+﻿package com.example.authapp.application.auth;
 
 import java.io.IOException;
 import java.util.Set;
@@ -14,21 +14,22 @@ import org.springframework.transaction.annotation.Transactional;
 import com.example.authapp.application.auth.dto.LoginResponseDTO;
 import com.example.authapp.domain.audit.service.AuthEventLogService;
 import com.example.authapp.domain.audit.service.LoginHistoryService;
-import com.example.authapp.domain.jwt.service.CookieService;
+import com.example.authapp.application.auth.usecase.CookieService;
+import com.example.authapp.domain.jwt.service.JwtTokenProvider;
 import com.example.authapp.domain.jwt.service.RefreshTokenService;
 import com.example.authapp.domain.mfa.dto.MfaChallengeResult;
 import com.example.authapp.domain.mfa.dto.MfaVerifyRequest;
 import com.example.authapp.domain.mfa.dto.PreAuthTotpConfirmRequest;
 import com.example.authapp.domain.mfa.exception.MfaException;
-import com.example.authapp.domain.mfa.service.MfaService;
-import com.example.authapp.domain.risk.service.RiskService;
+import com.example.authapp.application.auth.usecase.MfaService;
+import com.example.authapp.application.risk.usecase.RiskLoginDetectionService;
+import com.example.authapp.application.risk.usecase.RiskService;
 import com.example.authapp.domain.user.entity.UserEntity;
 import com.example.authapp.domain.user.service.UserQueryService;
 import com.example.authapp.security.rbac.RbacAuthorizationService;
 import com.example.authapp.security.handler.dto.UserResponseDTO;
 import com.example.authapp.security.principal.UserPrincipal;
 import com.example.authapp.util.ClientUtil;
-import com.example.authapp.util.JWTUtil;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -42,9 +43,11 @@ public class AuthFacade {
     private final CookieService cookieService;
     private final LoginHistoryService loginHistoryService;
     private final RiskService riskService;
+    private final RiskLoginDetectionService riskLoginDetectionService;
     private final AuthEventLogService authEventLogService;
     private final MfaService mfaService;
     private final RbacAuthorizationService rbacAuthorizationService;
+    private final JwtTokenProvider jwtTokenProvider;
     private final String frontendUrl;
 
     public AuthFacade(
@@ -53,9 +56,11 @@ public class AuthFacade {
             CookieService cookieService,
             LoginHistoryService loginHistoryService,
             RiskService riskService,
+            RiskLoginDetectionService riskLoginDetectionService,
             AuthEventLogService authEventLogService,
             MfaService mfaService,
             RbacAuthorizationService rbacAuthorizationService,
+            JwtTokenProvider jwtTokenProvider,
             @Value("${app.frontend-url:http://localhost:5173}") String frontendUrl
     ) {
         this.userQueryService = userQueryService;
@@ -63,9 +68,11 @@ public class AuthFacade {
         this.cookieService = cookieService;
         this.loginHistoryService = loginHistoryService;
         this.riskService = riskService;
+        this.riskLoginDetectionService = riskLoginDetectionService;
         this.authEventLogService = authEventLogService;
         this.mfaService = mfaService;
         this.rbacAuthorizationService = rbacAuthorizationService;
+        this.jwtTokenProvider = jwtTokenProvider;
         this.frontendUrl = frontendUrl;
     }
 
@@ -139,13 +146,17 @@ public class AuthFacade {
         }
 
         String jti = UUID.randomUUID().toString();
-        String refreshToken = JWTUtil.createJWT(username, roles, jti, false);
+        String refreshToken = jwtTokenProvider.createToken(username, roles, jti, false);
         String ip = ClientUtil.getIp(request);
         String userAgent = ClientUtil.getUserAgent(request);
         String device = ClientUtil.getDevice(userAgent);
         var history = loginHistoryService.saveSuccess(username, ip, userAgent, device);
         UserEntity user = userQueryService.getByUsername(username);
 
+        int ruleScore = riskLoginDetectionService.detectSuccess(user, history);
+        if (ruleScore > 0) {
+            riskService.applyLoginRuleScore(user, history, ruleScore, "RULE_BASED_LOGIN_SUCCESS");
+        }
         riskService.analyzeLoginRisk(user, history);
         refreshTokenService.addRefresh(username, refreshToken, ip, userAgent, device, history);
         authEventLogService.loginSuccess(username);
@@ -161,15 +172,19 @@ public class AuthFacade {
             HttpServletResponse response
     ) {
         String jti = UUID.randomUUID().toString();
-        String accessToken = JWTUtil.createJWT(username, roles, jti, true);
-        String refreshToken = JWTUtil.createJWT(username, roles, jti, false);
-        long expiresIn = JWTUtil.getAccessTokenExpiresIn();
+        String accessToken = jwtTokenProvider.createToken(username, roles, jti, true);
+        String refreshToken = jwtTokenProvider.createToken(username, roles, jti, false);
+        long expiresIn = jwtTokenProvider.accessTokenExpiresInSeconds();
 
         String ip = ClientUtil.getIp(request);
         String userAgent = ClientUtil.getUserAgent(request);
         String device = ClientUtil.getDevice(userAgent);
         var history = loginHistoryService.saveSuccess(username, ip, userAgent, device);
 
+        int ruleScore = riskLoginDetectionService.detectSuccess(user, history);
+        if (ruleScore > 0) {
+            riskService.applyLoginRuleScore(user, history, ruleScore, "RULE_BASED_LOGIN_SUCCESS");
+        }
         riskService.analyzeLoginRisk(user, history);
         refreshTokenService.addRefresh(username, refreshToken, ip, userAgent, device, history);
         cookieService.addRefreshCookie(response, refreshToken);
@@ -184,3 +199,4 @@ public class AuthFacade {
                 .build();
     }
 }
+

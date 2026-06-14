@@ -19,6 +19,7 @@ import type {
   AdminPermission,
   AdminPermissionRequest,
   AdminRisk,
+  AdminRiskEvent,
   AdminRole,
   AdminRoleAssignmentHistory,
   AdminRoleAssignmentRequest,
@@ -27,6 +28,7 @@ import type {
   AdminRoleRequest,
   AdminSession,
   AdminSettings,
+  AdminSecurityPolicyCenter,
   AdminUser,
   AdminUserCreateRequest,
   AdminUserDetail,
@@ -52,6 +54,16 @@ export const getAdminDashboardSummary = async () => {
 
 export const getAdminFilterOptions = async () => {
   const response = await apiClient.get<AdminFilterOptions>("/admin/filter-options");
+  return response.data;
+};
+
+export const getAdminSettings = async () => {
+  const response = await apiClient.get<AdminSettings>("/admin/settings");
+  return response.data;
+};
+
+export const updateAdminSettings = async (data: AdminSettings) => {
+  const response = await apiClient.patch<AdminSettings>("/admin/settings", data);
   return response.data;
 };
 
@@ -368,12 +380,21 @@ export const getAdminRisks = async (params?: AdminParams) => {
   return response.data;
 };
 
-export const getAdminSettings = async () => {
-  const response = await apiClient.get<AdminSettings>("/admin/settings");
+export const getAdminRiskEvents = async (params?: AdminParams) => {
+  const response = await apiClient.get<PageResponse<AdminRiskEvent>>("/admin/risks/events", { params: cleanAdminParams(params) });
   return response.data;
 };
 
-export const updateAdminSettings = async (data: AdminSettings) => {
-  const response = await apiClient.patch<AdminSettings>("/admin/settings", data);
+export const resolveAdminRiskEvent = async (id: string | number) => {
+  await apiClient.post(`/admin/risks/events/${id}/resolve`);
+};
+
+export const getAdminSecurityPolicies = async () => {
+  const response = await apiClient.get<AdminSecurityPolicyCenter>("/admin/security-settings");
+  return response.data;
+};
+
+export const updateAdminSecurityPolicies = async (data: AdminSecurityPolicyCenter) => {
+  const response = await apiClient.patch<AdminSecurityPolicyCenter>("/admin/security-settings", data);
   return response.data;
 };

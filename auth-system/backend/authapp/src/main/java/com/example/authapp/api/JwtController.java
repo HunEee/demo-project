@@ -1,11 +1,11 @@
-package com.example.authapp.api;
+﻿package com.example.authapp.api;
 
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.authapp.domain.jwt.dto.JWTResponseDTO;
-import com.example.authapp.domain.jwt.service.JwtService;
+import com.example.authapp.application.auth.usecase.JwtUseCase;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -16,20 +16,15 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/v1/jwt")
 public class JwtController {
 
-    private final JwtService jwtService;
+    private final JwtUseCase jwtService;
 
-    // 소셜 로그인 쿠키 방식의 Refresh 토큰 헤더 방식으로 교환
+    // 소셜 로그인 refresh cookie를 access token 응답으로 교환한다.
     @PostMapping("/exchange")
     public JWTResponseDTO jwtExchangeApi(HttpServletRequest request,HttpServletResponse response){
         return jwtService.cookie2Header(request, response);
     }
 
-    // Refresh 토큰으로 Access 토큰 재발급 (Rotate 포함)
-//    @PostMapping(value = "/jwt/refresh", consumes = MediaType.APPLICATION_JSON_VALUE)
-//    public JWTResponseDTO jwtRefreshApi(@Validated @RequestBody RefreshRequestDTO dto){
-//        return jwtService.refreshRotate(dto);
-//    }
-    
+    // refresh token을 회전하고 access token을 재발급한다.
     @PostMapping("/refresh")
     public JWTResponseDTO refresh(HttpServletRequest request, HttpServletResponse response) {
         return jwtService.refreshRotate(request, response);
